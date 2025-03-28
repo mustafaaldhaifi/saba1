@@ -1,0 +1,86 @@
+<!-- h1 class="table-title">Styled Angular Table</h1> -->
+
+<button (click)="logout()">
+  logout
+</button>
+<button *ngIf="ifHaveChanges()" (click)="saveChanges()">
+  Save Changes
+</button>
+<table class="styled-table">
+  <thead>
+
+
+
+    <tr>
+      <th>SI NO</th>
+      <th>الاصناف</th>
+      <!-- <td>{{ i + 1 }}</td>  -->
+      <th *ngFor="let row of barnches; let i = index">
+        {{ row.data()['name'] }}
+      </th>
+    </tr>
+
+    <!---->
+
+
+  </thead>
+  <tbody>
+    <tr *ngFor="let row of data; let i = index">
+      <td>{{ i + 1 }}</td>
+      <td> <input type="text" [value]="row.name" [(ngModel)]="data[i].name"
+          (ngModelChange)="onProductNameChange(i, data[i].id,data[i].name)">
+
+      </td>
+
+      <!-- Loop over barnches -->
+      <ng-container *ngFor="let barnch of barnches">
+        <!-- Loop over barnchesOrders -->
+        <ng-container *ngFor="let order of barnchesOrders; let i1 = index">
+          <!-- Conditional check for matching branch and product -->
+          <td *ngIf="barnch.id === order.branchId && row.id === order.productId;">
+            <div >
+              <input style="display: inline;" style="width: 50px;" type="text" [value]="order.qnt" [(ngModel)]="barnchesOrders[i1].qnt"
+                (ngModelChange)="onOrderChange(order,$event)">
+              <!-- <span *ngIf="order.id" style="display: inline;">
+                <label style="display: inline-block;">
+                  <input type="radio" name="status" value="received" id="received" required>
+                  تمت
+                </label>
+
+                <label style="display: inline-block;">
+                  <input type="radio" name="status" value="notReceived" id="notReceived" required>
+                  لم تتم
+                </label>
+              </span> -->
+              <span *ngIf="order.id" class="status-dropdown-container">
+                <label class="status-dropdown-label">
+                  <select [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)" class="status-dropdown" required>
+                    <option value="received">تمت</option>
+                    <option value="notReceived">لم تتم</option>
+                  </select>
+                </label>
+              </span>
+              
+            </div>
+
+
+          </td>
+        </ng-container>
+      </ng-container>
+    </tr>
+    <tr *ngFor="let row of productsToAdd; let i = index">
+      <td>new id</td>
+      <td> <input type="text" [value]="row.name" [(ngModel)]="productsToAdd[i].name"> </td>
+    </tr>
+    <tr (click)="addToProductsToAdd()">
+      <td>
+
+      </td>
+      <td>
+        +
+      </td>
+    </tr>
+  </tbody>
+
+
+</table>

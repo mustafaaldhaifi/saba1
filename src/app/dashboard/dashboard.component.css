@@ -1,0 +1,216 @@
+/* Global Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Table Styles */
+  .styled-table {
+    width: 100%;
+    margin: 50px auto;
+    border-collapse: collapse;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    border-radius: 8px;
+  }
+  
+  .styled-table thead {
+    background-color: #4CAF50;
+    color: #ffffff;
+  }
+  
+  .styled-table th,
+  .styled-table td {
+    padding: 12px 20px;
+    text-align: center;
+    border: 1px solid #ddd;
+  }
+ 
+  
+  .styled-table th {
+    font-size: 18px;
+    font-weight: bold;
+  }
+  
+  .styled-table td {
+    font-size: 16px;
+  }
+  
+  .styled-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+  
+  .styled-table tr:hover {
+    background-color: #ddd;
+    cursor: pointer;
+  }
+  
+  .styled-table td input[type="text"] {
+    width: 80%;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+  }
+  
+  .styled-table td input[type="radio"] {
+    margin-left: 10px;
+  }
+  
+  .styled-table label {
+    margin-left: 10px;
+    font-size: 14px;
+  }
+  
+  .styled-table td input[type="text"]:focus {
+    border-color: #4CAF50;
+    outline: none;
+  }
+  
+  .styled-table td span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .styled-table td span label {
+    margin-right: 10px;
+  }
+  
+  /* Button Styles */
+  button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+    margin: 20px 10px;
+  }
+  
+  button:hover {
+    background-color: #45a049;
+  }
+  
+  button:active {
+    transform: translateY(2px);
+  }
+  
+  button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  button + button {
+    margin-left: 10px;
+  }
+  
+  /* Add Product Row Styles */
+  tr td input[type="text"]:focus {
+    outline: none;
+  }
+  
+  /* Adding a New Product Row (for productsToAdd) */
+  .styled-table tr td:nth-child(2) input {
+    width: 100%;
+    padding: 8px;
+    font-size: 16px;
+  }
+  
+  .styled-table tr:last-child td {
+    text-align: center;
+  }
+  
+  .styled-table tr:last-child td a {
+    color: #4CAF50;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .styled-table tr:last-child td:hover {
+    background-color: transparent;
+  }
+  
+  /* Responsive Styling */
+  @media (max-width: 768px) {
+    .styled-table {
+      width: 100%;
+    }
+    
+    .styled-table td, .styled-table th {
+      padding: 8px;
+      font-size: 14px;
+    }
+  
+    button {
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+  
+    .styled-table td input[type="text"] {
+      width: 90%;
+    }
+  }
+
+  /* Styling the container for better alignment */
+.status-dropdown-container {
+    display: inline-block;
+    margin: 5px;
+  }
+  
+  /* Styling the dropdown label */
+  .status-dropdown-label {
+    font-weight: 600;
+    margin-right: 10px;
+    color: #333;
+  }
+  
+  /* Styling the dropdown itself */
+  .status-dropdown {
+    padding: 8px 15px;
+    font-size: 14px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    outline: none;
+    /* width: 120px; */
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+  }
+  
+  /* Focused state for the dropdown */
+  .status-dropdown:focus {
+    border-color: #4a90e2; /* Highlighting the border when focused */
+    background-color: #eaf6ff;
+  }
+  
+  /* Option styling */
+  .status-dropdown option {
+    font-size: 14px;
+  }
+  
+  /* Hover effect on the dropdown */
+  .status-dropdown:hover {
+    border-color: #007bff;
+    background-color: #f1f1f1;
+  }
+  
+  /* Styling the parent container */
+  .styled-table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #ddd;
+    vertical-align: middle;
+  }
+  
+  .styled-table tr:hover {
+    background-color: #f1f1f1;
+    cursor: pointer;
+  }
+  
+  

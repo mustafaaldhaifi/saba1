@@ -1,0 +1,180 @@
+/* General Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.bodydiv {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Login Container */
+.login-container {
+    background: #fff;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* Logo */
+.logo-container {
+    margin-bottom: 20px;
+}
+
+.logo {
+    width: 120px;
+    height: auto;
+}
+
+/* Login Form */
+.login-form h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Input Fields */
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    outline: none;
+    transition: border 0.3s ease;
+}
+
+.input-group input:focus {
+    border: 1px solid #007BFF;
+}
+
+/* Button */
+.btn-login {
+    width: 100%;
+    padding: 12px;
+    background-color: #007BFF;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-login:hover {
+    background-color: #0056b3;
+}
+
+/* Footer Links */
+.footer-links {
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.footer-links a {
+    color: #007BFF;
+    text-decoration: none;
+    margin: 0 10px;
+    transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+    color: #0056b3;
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 768px) {
+    .login-container {
+        padding: 30px;
+    }
+
+    .logo {
+        width: 100px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .login-container {
+        padding: 20px;
+        max-width: 90%;
+    }
+
+    .logo {
+        width: 80px;
+    }
+
+    .btn-login {
+        padding: 10px;
+    }
+}
+
+/* Style the input group container */
+.input-group {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+  }
+  
+  /* Style the label */
+  .input-group label {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #333;
+  }
+  
+  /* Style the select dropdown */
+  .input-group select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: #f9f9f9;
+    transition: border-color 0.3s ease;
+  }
+  
+  /* Add focus effect to the dropdown */
+  .input-group select:focus {
+    outline: none;
+    border-color: #007BFF;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+  }
+  
+  /* Style the placeholder (disabled option) */
+  .input-group option:disabled {
+    color: #999;
+    font-style: italic;
+  }
+  
+  /* Add padding and hover effect to the options */
+  .input-group option {
+    padding: 10px;
+  }
+  
+  /* Optional: add a subtle hover effect for options */
+  .input-group select option:hover {
+    background-color: #f1f1f1;
+  }
+  
