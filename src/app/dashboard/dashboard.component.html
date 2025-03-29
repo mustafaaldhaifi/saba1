@@ -27,7 +27,7 @@
   <tbody>
     <tr *ngFor="let row of data; let i = index">
       <td>{{ i + 1 }}</td>
-      <td> <input type="text" [value]="row.name" [(ngModel)]="data[i].name"
+      <td> <input style="width: 100px;" type="text" [value]="row.name" [(ngModel)]="data[i].name"
           (ngModelChange)="onProductNameChange(i, data[i].id,data[i].name)">
 
       </td>
