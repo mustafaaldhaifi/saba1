@@ -1,0 +1,214 @@
+[debug] [2025-03-29T00:24:04.483Z] ----------------------------------------------------------------------
+[debug] [2025-03-29T00:24:04.485Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2025-03-29T00:24:04.485Z] CLI Version:   13.35.1
+[debug] [2025-03-29T00:24:04.485Z] Platform:      win32
+[debug] [2025-03-29T00:24:04.485Z] Node Version:  v20.19.0
+[debug] [2025-03-29T00:24:04.485Z] Time:          Sat Mar 29 2025 03:24:04 GMT+0300 (Arabian Standard Time)
+[debug] [2025-03-29T00:24:04.485Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-03-29T00:24:04.610Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-03-29T00:24:04.610Z] > authorizing via signed-in user (mustafa774519161@gmail.com)
+[debug] [2025-03-29T00:24:04.610Z] [iam] checking project saba-613a2 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-03-29T00:24:04.611Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:24:04.611Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:24:04.612Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/saba-613a2:testIamPermissions [none]
+[debug] [2025-03-29T00:24:04.612Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/saba-613a2:testIamPermissions x-goog-quota-user=projects/saba-613a2
+[debug] [2025-03-29T00:24:04.612Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/saba-613a2:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-03-29T00:24:06.690Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/saba-613a2:testIamPermissions 200
+[debug] [2025-03-29T00:24:06.690Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/saba-613a2:testIamPermissions {}
+[debug] [2025-03-29T00:24:06.690Z] [iam] error while checking permissions, command may fail: Authorization failed. This account is missing the following required permissions on project saba-613a2:
+
+  firebase.projects.get
+  firebasehosting.sites.update
+[debug] [2025-03-29T00:24:06.691Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:24:06.691Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:24:06.692Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 [none]
+[debug] [2025-03-29T00:24:07.805Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 403
+[debug] [2025-03-29T00:24:07.805Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2025-03-29T00:24:07.805Z] Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+[debug] [2025-03-29T00:24:09.506Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+    at responseToError (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:52:12)
+    at RetryOperation._fn (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:312:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[error] 
+[error] Error: Failed to get Firebase project saba-613a2. Please make sure the project exists and your account has permission to access it.
+[debug] [2025-03-29T00:24:14.941Z] ----------------------------------------------------------------------
+[debug] [2025-03-29T00:24:14.943Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-03-29T00:24:14.943Z] CLI Version:   13.35.1
+[debug] [2025-03-29T00:24:14.943Z] Platform:      win32
+[debug] [2025-03-29T00:24:14.943Z] Node Version:  v20.19.0
+[debug] [2025-03-29T00:24:14.943Z] Time:          Sat Mar 29 2025 03:24:14 GMT+0300 (Arabian Standard Time)
+[debug] [2025-03-29T00:24:14.943Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-03-29T00:24:15.073Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-03-29T00:24:15.073Z] > authorizing via signed-in user (mustafa774519161@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Omar\Desktop\MyProject\saba1
+
+Before we get started, keep in mind:
+
+  * You are initializing within an existing Firebase project directory
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] but for now we'll just set up a default project.
+[info] 
+[debug] [2025-03-29T00:24:22.753Z] Using project from CLI flag: saba-613a2
+[debug] [2025-03-29T00:24:22.754Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:24:22.754Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:24:22.755Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 [none]
+[debug] [2025-03-29T00:24:23.825Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 403
+[debug] [2025-03-29T00:24:23.825Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2025-03-29T00:24:23.826Z] Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+[debug] [2025-03-29T00:24:24.598Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+    at responseToError (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:52:12)
+    at RetryOperation._fn (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:312:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[error] 
+[error] Error: Failed to get Firebase project saba-613a2. Please make sure the project exists and your account has permission to access it.
+[debug] [2025-03-29T00:24:33.802Z] ----------------------------------------------------------------------
+[debug] [2025-03-29T00:24:33.804Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-03-29T00:24:33.804Z] CLI Version:   13.35.1
+[debug] [2025-03-29T00:24:33.804Z] Platform:      win32
+[debug] [2025-03-29T00:24:33.804Z] Node Version:  v20.19.0
+[debug] [2025-03-29T00:24:33.804Z] Time:          Sat Mar 29 2025 03:24:33 GMT+0300 (Arabian Standard Time)
+[debug] [2025-03-29T00:24:33.804Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-03-29T00:24:33.937Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-03-29T00:24:33.937Z] > authorizing via signed-in user (mustafa774519161@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Omar\Desktop\MyProject\saba1
+
+Before we get started, keep in mind:
+
+  * You are initializing within an existing Firebase project directory
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] but for now we'll just set up a default project.
+[info] 
+[debug] [2025-03-29T00:24:41.137Z] Using project from CLI flag: saba-613a2
+[debug] [2025-03-29T00:24:41.138Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:24:41.138Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:24:41.139Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 [none]
+[debug] [2025-03-29T00:24:42.221Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 403
+[debug] [2025-03-29T00:24:42.222Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2025-03-29T00:24:42.223Z] Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+[debug] [2025-03-29T00:24:43.021Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+    at responseToError (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:52:12)
+    at RetryOperation._fn (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:312:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[error] 
+[error] Error: Failed to get Firebase project saba-613a2. Please make sure the project exists and your account has permission to access it.
+[debug] [2025-03-29T00:26:32.427Z] ----------------------------------------------------------------------
+[debug] [2025-03-29T00:26:32.429Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-03-29T00:26:32.429Z] CLI Version:   13.35.1
+[debug] [2025-03-29T00:26:32.429Z] Platform:      win32
+[debug] [2025-03-29T00:26:32.429Z] Node Version:  v20.19.0
+[debug] [2025-03-29T00:26:32.429Z] Time:          Sat Mar 29 2025 03:26:32 GMT+0300 (Arabian Standard Time)
+[debug] [2025-03-29T00:26:32.429Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-03-29T00:26:32.562Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-03-29T00:26:32.563Z] > authorizing via signed-in user (mustafa774519161@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Omar\Desktop\MyProject\saba1
+
+Before we get started, keep in mind:
+
+  * You are initializing within an existing Firebase project directory
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] but for now we'll just set up a default project.
+[info] 
+[debug] [2025-03-29T00:26:41.843Z] Using project from CLI flag: saba-613a2
+[debug] [2025-03-29T00:26:41.844Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:26:41.845Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:26:41.846Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 [none]
+[debug] [2025-03-29T00:26:43.011Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 403
+[debug] [2025-03-29T00:26:43.011Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2025-03-29T00:26:43.012Z] Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+[debug] [2025-03-29T00:26:43.886Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+    at responseToError (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:52:12)
+    at RetryOperation._fn (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:312:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[error] 
+[error] Error: Failed to get Firebase project saba-613a2. Please make sure the project exists and your account has permission to access it.
+[debug] [2025-03-29T00:40:54.726Z] ----------------------------------------------------------------------
+[debug] [2025-03-29T00:40:54.728Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-03-29T00:40:54.728Z] CLI Version:   13.35.1
+[debug] [2025-03-29T00:40:54.728Z] Platform:      win32
+[debug] [2025-03-29T00:40:54.728Z] Node Version:  v20.19.0
+[debug] [2025-03-29T00:40:54.728Z] Time:          Sat Mar 29 2025 03:40:54 GMT+0300 (Arabian Standard Time)
+[debug] [2025-03-29T00:40:54.729Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-03-29T00:40:54.863Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-03-29T00:40:54.864Z] > authorizing via signed-in user (mustafa774519161@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Omar\Desktop\MyProject\saba1
+
+Before we get started, keep in mind:
+
+  * You are initializing within an existing Firebase project directory
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] but for now we'll just set up a default project.
+[info] 
+[debug] [2025-03-29T00:41:08.787Z] Using project from CLI flag: saba-613a2
+[debug] [2025-03-29T00:41:08.789Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:41:08.789Z] Checked if tokens are valid: true, expires at: 1743211421346
+[debug] [2025-03-29T00:41:08.791Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 [none]
+[debug] [2025-03-29T00:41:09.905Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 403
+[debug] [2025-03-29T00:41:09.905Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/saba-613a2 {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2025-03-29T00:41:09.906Z] Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+[debug] [2025-03-29T00:41:10.735Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/saba-613a2 had HTTP Error: 403, The caller does not have permission
+    at responseToError (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:52:12)
+    at RetryOperation._fn (C:\Users\Omar\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:312:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[error] 
+[error] Error: Failed to get Firebase project saba-613a2. Please make sure the project exists and your account has permission to access it.
