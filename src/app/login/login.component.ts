@@ -7,6 +7,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from 'firebas
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../env';
 import { CommonModule } from '@angular/common';
+import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
+import { Router } from '@angular/router';
 
 // import { provideRouter } from '@angular/router';
 
@@ -31,25 +33,29 @@ export class LoginComponent {
   password = ""
 
   selectedOption: any
-  options = [
-    "Admin",
-    "Panaroma",
-    "Gallary",
-    "Qasar"
-  ]
+  options: any = []
+  // options = [
+  //   "Admin",
+  //   "Panaroma",
+  //   "Gallary",
+  //   "Qasar"
+  // ]
 
-  constructor() {
+  constructor(private router: Router) {
 
     // Initialize Firebase app with the environment config
     // initializeApp(environment.firebaseConfig);
     initializeApp(environment.firebase);
   }
 
+  isLoading = false
   isLogin: any
-  ngOnInit() {
+
+
+  async ngOnInit() {
     // Check if the user is already logged in on app initialization
     const auth = getAuth();
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
         // If the user is logged in, navigate to dashboard or home page
         console.log('User is logged in:', user);
@@ -59,9 +65,57 @@ export class LoginComponent {
         // If the user is not logged in, navigate to login page
         console.log('No user is logged in');
         this.isLogin = false
+        await this.getData()
         // this.router.navigate(['/login']);
       }
     });
+    this.getData()
+  }
+
+
+  async getData() {
+    this.isLoading = true
+    try {
+      const db = getFirestore();
+
+      // Fetch all collections concurrently
+      const [branchesSnapshot] = await Promise.all([
+        getDocs(collection(db, "branches")),
+
+      ]);
+
+      this.options = branchesSnapshot.docs.map(doc => {
+        return doc.data()['name'];
+      });
+
+      this.options.push("Admin")
+
+
+
+
+      // let newData = [];
+      // for (let product of this.data) {
+      //   for (let branch of this.barnches) {
+      //     let exists = this.barnchesOrders.some((order:any) => order.branchId === branch.id && order.productId === product.id);
+
+      //     if (!exists) {
+      //       newData.push({ qnt: 0, productId: product.id, branchId: branch.id });
+      //     }
+      //   }
+      // }
+
+      // // Add the new data to barnchesOrders
+      // this.barnchesOrders.push(...newData);
+
+      // // Optionally, log the data if needed
+      // console.log(this.barnches, this.data, this.barnchesOrders);
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+    this.isLoading = false
+    // console.log(this.data);
+
   }
   // Import the functions you need from the SDKs you need
   // import { initializeApp } from "firebase/app";
@@ -77,18 +131,28 @@ export class LoginComponent {
 
 
   login() {
+    this.isLoading = true
     const auth = getAuth();
 
     signInWithEmailAndPassword(auth, this.selectedOption + "@saba321.com", this.password)
       .then((userCredential) => {
+        this.isLoading = false
         // Signed in successfully
         const user = userCredential.user;
         console.log('Logged in as:', user);
         this.isLogin = true
+
+        if (user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2") {
+          this.router.navigate(['/dashboard']);
+        }
+        else{
+          this.router.navigate(['/branch']);
+        }
         // Navigate to a dashboard or another page
         // this.router.navigate(['/dashboard']);  // Adjust based on your routing
       })
       .catch((error) => {
+        this.isLoading = false
         const errorCode = error.code;
         const errorMessage = error.message;
         console.error(`Login failed: ${errorCode} - ${errorMessage}`);

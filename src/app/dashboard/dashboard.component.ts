@@ -1,9 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../env';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { Router } from '@angular/router';
-import { addDoc, and, collection, doc, getDocs, getFirestore, orderBy, query, Timestamp, updateDoc } from "firebase/firestore";
+import { addDoc, and, collection, doc, getDocs, getFirestore, orderBy, query, Timestamp, updateDoc, where } from "firebase/firestore";
 import { CommonModule } from '@angular/common';
 import { log } from 'console';
 // import { AngularFirestoreModule } from '@angular/fire/firestore';
@@ -18,22 +18,61 @@ import { log } from 'console';
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent {
+  async onSelectDate(arg0: any) {
+    this.selectedDate = arg0.toDate();
+    await this.getData(true)
+  }
   // firestore: Firestore = inject(Firestore);
   title = 'saba1';
+  isLoading = false
+  isAdmin = false
 
   constructor(private router: Router) {
-    // this.getProducts()
-    // this.getBranches()
-    // this.getBranchesOrders()
   }
 
   async ngOnInit(): Promise<void> {
-    // Call the asynchronous functions in ngOnInit
-    await this.getProducts();
-    await this.getBranches();
-    await this.getBranchesOrders();
+    const auth = getAuth();
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        if (user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2") {
+          this.isAdmin = true
+          await this.getData()
+        }
+        else {
+          this.router.navigate(['/branch']);
+        }
+
+        // If the user is logged in, navigate to dashboard or home page
+        console.log('User is logged in:', user);
+
+      } else {
+        // If the user is not logged in, navigate to login page
+
+        this.router.navigate(['/login']);
+        // this.router.navigate(['/login']);
+      }
+    });
   }
 
+
+
+  async getPreOrders() {
+    const db = getFirestore();
+    const productsRef = collection(db, "orders");
+    const q = query(
+      productsRef,
+      orderBy("createdAt", "desc")
+    );
+
+    const querySnapshot = await getDocs(q);
+    this.preOrders = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data()['name'],
+      createdAt: doc.data()['createdAt']
+    }));
+  }
+
+  preOrders: any = []
   data: any = []
   barnches: any = []
   barnchesOrders: any = []
@@ -47,6 +86,138 @@ export class DashboardComponent {
     }).catch((error) => {
       console.error('Logout error:', error);
     });
+  }
+
+  selectedDate: any
+  async getData(isUser: boolean = false) {
+    this.isLoading = true
+    try {
+      const db = getFirestore();
+
+      await this.getPreOrders();
+      // if (this.preOrders.length > 0) {
+
+      // }
+      var selectedDate
+      if (isUser == true) {
+        selectedDate = Timestamp.now().toDate()
+        this.selectedDate = selectedDate
+
+      } else {
+        if (this.preOrders.length > 0) {
+          selectedDate = this.preOrders[0].createdAt.toDate();
+          this.selectedDate = selectedDate
+        } else {
+          selectedDate = Timestamp.now().toDate()
+          this.selectedDate = selectedDate
+
+        }
+      }
+
+
+      // Start of day (00:00:00.000 UTC)
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const startTimestamp = Timestamp.fromDate(startOfDay);
+
+      // End of day (23:59:59.999 UTC)
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+
+
+      console.log("rtrtr", selectedDate);
+      console.log("rtrtr2", startOfDay);
+      console.log("rtrtr3", endOfDay);
+
+
+      // Fetch all collections concurrently
+      const [branchesSnapshot, productsSnapshot, branchesOrdersSnapshot] = await Promise.all([
+        getDocs(collection(db, "branches")),
+        getDocs(query(collection(db, "products"), orderBy("createdAt", "asc"))),
+        getDocs(query(collection(db, "branchesOrders"),
+          where("createdAt", ">=", startTimestamp),
+          where("createdAt", "<=", endTimestamp),
+        )),
+
+
+      ]);
+
+      // Process branches
+      this.barnches = branchesSnapshot.docs.map(doc => {
+        return { id: doc.id, name: doc.data()['name'] };
+      });
+
+      // Process products
+      this.data = productsSnapshot.docs.map(doc => {
+        return { id: doc.id, name: doc.data()['name'] };
+      });
+
+      // Process branchesOrders
+      this.barnchesOrders = branchesOrdersSnapshot.docs.map(doc => {
+        return {
+          id: doc.id,
+          qnt: doc.data()['qnt'],
+          status: doc.data()['status'],
+          productId: doc.data()['productId'],
+          branchId: doc.data()['branchId'],
+        };
+      });
+
+      // Logic for combining branches, products, and orders
+      let newData = [];
+
+      for (let index = 0; index < this.data.length; index++) {
+        const product = this.data[index];
+
+        for (let index2 = 0; index2 < this.barnches.length; index2++) {
+          const branch = this.barnches[index2];
+
+          // Check if the combination of productId and branchId already exists in barnchesOrders
+          let exists = false;
+          for (let index3 = 0; index3 < this.barnchesOrders.length; index3++) {
+            const order = this.barnchesOrders[index3];
+
+            // Check if this order matches the current product and branch
+            if (order.branchId === branch.id && order.productId === product.id) {
+              exists = true;
+              break;  // Exit early as we found a matching order
+            }
+          }
+
+          // If the combination doesn't exist, add it to newData
+          if (!exists) {
+            newData.push({ qnt: 0, productId: product.id, branchId: branch.id });
+          }
+        }
+      }
+
+
+      // Add the new data to barnchesOrders
+      this.barnchesOrders.push(...newData);
+      // let newData = [];
+      // for (let product of this.data) {
+      //   for (let branch of this.barnches) {
+      //     let exists = this.barnchesOrders.some((order:any) => order.branchId === branch.id && order.productId === product.id);
+
+      //     if (!exists) {
+      //       newData.push({ qnt: 0, productId: product.id, branchId: branch.id });
+      //     }
+      //   }
+      // }
+
+      // // Add the new data to barnchesOrders
+      // this.barnchesOrders.push(...newData);
+
+      // // Optionally, log the data if needed
+      // console.log(this.barnches, this.data, this.barnchesOrders);
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+    this.isLoading = false
+    // console.log(this.data);
+
   }
 
 
@@ -77,16 +248,6 @@ export class DashboardComponent {
     // this.data = querySnapshot.docs
 
   }
-
-  // async getProducts() {
-  //   const db = getFirestore()
-  //   const querySnapshot = await getDocs(collection(db, "products"));
-  //   console.log(querySnapshot.name);
-  //   console.log(querySnapshot.id);
-
-  //   this.data = querySnapshot.docs
-  // }
-
   async getBranchesOrders() {
     const db = getFirestore()
     const querySnapshot = await getDocs(collection(db, "branchesOrders"));
@@ -100,6 +261,7 @@ export class DashboardComponent {
         id: doc.id, // Firestore document ID
         qnt: doc.data()['qnt'] // 'name' field from Firestore document,
         ,
+        status: doc.data()['status'],
         productId: doc.data()['productId'],
         branchId: doc.data()['branchId'],
       };
@@ -167,6 +329,7 @@ export class DashboardComponent {
           branchId: element.branchId,
           productId: element.productId,
           qnt: element.qnt,
+          status: '0',
           createdAt: Timestamp.fromDate(new Date())
         });
         console.log("Order added with ID: ", docRef.id);
@@ -177,10 +340,15 @@ export class DashboardComponent {
 
   }
   onStatusChange(order: any) {
-    // Handle the status change for the order
-    console.log('Order status updated:', order);
+    // Handle the status change for the order 
+    // console.log('Order status updated:', order);
+    if (order.id) {
+      this.addToOrdersToUpdate(order)
+    } else {
+      this.addToOrdersToAdd(order)
+    }
   }
-  
+
 
   async updateProducts() {
     const db = getFirestore();
@@ -330,10 +498,6 @@ export class DashboardComponent {
     } else {
       this.addToOrdersToAdd(order)
     }
-    console.log("ggg", this.ordersToAdd.length);
-    console.log("ppp", this.ordersToUpdate.length);
-
-
   }
 
   // Method to check if there are any changes in the product arrays
@@ -342,6 +506,7 @@ export class DashboardComponent {
   }
 
   async saveChanges() {
+    this.isLoading = true
     if (this.productsToAdd.length > 0) {
       await this.addProducts()
     }

@@ -1,0 +1,68 @@
+<div class="loading-overlay" *ngIf="isLoading">
+    <div class="spinner"></div>
+</div>
+
+
+<!-- Date Selection Buttons -->
+<div *ngFor="let item of preOrders; let i = index">
+    <button (click)="onSelectDate(item.createdAt)" style="width: -webkit-fill-available;"
+        [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
+        {{item.createdAt?.toDate() | date:'mediumDate'}}
+    </button>
+</div>
+
+
+<button *ngIf="isToAddMode === false && ifCurrentDateInPreOrders1 === false " (click)="addNewOrder()"
+    style="width: -webkit-fill-available;">
+    Add New Order
+</button>
+
+<div *ngIf="selectedDate" style="text-align: center;">
+    <hr>
+    {{selectedDate.toDate() | date:'mediumDate'}}
+</div>
+
+<!-- Orders Table -->
+<table *ngIf="branch" class="styled-table">
+    <thead>
+        <tr>
+            <th>SI NO</th>
+            <th>الاصناف</th>
+            <th>الكمية</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr *ngFor="let item of combinedData; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>
+                <input style="width: 100px;" type="text" [value]="item.name" disabled>
+            </td>
+            <td>
+                <input style="display: inline; width: 50px;" [(ngModel)]="item.qnt" (ngModelChange)="onQntChange(item)"
+                    [disabled]="isPreSent === true">
+                <span *ngIf="item.qnt > 0" class="status-dropdown-container">
+                    <label class="status-dropdown-label">
+                        <select [disabled]="item.status !== '0'" [(ngModel)]="item.status"
+                            (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+                            <option value="1">تم استلامها</option>
+                            <option value="2">لم يتم استلامها</option>
+                        </select>
+                    </label>
+                </span>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Action Buttons -->
+<button  style="width: -webkit-fill-available;" *ngIf="ordersToAdd.length > 0" (click)="addOrders()" [disabled]="isLoading">
+    Send Order
+</button>
+
+<button *ngIf="ordersToUpdate.length > 0" (click)="saveUpdates()" [disabled]="isLoading">
+    Save Updates
+</button>
+
+<!-- <button style="width: -webkit-fill-available;" (click)="add()" *ngIf="ordersToAdd.length > 0">
+    Send Order
+</button> -->

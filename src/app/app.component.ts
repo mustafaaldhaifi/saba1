@@ -41,7 +41,13 @@ export class AppComponent {
     const auth = getAuth();
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        this.router.navigate(['/dashboard']);
+        if (user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2") {
+          this.router.navigate(['/dashboard']);
+        }
+        else{
+          this.router.navigate(['/branch']);
+        }
+        
         // If the user is logged in, navigate to dashboard or home page
         console.log('User is logged in:', user);
         // this.router.navigate(['/dashboard']);  // Adjust as needed
