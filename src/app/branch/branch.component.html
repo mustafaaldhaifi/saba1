@@ -7,7 +7,7 @@
 <div *ngFor="let item of preOrders; let i = index">
     <button (click)="onSelectDate(item.createdAt)" style="width: -webkit-fill-available;"
         [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
-        {{item.createdAt?.toDate() | date:'mediumDate'}}
+        {{item.createdAt?.toDate() | date:'mediumDate'}} 
     </button>
 </div>
 
@@ -55,7 +55,8 @@
 </table>
 
 <!-- Action Buttons -->
-<button  style="width: -webkit-fill-available;" *ngIf="ordersToAdd.length > 0" (click)="addOrders()" [disabled]="isLoading">
+<button style="width: -webkit-fill-available;" *ngIf="ordersToAdd.length > 0" (click)="addOrders()"
+    [disabled]="isLoading">
     Send Order
 </button>
 
