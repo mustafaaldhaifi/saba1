@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
 
@@ -6,7 +6,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from 'firebas
 // import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../env';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
 import { Router } from '@angular/router';
 
@@ -41,35 +41,51 @@ export class LoginComponent {
   //   "Qasar"
   // ]
 
-  constructor(private router: Router) {
+  // constructor(private router: Router) {
 
-    // Initialize Firebase app with the environment config
-    // initializeApp(environment.firebaseConfig);
+  //   // Initialize Firebase app with the environment config
+  //   // initializeApp(environment.firebaseConfig);
+  //   initializeApp(environment.firebase);
+  // }
+  constructor(
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
     initializeApp(environment.firebase);
   }
+
+  // ngOnInit() {
+  //  {
+  //     // this.setupAuthListener();
+  //   }
+  // }
 
   isLoading = false
   isLogin: any
 
 
   async ngOnInit() {
+    if (isPlatformBrowser(this.platformId)) {
+      const auth = getAuth();
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          // If the user is logged in, navigate to dashboard or home page
+          console.log('User is logged in:', user);
+          // this.router.navigate(['/dashboard']);  // Adjust as needed
+          this.isLogin = true
+        } else {
+          // If the user is not logged in, navigate to login page
+          console.log('No user is logged in');
+          this.isLogin = false
+          await this.getData()
+          // this.router.navigate(['/login']);
+        }
+      });
+      this.getData()
+    }
     // Check if the user is already logged in on app initialization
-    const auth = getAuth();
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // If the user is logged in, navigate to dashboard or home page
-        console.log('User is logged in:', user);
-        // this.router.navigate(['/dashboard']);  // Adjust as needed
-        this.isLogin = true
-      } else {
-        // If the user is not logged in, navigate to login page
-        console.log('No user is logged in');
-        this.isLogin = false
-        await this.getData()
-        // this.router.navigate(['/login']);
-      }
-    });
-    this.getData()
+
+
   }
 
 
@@ -145,7 +161,7 @@ export class LoginComponent {
         if (user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2") {
           this.router.navigate(['/dashboard']);
         }
-        else{
+        else {
           this.router.navigate(['/branch']);
         }
         // Navigate to a dashboard or another page

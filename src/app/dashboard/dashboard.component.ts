@@ -637,9 +637,9 @@
 // }
 
 
-import { Component, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   getAuth,
@@ -716,13 +716,21 @@ export class DashboardComponent implements OnInit {
   ordersToAdd: Order[] = [];
   ordersToUpdate: Order[] = [];
 
-  constructor(private router: Router) { }
+  constructor(
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+  }
+
 
   async ngOnInit(): Promise<void> {
 
-    await this.checkAuthStatus();
+    if (isPlatformBrowser(this.platformId)){
+      await this.checkAuthStatus();
+    }
+    
 
-    console.log("getting data", this.isAdmin);
+    // console.log("getting data", this.isAdmin);
 
     // if (this.isAdmin) {
 

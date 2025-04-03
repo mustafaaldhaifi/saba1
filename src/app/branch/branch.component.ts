@@ -283,8 +283,8 @@
 // }
 
 
-import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
@@ -418,11 +418,21 @@ export class BranchComponent {
 
   currentTimestamp: any  // Get the current Firebase Timestamp
 
-  constructor(private router: Router) { }
+  constructor(
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    // initializeApp(environment.firebase);
+  }
+
+
 
   async ngOnInit(): Promise<void> {
-    this.currentTimestamp = Timestamp.now();
-    await this.getBranch();
+    if (isPlatformBrowser(this.platformId)) {
+      this.currentTimestamp = Timestamp.now();
+      await this.getBranch();
+    }
+
   }
 
   onQntChange(order: any) {
