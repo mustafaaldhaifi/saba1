@@ -1012,8 +1012,8 @@ export class DashboardComponent implements OnInit {
 
     this.productsToAdd.forEach(product => {
       if (product.name) {
-        const tempId = doc(collection(db, 'products')).id;
-        const docRef = doc(collection(db, 'products', tempId));
+        // const tempId = doc(collection(db, 'products')).id;
+        const docRef = doc(collection(db, 'products'));
         const newData = {
           name: product.name,
           createdAt: Timestamp.fromDate(new Date())
