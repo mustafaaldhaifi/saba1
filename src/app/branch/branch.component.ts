@@ -480,6 +480,8 @@ export class BranchComponent {
         } else {
           const name = user.email?.split('@')[0];
           this.branch = await this.getRelatedBranche(name!);
+          console.log("bbbb", this.branch.data);
+
           await this.getProducts();
           await this.getPreOrders();
 
