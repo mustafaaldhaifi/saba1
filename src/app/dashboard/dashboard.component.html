@@ -16,10 +16,8 @@
   <div class="date-selection">
     <h3>Select Order Date</h3>
     <div class="date-buttons">
-      <button *ngFor="let item of preOrders" 
-              class="btn date-btn" 
-              (click)="onSelectDate(item.createdAt)"
-              [class.selected]="selectedDate?.getTime() === item.createdAt.toDate().getTime()">
+      <button *ngFor="let item of preOrders" class="btn date-btn" (click)="onSelectDate(item.createdAt)"
+        [class.selected]="selectedDate?.getTime() === item.createdAt.toDate().getTime()">
         {{item.createdAt.toDate() | date:'mediumDate'}} ({{item.count}})
       </button>
     </div>
@@ -29,6 +27,9 @@
     <hr>
     <h2>{{selectedDate | date:'fullDate'}}</h2>
   </div>
+  <button class="btn logout-btn" (click)="exportToExcel()">
+    Export
+  </button>
 
   <!-- Products Table -->
   <div class="table-container">
@@ -49,27 +50,19 @@
             {{ i + 1 }}
           </td>
           <td>
-            <input type="text" 
-                   [value]="product.name" 
-                   [(ngModel)]="product.name"
-                   (ngModelChange)="onProductNameChange(i, product.id, product.name)">
+            <input style="width: 130px;" type="text" [value]="product.name" [(ngModel)]="product.name"
+              (ngModelChange)="onProductNameChange(i, product.id, product.name)">
           </td>
-        
+
           <!-- One cell per branch -->
           <td *ngFor="let branch of branches">
             <div *ngFor="let order of orders">
               <div *ngIf="order.branchId === branch.id && order.productId === product.id" class="order-cell">
-                <input type="number" 
-                       min="0"
-                       [value]="order.qnt" 
-                       [(ngModel)]="order.qnt" 
-                       (ngModelChange)="onOrderChange(order, $event)"
-                       class="quantity-input">
-        
-                <select *ngIf="order.id" 
-                        [(ngModel)]="order.status" 
-                        (ngModelChange)="onStatusChange(order)"
-                        class="status-select">
+                <input type="number" min="0" [value]="order.qnt" [(ngModel)]="order.qnt"
+                  (ngModelChange)="onOrderChange(order, $event)" class="quantity-input">
+
+                <select *ngIf="order.id" [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)"
+                  class="status-select">
                   <option value="1">Received</option>
                   <option value="2">Not Received</option>
                 </select>
@@ -82,9 +75,7 @@
         <tr *ngFor="let newProduct of productsToAdd; let i = index">
           <td>New</td>
           <td>
-            <input type="text" 
-                   [(ngModel)]="productsToAdd[i].name" 
-                   placeholder="Enter product name">
+            <input type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Enter product name">
           </td>
           <td *ngFor="let branch of branches" class="empty-cell"></td>
         </tr>
