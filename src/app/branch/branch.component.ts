@@ -315,6 +315,7 @@ export class BranchComponent {
         name: product.name,
         productId: product.id,
         qnt: 0,
+        qntF: 0,
       };
 
       console.log("new order", s);
@@ -443,6 +444,14 @@ export class BranchComponent {
       this.addToOrdersToAdd(order);
     }
   }
+  onQntFChange(order: any) {
+    if (order && order.qntF > 0) {
+      console.log("added", this.ordersToAdd);
+
+
+      this.addToOrdersToAdd(order);
+    }
+  }
 
   addToOrdersToAdd(order: any) {
     console.log("ooo", order);
@@ -500,6 +509,9 @@ export class BranchComponent {
         this.router.navigate(['/login']);
       }
     });
+  }
+  isItemInAdd(item: any): boolean {
+    return this.ordersToAdd.some((order: any) => order.productId === item.productId);
   }
 
   async onSelectDate(selectedTimestamp: Timestamp) {
@@ -622,6 +634,8 @@ export class BranchComponent {
       id: doc.id,
       productId: doc.data()['productId'],
       qnt: doc.data()['qnt'],
+      qntF: doc.data()['qntF'],
+
       status: doc.data()['status'],
       createdAt: doc.data()['createdAt']
     }));
@@ -648,6 +662,7 @@ export class BranchComponent {
           branchId: this.branch.id,
           productId: element.productId,
           qnt: element.qnt,
+          qntF: element.qntF,
           status: '0',
           createdAt: this.currentTimestamp // Better than manual timestamp
         });
@@ -744,6 +759,7 @@ export class BranchComponent {
         name: product.name,
         productId: product.id,
         qnt: order ? order.qnt : 0,
+        qntF: order ? order.qntF : 0,
         status: order ? order.status : 0
       };
 

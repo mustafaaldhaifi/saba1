@@ -30,30 +30,71 @@
 <table *ngIf="branch" class="styled-table">
     <thead>
         <tr>
-            <th>SI NO</th>
+            <!-- <th>SI NO</th> -->
             <th>الاصناف</th>
-            <th>الكمية</th>
+            <th>
+                <div>
+                    الكمية
+                </div>
+                <div>
+                    المتوفرة
+                </div>
+            </th>
+            <th>
+                الوحدة
+            </th>
+            <th>
+                <div>
+                    الكمية
+                </div>
+                <div>
+                    المطلوبة
+                </div>
+            </th>
+            <th>
+                حالة الاستلام
+            </th>
+
+
         </tr>
     </thead>
     <tbody>
         <tr *ngFor="let item of combinedData; let i = index">
-            <td>{{ i + 1 }}</td>
+            <!-- <td>{{ i + 1 }}</td> -->
             <td>
-                <input style="width: 100px;" type="text" [value]="item.name" disabled>
+                {{item.name}}
+                <!-- <input style="width: 82px;" type="text" [value]="" disabled> -->
+            </td>
+
+            <td>
+                <input *ngIf="isPreSent === false" style="width: 20px;height: 5px;" class="quantity-input"
+                    [(ngModel)]="item.qntF" (ngModelChange)="onQntFChange(item)" type="number">
+                <div *ngIf="isPreSent === true">{{item.qntF}}</div>
             </td>
             <td>
-                <input style="display: inline; width: 50px;" [(ngModel)]="item.qnt" (ngModelChange)="onQntChange(item)"
-                    [disabled]="isPreSent === true">
-                <span *ngIf="item.qnt > 0" class="status-dropdown-container">
+                كيلو
+            </td>
+            <td>
+                <input *ngIf="isPreSent === false" style="width: 20px;height: 5px;" [(ngModel)]="item.qnt"
+                    (ngModelChange)="onQntChange(item)" class="quantity-input" type="number">
+                <div *ngIf="isPreSent === true">{{item.qnt}}</div>
+
+            </td>
+            <td>
+                <span *ngIf="item.qnt > 0 && !isItemInAdd(item)" class="status-dropdown-container">
                     <label class="status-dropdown-label">
-                        <select [disabled]="item.status !== '0'" [(ngModel)]="item.status"
-                            (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                            <option value="1">تم استلامها</option>
-                            <option value="2">لم يتم استلامها</option>
+                        <select [disabled]="item.status !== '0'" [(ngModel)]="item.status " [ngClass]="{
+                            'green-bg': item.status === '1',
+                            'red-bg': item.status === '2',
+                            'white-bg': item.status !== '1' && item.status !== '2'
+                        }" (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+                            <option value='1'>تم استلامها</option>
+                            <option value='2'>لم يتم استلامها</option>
                         </select>
                     </label>
                 </span>
             </td>
+
         </tr>
     </tbody>
 </table>
