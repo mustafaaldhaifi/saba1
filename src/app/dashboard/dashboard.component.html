@@ -12,6 +12,23 @@
     </button>
   </div>
 
+  <div class="container">
+    <div class="dropdown-container">
+      <label for="options" class="dropdown-label">Select Option:</label>
+      <select id="options" [(ngModel)]="selectedOption" (ngModelChange)="onSelectChange($event)" class="dropdown">
+        <option value="ryad">الرياض</option>
+        <option value="other">خارج الرياض</option>
+      </select>
+    </div>
+  </div>
+
+
+  <!-- <div>
+    <select [(ngModel)]="selectedOption" (ngModelChange)="onSelectChange($event)">
+      <option value="ryad">الرياض</option>
+      <option value="other">خارج الرياض</option>
+    </select>
+  </div> -->
   <!-- Date Selection -->
   <div class="date-selection">
     <h3>Select Order Date</h3>
@@ -36,11 +53,25 @@
     <table class="styled-table">
       <thead>
         <tr>
-          <th>#</th>
-          <th>Product Name</th>
-          <th *ngFor="let branch of branches">
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th style="background-color: rgb(181, 0, 0);" *ngFor="let branch of branches" colspan="3">
+            <!-- Each branch takes 3 columns -->
             {{ branch.name }}
           </th>
+        </tr>
+        <tr>
+          <th>#</th>
+          <th>Product Name</th>
+          <th>Requested Unit</th>
+          <th>Remain Unit</th>
+          <ng-container *ngFor="let branch of branches">
+            <th>Requested Qnt</th>
+            <th>Remain Qnt</th>
+            <th>Status</th>
+          </ng-container>
         </tr>
       </thead>
       <tbody>
@@ -50,40 +81,70 @@
             {{ i + 1 }}
           </td>
           <td>
-            <input style="width: 130px;" type="text" [value]="product.name" [(ngModel)]="product.name"
-              (ngModelChange)="onProductNameChange(i, product.id, product.name)">
+            <input type="text" [value]="product.name" [(ngModel)]="product.name"
+              (ngModelChange)="onProductNameChange(i, product)" class="product-input">
+          </td>
+          <td>
+            <input type="text" [value]="product.unit" [(ngModel)]="product.unit"
+              (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
+          </td>
+          <td>
+            <input type="text" [value]="product.unitF" [(ngModel)]="product.unitF"
+              (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
           </td>
 
-          <!-- One cell per branch -->
-          <td *ngFor="let branch of branches">
-            <div *ngFor="let order of orders">
-              <div *ngIf="order.branchId === branch.id && order.productId === product.id" class="order-cell">
-                <input type="number" min="0" [value]="order.qnt" [(ngModel)]="order.qnt"
-                  (ngModelChange)="onOrderChange(order, $event)" class="quantity-input">
-
-                <select *ngIf="order.id" [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)"
-                  class="status-select">
-                  <option value="1">Received</option>
-                  <option value="2">Not Received</option>
-                </select>
+          <!-- Quantity and Status for each branch -->
+          <ng-container *ngFor="let branch of branches">
+            <td class="branch-cell">
+              <div *ngFor="let order of orders;let i1 = index">
+                <div *ngIf="order.branchId === branch.id && order.productId === product.id ">
+                  <input type="number" min="0" [value]="orders[i1].qnt" [(ngModel)]="orders[i1].qnt"
+                    (ngModelChange)="onOrderChange(orders[i1], $event)" class="quantity-input">
+                </div>
               </div>
-            </div>
-          </td>
+            </td>
+            <td class="branch-cell">
+              <div *ngFor="let order of orders;let i2 = index">
+                <div *ngIf="order.branchId === branch.id && order.productId === product.id">
+                  <input type="number" min="0" [value]="orders[i2].qntF" [(ngModel)]="orders[i2].qntF"
+                    (ngModelChange)="onOrderChange(orders[i2], $event)" class="quantity-input">
+                </div>
+              </div>
+            </td>
+            <td class="branch-cell">
+              <div *ngFor="let order of orders">
+                <div *ngIf="order.branchId === branch.id && order.productId === product.id && order.id">
+                  <select [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)" class="status-select">
+                    <option value="1">Received</option>
+                    <option value="2">Not Received</option>
+                  </select>
+                </div>
+              </div>
+            </td>
+          </ng-container>
         </tr>
 
         <!-- New Products to Add -->
         <tr *ngFor="let newProduct of productsToAdd; let i = index">
           <td>New</td>
           <td>
-            <input type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Enter product name">
+            <input type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Product name" class="product-input">
           </td>
-          <td *ngFor="let branch of branches" class="empty-cell"></td>
+          <td>
+            <input type="text" [(ngModel)]="productsToAdd[i].unit" placeholder="Unit" class="unit-input">
+          </td>
+          <td>
+            <input type="text" [(ngModel)]="productsToAdd[i].unitF" placeholder="UnitF" class="unit-input">
+          </td>
+          <td *ngFor="let branch of branches" colspan="3" class="empty-cell"></td>
         </tr>
 
         <!-- Add New Product Row -->
         <tr (click)="addToProductsToAdd()" class="add-row">
-          <td colspan="2">
-            + Add New Product
+          <td colspan="4">
+            <button class="add-button">
+              + Add New Product
+            </button>
           </td>
         </tr>
       </tbody>

@@ -26,6 +26,8 @@ import {
 } from "firebase/firestore";
 
 interface Product {
+  unitF: any;
+  unit: any;
   id: string;
   name: string;
 }
@@ -36,6 +38,7 @@ interface Branch {
 }
 
 interface Order {
+  qntF: any;
   id?: string;
   qnt: number;
   status: string;
@@ -64,6 +67,19 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  async onSelectChange(event: any) {
+    console.log('Selected option:', event);  // You can perform any action here
+    // Add more logic based on selected option
+    // if (event != this.selectedOption) {
+    console.log('Selected option:', event);  // You can perform any action here
+
+    this.isLoading = true
+    this.selectedOption = event
+    await this.getPreOrders();
+    await this.getData()
+    // Handle 'Ryad' selection
+    // }
+  }
   isLoading = false;
   isAdmin = false;
   selectedDate: Date | null = null;
@@ -75,10 +91,11 @@ export class DashboardComponent implements OnInit {
   preOrders: GroupedPreOrder[] = [];
   actualPreOrders: PreOrder[] = [];
 
-  productsToAdd: Partial<Product>[] = [];
+  productsToAdd: any = [];
   productsToUpdate: Product[] = [];
   ordersToAdd: Order[] = [];
   ordersToUpdate: Order[] = [];
+  selectedOption = "ryad"
 
   constructor(
     private router: Router,
@@ -136,10 +153,14 @@ export class DashboardComponent implements OnInit {
         this.fetchProducts(),
         this.fetchOrders(startTimestamp, endTimestamp)
       ]);
+      console.log("bb", branches);
+
 
       this.branches = branches;
       this.data = products;
       this.orders = orders;
+      console.log(orders);
+
 
       this.addMissingOrders();
     } catch (error) {
@@ -164,7 +185,10 @@ export class DashboardComponent implements OnInit {
 
   private async fetchBranches(): Promise<Branch[]> {
     const db = getFirestore();
-    const snapshot = await getDocs(collection(db, "branches"));
+    const q = query(collection(db, "branches"),
+      where("city", '==', this.selectedOption),
+    );
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({
       id: doc.id,
       name: doc.data()['name']
@@ -173,11 +197,15 @@ export class DashboardComponent implements OnInit {
 
   private async fetchProducts(): Promise<Product[]> {
     const db = getFirestore();
-    const q = query(collection(db, "products"), orderBy("createdAt", "asc"));
+    const q = query(collection(db, "products"),
+      where("city", '==', this.selectedOption),
+      orderBy("createdAt", "asc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({
       id: doc.id,
-      name: doc.data()['name']
+      name: doc.data()['name'],
+      unit: doc.data()['unit'],
+      unitF: doc.data()['unitF'],
     }));
   }
 
@@ -185,13 +213,19 @@ export class DashboardComponent implements OnInit {
     const db = getFirestore();
     const q = query(
       collection(db, "branchesOrders"),
+      where("city", '==', this.selectedOption),
       where("createdAt", ">=", start),
-      where("createdAt", "<=", end)
+      where("createdAt", "<=", end),
+      orderBy("createdAt")
     );
     const snapshot = await getDocs(q);
+    console.log('ss', snapshot);
+
     return snapshot.docs.map(doc => ({
       id: doc.id,
       qnt: doc.data()['qnt'],
+      qntF: doc.data()['qntF'],
+
       status: doc.data()['status']?.toString() || '',
       productId: doc.data()['productId'],
       branchId: doc.data()['branchId']
@@ -210,6 +244,8 @@ export class DashboardComponent implements OnInit {
         if (!exists) {
           newOrders.push({
             qnt: 0,
+            qntF: 0,
+
             status: '',
             productId: product.id,
             branchId: branch.id
@@ -223,7 +259,9 @@ export class DashboardComponent implements OnInit {
 
   async getPreOrders(): Promise<void> {
     const db = getFirestore();
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "orders"),
+      where("city", '==', this.selectedOption),
+      orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
     this.actualPreOrders = snapshot.docs.map(doc => ({
@@ -393,16 +431,18 @@ export class DashboardComponent implements OnInit {
 
   // Product CRUD operations
   addToProductsToAdd(): void {
-    this.productsToAdd.push({ name: "" });
+    this.productsToAdd.push({ name: "", unit: "", unitF: "", city: this.selectedOption });
   }
 
-  onProductNameChange(index: number, id: string, name: string): void {
-    const existingIndex = this.productsToUpdate.findIndex(p => p.id === id);
+  onProductNameChange(index: number, product: any): void {
+    const prod = this.productsToUpdate[index];
 
-    if (existingIndex !== -1) {
-      this.productsToUpdate[existingIndex].name = name;
+    console.log(prod);
+
+    if (prod) {
+      this.productsToUpdate[index] = product;
     } else {
-      this.productsToUpdate.push({ id, name });
+      this.productsToUpdate.push(product);
     }
   }
 
@@ -437,11 +477,14 @@ export class DashboardComponent implements OnInit {
 
   // Order operations
   onOrderChange(order: Order, qnt: number): void {
-    order.qnt = qnt;
+    // order.qnt = qnt;
+    console.log(order);
+
     this.updateOrderCollections(order);
   }
 
   onStatusChange(order: Order): void {
+
     this.updateOrderCollections(order);
   }
 
@@ -496,14 +539,20 @@ export class DashboardComponent implements OnInit {
     const db = getFirestore();
     const batch = writeBatch(db);
 
-    this.productsToAdd.forEach(product => {
+    this.productsToAdd.forEach((product: any) => {
       if (product.name) {
         // const tempId = doc(collection(db, 'products')).id;
         const docRef = doc(collection(db, 'products'));
+        // Remove the 'id' property from the product object
+        const { id, ...productWithoutId } = product;
+
+        // Now create the new object, including the product without the id and the createdAt timestamp
         const newData = {
-          name: product.name,
-          createdAt: Timestamp.fromDate(new Date())
-        }
+          ...productWithoutId,        // Include all product data except id
+          // city: this.selectedOption,
+          createdAt: Timestamp.fromDate(new Date()) // Add createdAt timestamp
+        };
+
         batch.set(docRef, newData);
         // this.data.push({
         //   id: tempId,
@@ -515,7 +564,8 @@ export class DashboardComponent implements OnInit {
 
     await batch.commit();
     this.productsToAdd = [];
-    window.location.reload();
+    // window.location.reload();
+    await this.getData()
 
 
   }
@@ -526,7 +576,10 @@ export class DashboardComponent implements OnInit {
 
     this.productsToUpdate.forEach(product => {
       const docRef = doc(db, 'products', product.id);
-      batch.update(docRef, { name: product.name });
+      const { id, ...productWithoutId } = product;
+
+      // Update the document with the remaining fields
+      batch.update(docRef, productWithoutId);
     });
 
     await batch.commit();
@@ -569,6 +622,7 @@ export class DashboardComponent implements OnInit {
         const branchesOrderRef = doc(collection(db, 'branchesOrders'));
         batch.set(branchesOrderRef, {
           ...order,
+          city: this.selectedOption,
           createdAt: this.selectedDate
         });
       }
@@ -625,10 +679,15 @@ export class DashboardComponent implements OnInit {
     this.ordersToUpdate.forEach(order => {
       if (order.id) {
         const docRef = doc(db, 'branchesOrders', order.id);
-        batch.update(docRef, {
-          qnt: order.qnt,
-          status: order.status
-        });
+
+        const { id, ...productWithoutId } = order;
+
+        // Now create the new object, including the product without the id and the createdAt timestamp
+        const newData = {
+          ...productWithoutId,        // Include all product data except id
+        };
+
+        batch.update(docRef, newData);
       }
     });
 
@@ -636,58 +695,148 @@ export class DashboardComponent implements OnInit {
     this.ordersToUpdate = [];
   }
 
+  // exportToExcel() {
+  //   // Prepare the data
+  //   const excelData = [];
+
+  //   // Add headers - separate columns for Quantity and Status for each branch
+  //   const headers = ['Product Name'];
+  //   this.branches.forEach(branch => {
+  //     headers.push(`${branch.name} Qty`);
+  //     headers.push(`${branch.name} Status`);
+  //   });
+  //   excelData.push(headers);
+
+  //   // Add product rows
+  //   this.data.forEach(product => {
+  //     const row = [product.name];
+
+  //     this.branches.forEach(branch => {
+  //       const order = this.orders.find(o =>
+  //         o.branchId === branch.id && o.productId === product.id
+  //       );
+
+  //       // Add quantity
+  //       row.push(order ? order.qnt.toString() : '');
+
+  //       // Add status with the specified logic
+  //       let statusText = '';
+  //       if (order) {
+  //         if (order.status === '1') {
+  //           statusText = 'Received';
+  //         } else if (order.status === '0') {
+  //           statusText = 'Not Received';
+  //         } else {
+  //           statusText = 'No Action';
+  //         }
+  //       }
+  //       row.push(statusText);
+  //     });
+
+  //     excelData.push(row);
+  //   });
+
+  //   // Create worksheet
+  //   const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(excelData);
+
+  //   // Create workbook
+  //   const wb: XLSX.WorkBook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+
+  //   // Generate file name
+  //   const fileName = `orders_${this.selectedDate?.toISOString().split('T')[0] || 'all'}.xlsx`;
+
+  //   // Export to Excel
+  //   XLSX.writeFile(wb, fileName);
+  // }
+
+
   exportToExcel() {
-    // Prepare the data
-    const excelData = [];
+    // Prepare the worksheet data
+    const wsData = this.prepareWorksheetData();
 
-    // Add headers - separate columns for Quantity and Status for each branch
-    const headers = ['Product Name'];
+    // Create worksheet with correct headers
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 5 },   // #
+      { wch: 25 },  // Product Name
+      { wch: 15 },  // Requested Unit
+      { wch: 15 },  // Remain Unit
+      ...Array(this.branches.length * 3).fill({ wch: 12 }) // Branch columns
+    ];
+
+    // Set row heights
+    ws['!rows'] = [{ hpt: 20 }, { hpt: 25 }]; // Header rows
+
+    // Create workbook
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+
+    // Generate Excel file
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Orders_Export_${date}.xlsx`);
+  }
+
+  prepareWorksheetData(): any[][] {
+    const wsData = [];
+
+    // First header row (branch names)
+    const header1 = ['', '', '', ''];
     this.branches.forEach(branch => {
-      headers.push(`${branch.name} Qty`);
-      headers.push(`${branch.name} Status`);
+      header1.push(branch.name, '', ''); // Main branch header spans 3 columns
     });
-    excelData.push(headers);
+    wsData.push(header1);
 
-    // Add product rows
-    this.data.forEach(product => {
-      const row = [product.name];
+    // Second header row (column titles)
+    const header2 = ['#', 'Product Name', 'Requested Unit', 'Remain Unit'];
+    this.branches.forEach(() => {
+      header2.push('Requested Qnt', 'Remain Qnt', 'Status');
+    });
+    wsData.push(header2);
+
+    // Add existing products
+    this.data.forEach((product, i) => {
+      const row = [
+        i + 1,
+        product.name,
+        product.unit,
+        product.unitF
+      ];
 
       this.branches.forEach(branch => {
         const order = this.orders.find(o =>
           o.branchId === branch.id && o.productId === product.id
         );
 
-        // Add quantity
-        row.push(order ? order.qnt.toString() : '');
-
-        // Add status with the specified logic
-        let statusText = '';
-        if (order) {
-          if (order.status === '1') {
-            statusText = 'Received';
-          } else if (order.status === '0') {
-            statusText = 'Not Received';
-          } else {
-            statusText = 'No Action';
-          }
-        }
-        row.push(statusText);
+        row.push(
+          order?.qnt || '',
+          order?.qntF || '',
+          order?.status === '1' ? 'Received' : (order!.status === '0' ? 'No Action' : (order!.status === '0' ? 'Not Recieved' : ''))
+        );
       });
 
-      excelData.push(row);
+      wsData.push(row);
     });
 
-    // Create worksheet
-    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(excelData);
+    // Add new products
+    this.productsToAdd.forEach((newProduct: any) => {
+      const row = [
+        'New',
+        newProduct.name || '',
+        newProduct.unit || '',
+        newProduct.unitF || ''
+      ];
 
-    // Create workbook
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+      // Empty cells for branches
+      this.branches.forEach(() => {
+        row.push('', '', '');
+      });
 
-    // Generate file name
-    const fileName = `orders_${this.selectedDate?.toISOString().split('T')[0] || 'all'}.xlsx`;
+      wsData.push(row);
+    });
 
-    // Export to Excel
-    XLSX.writeFile(wb, fileName);
+    return wsData;
   }
 }

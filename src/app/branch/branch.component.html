@@ -1,114 +1,96 @@
+<!-- Loading Overlay -->
 <div class="loading-overlay" *ngIf="isLoading">
-    <div class="spinner"></div>
+    <div class="spinner">Loading...</div>
 </div>
-
 
 <!-- Date Selection Buttons -->
 <div *ngFor="let item of preOrders; let i = index">
-    <button (click)="onSelectDate(item.createdAt)" style="width: -webkit-fill-available;"
+    <button (click)="onSelectDate(item.createdAt)" style="width: 100%;"
         [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
         {{item.createdAt?.toDate() | date:'mediumDate'}}
     </button>
 </div>
 
-
+<!-- Add New Order Button -->
 <button *ngIf="isToAddMode === false && ifCurrentDateInPreOrders1 === false " (click)="addNewOrder()"
-    style="width: -webkit-fill-available;">
+    style="width: 100%;">
     Add New Order
 </button>
 
+<!-- Selected Date Info -->
 <div *ngIf="selectedDate" style="text-align: center;">
     <hr>
     {{selectedDate.toDate() | date:'mediumDate'}}
     <div *ngIf="branch">
         {{branch.data.name}}
     </div>
-
 </div>
 
 <!-- Orders Table -->
 <table *ngIf="branch" class="styled-table">
     <thead>
-        <tr>
-            <!-- <th>SI NO</th> -->
+        <tr style="background-color: rgb(75, 79, 145);">
             <th>الاصناف</th>
-            <th>
-                <div>
-                    الكمية
-                </div>
-                <div>
-                    المتوفرة
-                </div>
+            <th style="width: 28px;">
+                <div>الكمية</div>
+                <div>المتوفرة</div>
             </th>
-            <th>
-                الوحدة
+            <th>الوحدة</th>
+            <th style="width: 28px;">
+                <div>الكمية</div>
+                <div>المطلوبة</div>
             </th>
-            <th>
-                <div>
-                    الكمية
-                </div>
-                <div>
-                    المطلوبة
-                </div>
-            </th>
-            <th>
-                حالة الاستلام
-            </th>
-
-
+            <th>الوحدة</th>
+            <th *ngIf="isPreSent === true">حالة الاستلام</th>
         </tr>
     </thead>
-    <tbody>
-        <tr *ngFor="let item of combinedData; let i = index">
-            <!-- <td>{{ i + 1 }}</td> -->
+    <tbody >
+        <tr  *ngFor="let item of combinedData; let i = index"
+        [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+        [style.border-bottom]="'1px solid #dee2e6'"
+        >
+            <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
+
             <td>
-                {{item.name}}
-                <!-- <input style="width: 82px;" type="text" [value]="" disabled> -->
+                <input (ngModelChange)="onQntFChange(item)" *ngIf="isPreSent === false" class="quantity-input"
+                    [(ngModel)]="combinedData[i].qntF" type="number">
+                <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
             </td>
 
             <td>
-                <input *ngIf="isPreSent === false" style="width: 20px;height: 5px;" class="quantity-input"
-                    [(ngModel)]="item.qntF" (ngModelChange)="onQntFChange(item)" type="number">
-                <div *ngIf="isPreSent === true">{{item.qntF}}</div>
+                {{item.unitF}}
             </td>
-            <td>
-                كيلو
-            </td>
-            <td>
-                <input *ngIf="isPreSent === false" style="width: 20px;height: 5px;" [(ngModel)]="item.qnt"
-                    (ngModelChange)="onQntChange(item)" class="quantity-input" type="number">
-                <div *ngIf="isPreSent === true">{{item.qnt}}</div>
 
-            </td>
             <td>
+                <input (ngModelChange)="onQntChange(item)" *ngIf="isPreSent === false" class="quantity-input"
+                    [(ngModel)]="combinedData[i].qnt" type="number">
+                <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
+            </td>
+
+            <td>
+                {{item.unit}}
+            </td>
+
+            <td *ngIf="isPreSent === true">
                 <span *ngIf="item.qnt > 0 && !isItemInAdd(item)" class="status-dropdown-container">
                     <label class="status-dropdown-label">
-                        <select [disabled]="item.status !== '0'" [(ngModel)]="item.status " [ngClass]="{
-                            'green-bg': item.status === '1',
-                            'red-bg': item.status === '2',
-                            'white-bg': item.status !== '1' && item.status !== '2'
-                        }" (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                            <option value='1'>تم استلامها</option>
-                            <option value='2'>لم يتم استلامها</option>
+                        <select [disabled]="item.status !== '0'" [(ngModel)]="item.status"
+                            (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+                            <option value="1">تم استلامها</option>
+                            <option value="2">لم يتم استلامها</option>
                         </select>
                     </label>
                 </span>
             </td>
-
         </tr>
     </tbody>
 </table>
 
 <!-- Action Buttons -->
-<button style="width: -webkit-fill-available;" *ngIf="ordersToAdd.length > 0" (click)="addOrders()"
-    [disabled]="isLoading">
+<button style="width: 100%;" *ngIf="ordersToAdd.length > 0" (click)="addOrders()" [disabled]="isLoading">
     Send Order
 </button>
 
 <button *ngIf="ordersToUpdate.length > 0" (click)="saveUpdates()" [disabled]="isLoading">
     Save Updates
 </button>
-
-<!-- <button style="width: -webkit-fill-available;" (click)="add()" *ngIf="ordersToAdd.length > 0">
-    Send Order
-</button> -->
