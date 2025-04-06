@@ -22,6 +22,9 @@
   /* background-color: #fff; */
   border: 1px solid #ddd;
 }
+.alert-red {
+  border: 1px solid red;
+}
 
 /* Ensure inputs, selects, and buttons fill available width */
 input, select, button {

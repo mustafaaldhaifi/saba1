@@ -52,8 +52,9 @@
             <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
             <td>
-                <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false"
-                    class="quantity-input" [(ngModel)]="combinedData[i].qntF" type="number" required>
+                <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false" #qntFInput="ngModel"
+                    [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="quantity-input"
+                    [(ngModel)]="combinedData[i].qntF" type="number" required>
                 <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
             </td>
 
@@ -62,8 +63,9 @@
             </td>
 
             <td>
-                <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false"
-                    class="quantity-input" [(ngModel)]="combinedData[i].qnt" type="number" required>
+                <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false" #qntInput="ngModel"
+                    [class.alert-red]="qntInput.invalid && qntInput.touched" class="quantity-input"
+                    [(ngModel)]="combinedData[i].qnt" type="number" required>
                 <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
             </td>
 

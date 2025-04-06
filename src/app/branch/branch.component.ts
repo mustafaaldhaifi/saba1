@@ -188,6 +188,21 @@ export class BranchComponent {
 
   }
 
+  isValidQuantity(value: any): boolean {
+    return value !== null && 
+           value !== undefined && 
+           !isNaN(parseFloat(value)) && 
+           isFinite(value) && 
+           parseFloat(value) >= 0;
+  }
+  
+  // Blur handler
+  validateQuantity(item: any, field: string): void {
+    if (!this.isValidQuantity(item[field])) {
+      item[field] = null; // Reset to invalid state
+    }
+  }
+
   isFullFilled(): boolean {
     // Check if combinedData exists and is an array
     if (!this.ordersToAdd || !Array.isArray(this.combinedData)) {
