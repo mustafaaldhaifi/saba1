@@ -152,28 +152,63 @@ export class BranchComponent {
 
   }
 
-  onQntChange(item: any) {
-    if (item.qnt <= 0) {
-      return
-    }
-    if (this.isToAddMode == true) {
-      this.addToOrdersToAdd(item);
-    }
-    else {
-      this.addToOrdersToUpdate(item)
-    }
-  }
+  // onQntChange(item: any) {
+  //   if (item.qnt <= 0) {
+  //     return
+  //   }
+  //   if (this.isToAddMode == true) {
+  //     this.addToOrdersToAdd(item);
+  //   }
+  //   else {
+  //     this.addToOrdersToUpdate(item)
+  //   }
+  // }
   onQntFChange(item: any) {
 
-    if (item.qntF <= 0) {
-      return
-    }
+
+
     if (this.isToAddMode == true) {
       this.addToOrdersToAdd(item);
     }
     else {
       this.addToOrdersToUpdate(item)
     }
+
+    // if (item) {
+
+    // } else {
+    //   return
+    // }
+    // console.log();
+
+    // if (item.qntF < 0) {
+    //   console.log("new", item);
+    //   return
+    // }
+
+  }
+
+  isFullFilled(): boolean {
+    // Check if combinedData exists and is an array
+    if (!this.ordersToAdd || !Array.isArray(this.combinedData)) {
+      return false;
+    }
+
+    // Use every() instead of forEach for proper early termination
+    const a = this.combinedData.every((d: any) => {
+      return this.isPositiveNumber(d.qnt) && this.isPositiveNumber(d.qntF);
+    });
+    return a
+  }
+
+  isNumber(value: any): boolean {
+    // Check for both number type and numeric string values
+    return !isNaN(parseFloat(value)) && isFinite(value);
+  }
+  isPositiveNumber(value: any): boolean {
+    if (!this.isNumber(value)) return false;
+    const num = parseFloat(value);
+    return num >= 0;
   }
 
   addToOrdersToAdd(order: any) {
@@ -182,6 +217,8 @@ export class BranchComponent {
 
     const existingProductIndex = this.ordersToAdd.findIndex((p: any) => p.productId === order.productId);
     console.log("ooo2", existingProductIndex);
+    console.log("ooo3", this.ordersToAdd);
+
 
     if (existingProductIndex !== -1) {
       this.ordersToAdd[existingProductIndex] = order;
@@ -317,12 +354,12 @@ export class BranchComponent {
     });
   }
 
-    logout(): void {
-      const auth = getAuth();
-      signOut(auth).then(() => {
-        this.router.navigate(['/login']);
-      }).catch(console.error);
-    }
+  logout(): void {
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      this.router.navigate(['/login']);
+    }).catch(console.error);
+  }
 
   async getPreOrders() {
     const db = getFirestore();
@@ -399,7 +436,7 @@ export class BranchComponent {
           productId: element.productId,
           qnt: element.qnt,
           qntF: element.qntF,
-        city: this.branch.data.city,
+          city: this.branch.data.city,
 
           status: '0',
           createdAt: this.currentTimestamp // Better than manual timestamp
@@ -469,6 +506,8 @@ export class BranchComponent {
     const db = getFirestore();
     const n = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 
+    console.log("n", n);
+
     const q = query(
       collection(db, "branches"),
       where("name", "==", n),
@@ -476,7 +515,13 @@ export class BranchComponent {
     );
 
     const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+      this.router.navigate(['/login']);
+    }
     const doc = querySnapshot.docs[0];
+
+    console.log(doc);
+
 
     return { id: doc.id, data: doc.data() };
   }

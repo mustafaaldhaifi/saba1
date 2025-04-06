@@ -52,8 +52,8 @@
             <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
             <td>
-                <input (ngModelChange)="onQntFChange(item)" *ngIf="isPreSent === false" class="quantity-input"
-                    [(ngModel)]="combinedData[i].qntF" type="number">
+                <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false"
+                    class="quantity-input" [(ngModel)]="combinedData[i].qntF" type="number" required>
                 <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
             </td>
 
@@ -62,8 +62,8 @@
             </td>
 
             <td>
-                <input (ngModelChange)="onQntChange(item)" *ngIf="isPreSent === false" class="quantity-input"
-                    [(ngModel)]="combinedData[i].qnt" type="number">
+                <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false"
+                    class="quantity-input" [(ngModel)]="combinedData[i].qnt" type="number" required>
                 <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
             </td>
 
@@ -87,7 +87,7 @@
 </table>
 
 <!-- Action Buttons -->
-<button style="width: 100%;" *ngIf="ordersToAdd.length > 0" (click)="addOrders()" [disabled]="isLoading">
+<button style="width: 100%;" *ngIf="isFullFilled() && isToAddMode" (click)="addOrders()" [disabled]="isLoading">
     Send Order
 </button>
 
