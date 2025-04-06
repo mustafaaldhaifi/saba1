@@ -10,7 +10,9 @@
         {{item.createdAt?.toDate() | date:'mediumDate'}}
     </button>
 </div>
-
+<a (click)="logout()" class="power-off-icon" style="color: red;">
+    <i class="fas fa-power-off"></i>
+</a>
 <!-- Add New Order Button -->
 <button *ngIf="isToAddMode === false && ifCurrentDateInPreOrders1 === false " (click)="addNewOrder()"
     style="width: 100%;">
@@ -44,11 +46,9 @@
             <th *ngIf="isPreSent === true">حالة الاستلام</th>
         </tr>
     </thead>
-    <tbody >
-        <tr  *ngFor="let item of combinedData; let i = index"
-        [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
-        [style.border-bottom]="'1px solid #dee2e6'"
-        >
+    <tbody>
+        <tr *ngFor="let item of combinedData; let i = index"
+            [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'" [style.border-bottom]="'1px solid #dee2e6'">
             <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
             <td>

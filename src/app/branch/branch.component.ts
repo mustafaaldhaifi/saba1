@@ -2,7 +2,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { addDoc, collection, doc, getDocs, getFirestore, limit, orderBy, query, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 
 @Component({
@@ -316,6 +316,13 @@ export class BranchComponent {
       };
     });
   }
+
+    logout(): void {
+      const auth = getAuth();
+      signOut(auth).then(() => {
+        this.router.navigate(['/login']);
+      }).catch(console.error);
+    }
 
   async getPreOrders() {
     const db = getFirestore();

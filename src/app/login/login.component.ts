@@ -66,6 +66,10 @@ export class LoginComponent {
 
   async ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
+
+      if (localStorage.getItem("pass")) {
+        this.password = localStorage.getItem("pass")!
+      }
       const auth = getAuth();
       onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -164,6 +168,7 @@ export class LoginComponent {
         else {
           this.router.navigate(['/branch']);
         }
+        localStorage.setItem("pass", this.password)
         // Navigate to a dashboard or another page
         // this.router.navigate(['/dashboard']);  // Adjust based on your routing
       })
