@@ -22,7 +22,8 @@ import {
   where,
   writeBatch,
   addDoc,
-  deleteDoc
+  deleteDoc,
+  serverTimestamp
 } from "firebase/firestore";
 
 interface Product {
@@ -270,6 +271,8 @@ export class DashboardComponent implements OnInit {
       createdAt: doc.data()['createdAt']
     }));
 
+    console.log("act", this.actualPreOrders);
+
 
     this.groupPreOrdersByDate();
 
@@ -400,7 +403,17 @@ export class DashboardComponent implements OnInit {
     const grouped = new Map<string, GroupedPreOrder>();
 
     this.actualPreOrders.forEach(order => {
-      const dateKey = order.createdAt.toDate().toISOString().split('T')[0];
+      // const dateKey = order.createdAt.toDate().toISOString().split('T')[0];
+      const date = order.createdAt.toDate();
+      const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+      console.log("d1d", order);
+
+      console.log("dd", dateKey);
+      console.log("dd2", order.createdAt.toDate());
+
+      console.log("dd3", order.createdAt.toDate().toISOString());
+
 
       if (!grouped.has(dateKey)) {
         grouped.set(dateKey, {
@@ -431,7 +444,7 @@ export class DashboardComponent implements OnInit {
 
   // Product CRUD operations
   addToProductsToAdd(): void {
-    this.productsToAdd.push({ name: "", unit: "", unitF: "", city: this.selectedOption });
+    this.productsToAdd.push({ name: "", unit: "", unitF: "", city: this.selectedOption, createdAt: Timestamp.now() });
   }
 
   onProductNameChange(index: number, product: any): void {
@@ -538,8 +551,9 @@ export class DashboardComponent implements OnInit {
   private async addProducts(): Promise<void> {
     const db = getFirestore();
     const batch = writeBatch(db);
+    let timeOffset = 0;
 
-    this.productsToAdd.forEach((product: any) => {
+    this.productsToAdd.forEach(async (product: any) => {
       if (product.name) {
         // const tempId = doc(collection(db, 'products')).id;
         const docRef = doc(collection(db, 'products'));
@@ -550,10 +564,13 @@ export class DashboardComponent implements OnInit {
         const newData = {
           ...productWithoutId,        // Include all product data except id
           // city: this.selectedOption,
-          createdAt: Timestamp.fromDate(new Date()) // Add createdAt timestamp
+          // createdAt: Timestamp.now() // Add createdAt timestamp
+
         };
+        // await new Promise(resolve => setTimeout(resolve, 5)); // 10ms delay
 
         batch.set(docRef, newData);
+        timeOffset += 1;
         // this.data.push({
         //   id: tempId,
         //   name: product.name,

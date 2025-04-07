@@ -1,16 +1,11 @@
 import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
-
-// import { RouterModule, Routes, RouterLink, Route } from '@angular/router';
-// import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../env';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
 import { Router } from '@angular/router';
-
-// import { provideRouter } from '@angular/router';
 
 @Component({
   selector: 'app-root',
@@ -70,6 +65,9 @@ export class LoginComponent {
       if (localStorage.getItem("pass")) {
         this.password = localStorage.getItem("pass")!
       }
+      if (localStorage.getItem("usr")) {
+        this.selectedOption = localStorage.getItem("usr")!
+      }
       const auth = getAuth();
       onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -77,6 +75,10 @@ export class LoginComponent {
           console.log('User is logged in:', user);
           // this.router.navigate(['/dashboard']);  // Adjust as needed
           this.isLogin = true
+          const targetRoute = user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2"
+            ? '/dashboard'
+            : '/branch';
+          this.router.navigate([targetRoute]);
         } else {
           // If the user is not logged in, navigate to login page
           console.log('No user is logged in');
@@ -169,6 +171,8 @@ export class LoginComponent {
           this.router.navigate(['/branch']);
         }
         localStorage.setItem("pass", this.password)
+        localStorage.setItem("usr", this.selectedOption)
+
         // Navigate to a dashboard or another page
         // this.router.navigate(['/dashboard']);  // Adjust based on your routing
       })

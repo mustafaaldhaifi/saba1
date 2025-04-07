@@ -14,8 +14,7 @@ import { addDoc, collection, doc, getDocs, getFirestore, limit, orderBy, query, 
 })
 export class BranchComponent {
 
-  addNewOrder
-    () {
+  addNewOrder() {
     this.selectedDate = this.currentTimestamp
     this.combinedData = this.data.map((product: any) => {
       const order = this.branchOrders.find((o: any) => o.productId === product.id);
@@ -41,36 +40,8 @@ export class BranchComponent {
     this.isToAddMode = true
     this.isPreSent = false
   }
-  // async saveUpdates() {
-  //   console.log("ttttt", this.ordersToUpdate);
-
-  //   this.isLoading = true
-  //   const db = getFirestore();
-
-  //   // Loop over the products to update
-  //   for (const element of this.ordersToUpdate) {
-  //     console.log("frfrfr", element);
-
-  //     const productRef = doc(db, "branchesOrders", element.id);
-
-  //     // Exclude the 'id' field from the update data using destructuring
-  //     const { id, ...updatedData } = element; // This removes `id` from the object
-
-  //     try {
-  //       // Update the product in Firestore with the fields (without `id`)
-  //       await updateDoc(productRef, updatedData);
-  //       console.log(`Order with ID: ${element.id} updated successfully.`);
-  //       this.isLoading = false
-  //     } catch (e) {
-  //       this.isLoading = false
-
-  //       console.error("Error updating product: ", e);
-  //     }
-  //   }
 
   async saveUpdates() {
-    console.log("ttttt", this.ordersToUpdate);
-
     this.isLoading = true;
     const db = getFirestore();
 
@@ -79,8 +50,6 @@ export class BranchComponent {
 
     // Loop over the orders to update
     for (const element of this.ordersToUpdate) {
-      console.log("frfrfr", element);
-
       const productRef = doc(db, "branchesOrders", element.id);
 
       // Exclude the 'id' field from the update data using destructuring
@@ -115,8 +84,6 @@ export class BranchComponent {
   }
 
   ifCurrentDateInPreOrders1 = false
-  // Check if the current date is within a range from createdAt
-
   ordersToAdd: any = [];
   ordersToUpdate: any = [];
 
@@ -152,50 +119,24 @@ export class BranchComponent {
 
   }
 
-  // onQntChange(item: any) {
-  //   if (item.qnt <= 0) {
-  //     return
-  //   }
-  //   if (this.isToAddMode == true) {
-  //     this.addToOrdersToAdd(item);
-  //   }
-  //   else {
-  //     this.addToOrdersToUpdate(item)
-  //   }
-  // }
+
   onQntFChange(item: any) {
-
-
-
     if (this.isToAddMode == true) {
       this.addToOrdersToAdd(item);
     }
     else {
       this.addToOrdersToUpdate(item)
     }
-
-    // if (item) {
-
-    // } else {
-    //   return
-    // }
-    // console.log();
-
-    // if (item.qntF < 0) {
-    //   console.log("new", item);
-    //   return
-    // }
-
   }
 
   isValidQuantity(value: any): boolean {
-    return value !== null && 
-           value !== undefined && 
-           !isNaN(parseFloat(value)) && 
-           isFinite(value) && 
-           parseFloat(value) >= 0;
+    return value !== null &&
+      value !== undefined &&
+      !isNaN(parseFloat(value)) &&
+      isFinite(value) &&
+      parseFloat(value) >= 0;
   }
-  
+
   // Blur handler
   validateQuantity(item: any, field: string): void {
     if (!this.isValidQuantity(item[field])) {
@@ -270,7 +211,6 @@ export class BranchComponent {
             this.getProducts(),
             // this.getUnits(),
             this.getPreOrders(),
-            // this.fetchOrders(startTimestamp, endTimestamp)
           ]);
 
           // await this.getProducts();
@@ -395,11 +335,19 @@ export class BranchComponent {
 
     // Check if the current timestamp is in the list
 
-    const currentDateStr = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD
+    // const currentDateStr = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD
 
-    this.ifCurrentDateInPreOrders1 = this.preOrders.some(
-      (o: any) => o.createdAt.toDate().toISOString().split('T')[0] === currentDateStr
-    );
+    const date = new Date()
+    const currentDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+    // this.ifCurrentDateInPreOrders1 = this.preOrders.some(
+    //   (o: any) => o.createdAt.toDate().toISOString().split('T')[0] === currentDateStr
+    // );
+    this.ifCurrentDateInPreOrders1 = this.preOrders.some((o: any) => {
+      const orderDate = o.createdAt.toDate();
+      const orderDateStr = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
+      return orderDateStr === currentDateStr;
+    });
   }
 
   async getBranchOrders(startTimestamp: Timestamp, endTimestamp: Timestamp) {
