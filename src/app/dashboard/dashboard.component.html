@@ -7,7 +7,7 @@
     <button class="btn logout-btn" (click)="logout()">
       Logout
     </button>
-    <button *ngIf="hasChanges()" class="btn save-btn" (click)="saveChanges()">
+    <button *ngIf="ifHasChanges == true" class="btn save-btn" (click)="saveChanges()">
       Save Changes
     </button>
   </div>
@@ -21,14 +21,6 @@
       </select>
     </div>
   </div>
-
-
-  <!-- <div>
-    <select [(ngModel)]="selectedOption" (ngModelChange)="onSelectChange($event)">
-      <option value="ryad">الرياض</option>
-      <option value="other">خارج الرياض</option>
-    </select>
-  </div> -->
   <!-- Date Selection -->
   <div class="date-selection">
     <h3>Select Order Date</h3>

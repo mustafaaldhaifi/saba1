@@ -121,6 +121,29 @@ export class BranchComponent {
 
 
   onQntFChange(item: any) {
+
+    if (this.isToAddMode == true) {
+      this.addToOrdersToAdd(item);
+    }
+    else {
+      this.addToOrdersToUpdate(item)
+    }
+  }
+  onQntChange(i: any, item: any) {
+
+    // // console.log('iiii', i);
+
+    // console.log('itttt', item);
+    // console.log('ittttrrr', item.qnt);
+
+
+    if (this.isPositiveNumber(this.combinedData[i].qnt) && this.combinedData[i].qnt > 9) {
+      const confirmed = confirm(`    انت صاحي متأكد الكمية ${this.combinedData[i].qnt}صحيحة ؟`);
+      if (!confirmed) {
+        this.combinedData[i].qnt = ''
+        return
+      };
+    }
     if (this.isToAddMode == true) {
       this.addToOrdersToAdd(item);
     }
@@ -420,7 +443,9 @@ export class BranchComponent {
 
       this.ordersToAdd = [];
       // alert('All orders added successfully in one operation!');
-      window.location.reload()
+      alert("يعطيك العافية تم الارسال بنجاح")
+      await this.getBranch()
+      // window.location.reload()
     } catch (e) {
       console.error("Batch write failed: ", e);
       alert('No orders were added. Please try again.');

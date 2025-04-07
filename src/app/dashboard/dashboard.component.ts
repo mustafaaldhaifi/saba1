@@ -98,6 +98,8 @@ export class DashboardComponent implements OnInit {
   ordersToUpdate: Order[] = [];
   selectedOption = "ryad"
 
+  ifHasChanges = false
+
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -147,6 +149,8 @@ export class DashboardComponent implements OnInit {
       await this.getPreOrders();
 
       this.selectedDate = date || Timestamp.now().toDate();
+      console.log("seleele", this.selectedDate);
+
       const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(this.selectedDate);
 
       const [branches, products, orders] = await Promise.all([
@@ -172,16 +176,28 @@ export class DashboardComponent implements OnInit {
   }
 
   private getDateRangeTimestamps(date: Date): { startTimestamp: Timestamp; endTimestamp: Timestamp } {
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
+    // const startOfDay = new Date(date);
+    // startOfDay.setUTCHours(0, 0, 0, 0);
 
-    const endOfDay = new Date(date);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    // const endOfDay = new Date(date);
+    // endOfDay.setUTCHours(23, 59, 59, 999);
 
-    return {
-      startTimestamp: Timestamp.fromDate(startOfDay),
-      endTimestamp: Timestamp.fromDate(endOfDay)
-    };
+    // return {
+    //   startTimestamp: Timestamp.fromDate(startOfDay),
+    //   endTimestamp: Timestamp.fromDate(endOfDay)
+    // };
+
+     // Get the date at midnight local time
+  const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  // Get the date at 23:59:59.999 local time
+  const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+
+  return {
+    startTimestamp: new Timestamp(Math.floor(startOfDay.getTime() / 1000), 0),
+    endTimestamp: new Timestamp(Math.floor(endOfDay.getTime() / 1000), 999000000)
+  };
+    
   }
 
   private async fetchBranches(): Promise<Branch[]> {
@@ -211,6 +227,14 @@ export class DashboardComponent implements OnInit {
   }
 
   private async fetchOrders(start: Timestamp, end: Timestamp): Promise<Order[]> {
+    console.log("start1", start);
+    console.log("end1", end)
+    console.log("start", start.toDate());
+    console.log("end", end.toDate());
+    console.log("city", this.selectedOption);
+
+
+
     const db = getFirestore();
     const q = query(
       collection(db, "branchesOrders"),
@@ -445,6 +469,7 @@ export class DashboardComponent implements OnInit {
   // Product CRUD operations
   addToProductsToAdd(): void {
     this.productsToAdd.push({ name: "", unit: "", unitF: "", city: this.selectedOption, createdAt: Timestamp.now() });
+    this.ifHasChanges = true
   }
 
   onProductNameChange(index: number, product: any): void {
@@ -457,6 +482,8 @@ export class DashboardComponent implements OnInit {
     } else {
       this.productsToUpdate.push(product);
     }
+    this.ifHasChanges = true
+
   }
 
   async deleteProduct(id: string): Promise<void> {
@@ -494,11 +521,15 @@ export class DashboardComponent implements OnInit {
     console.log(order);
 
     this.updateOrderCollections(order);
+    this.ifHasChanges = true
+
   }
 
   onStatusChange(order: Order): void {
 
     this.updateOrderCollections(order);
+    this.ifHasChanges = true
+
   }
 
   private updateOrderCollections(order: Order): void {

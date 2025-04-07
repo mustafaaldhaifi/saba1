@@ -28,65 +28,69 @@
     </div>
 </div>
 
-<!-- Orders Table -->
-<table *ngIf="branch" class="styled-table" style="position: relative;">
-    <thead style="position: sticky; top: 0; z-index: 100; ">
-        <tr style="background-color: rgb(75, 79, 145);">
-            <th>الاصناف</th>
-            <th style="width: 28px;">
-                <div>الكمية</div>
-                <div>المتوفرة</div>
-            </th>
-            <th>الوحدة</th>
-            <th style="width: 28px;">
-                <div>الكمية</div>
-                <div>المطلوبة</div>
-            </th>
-            <th>الوحدة</th>
-            <th *ngIf="isPreSent === true">حالة الاستلام</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr *ngFor="let item of combinedData; let i = index"
-            [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'" [style.border-bottom]="'1px solid #dee2e6'">
-            <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
+<div class="table fixed-header">
+    <!-- Orders Table -->
+    <table *ngIf="branch" class="styled-table">
+        <thead>
+            <tr class="fixed-header">
+                <th>الاصناف</th>
+                <th style="width: 28px;">
+                    <div>الكمية</div>
+                    <div>المتوفرة</div>
+                </th>
+                <th>الوحدة</th>
+                <th style="width: 28px;">
+                    <div>الكمية</div>
+                    <div>المطلوبة</div>
+                </th>
+                <th>الوحدة</th>
+                <th *ngIf="isPreSent === true">حالة الاستلام</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let item of combinedData; let i = index"
+                [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                [style.border-bottom]="'1px solid #dee2e6'">
+                <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
-            <td>
-                <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false" #qntFInput="ngModel"
-                    [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
-                    [(ngModel)]="combinedData[i].qntF" type="number" required>
-                <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
-            </td>
+                <td>
+                    <input (input)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false"
+                        #qntFInput="ngModel" [class.alert-red]="qntFInput.invalid && qntFInput.touched"
+                        class="sticky-input" [(ngModel)]="combinedData[i].qntF" type="number" required>
+                    <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
+                </td>
 
-            <td>
-                {{item.unitF}}
-            </td>
+                <td>
+                    {{item.unitF}}
+                </td>
 
-            <td>
-                <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false" #qntInput="ngModel"
-                    [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
-                    [(ngModel)]="combinedData[i].qnt" type="number" required>
-                <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
-            </td>
+                <td>
+                    <input (input)="onQntChange(i,combinedData[i])" *ngIf="isPreSent === false"
+                        #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
+                        class="sticky-input" [(ngModel)]="combinedData[i].qnt" type="number" required>
+                    <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
+                </td>
 
-            <td>
-                {{item.unit}}
-            </td>
+                <td>
+                    {{item.unit}}
+                </td>
 
-            <td *ngIf="isPreSent === true">
-                <span *ngIf="item.qnt > 0 && !isItemInAdd(item)" class="status-dropdown-container">
-                    <label class="status-dropdown-label">
-                        <select [disabled]="item.status !== '0'" [(ngModel)]="item.status"
-                            (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                            <option value="1">تم استلامها</option>
-                            <option value="2">لم يتم استلامها</option>
-                        </select>
-                    </label>
-                </span>
-            </td>
-        </tr>
-    </tbody>
-</table>
+                <td *ngIf="isPreSent === true">
+                    <span *ngIf="item.qnt > 0 && !isItemInAdd(item)" class="status-dropdown-container">
+                        <label class="status-dropdown-label">
+                            <select [disabled]="item.status !== '0'" [(ngModel)]="item.status"
+                                (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+                                <option value="1">تم استلامها</option>
+                                <option value="2">لم يتم استلامها</option>
+                            </select>
+                        </label>
+                    </span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
 
 <!-- Action Buttons -->
 <button style="width: 100%;" *ngIf="isFullFilled() && isToAddMode" (click)="addOrders()" [disabled]="isLoading">
@@ -96,3 +100,34 @@
 <button *ngIf="ordersToUpdate.length > 0" (click)="saveUpdates()" [disabled]="isLoading">
     Save Updates
 </button>
+
+<!-- <table class="table">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">First</th>
+            <th scope="col">Last</th>
+            <th scope="col">Handle</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th scope="row">1</th>
+            <td>Mark</td>
+            <td>Otto</td>
+            <td>mdo</td>
+        </tr>
+        <tr>
+            <th scope="row">2</th>
+            <td>Jacob</td>
+            <td>Thornton</td>
+            <td>fat</td>
+        </tr>
+        <tr>
+            <th scope="row">3</th>
+            <td>John</td>
+            <td>Doe</td>
+            <td>social</td>
+        </tr>
+    </tbody>
+</table> -->

@@ -1,17 +1,21 @@
 /* General Table Styling */
-*{
+* {
   font-weight: bold;
 }
+
 .styled-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px; /* Smaller text for better fitting */
+  font-size: 12px;
+  /* Smaller text for better fitting */
 }
 
-.styled-table th, .styled-table td {
+.styled-table th,
+.styled-table td {
   padding: 8px 12px;
   text-align: center;
-  word-wrap: break-word; /* Allow long words to break */
+  word-wrap: break-word;
+  /* Allow long words to break */
 }
 
 .styled-table th {
@@ -22,17 +26,22 @@
   /* background-color: #fff; */
   border: 1px solid #ddd;
 }
+
 .alert-red {
   border: 1px solid red;
 }
 
 /* Ensure inputs, selects, and buttons fill available width */
-input, select, button {
+input,
+select,
+button {
   width: 100%;
-  box-sizing: border-box; /* Prevent content from overflowing */
+  box-sizing: border-box;
+  /* Prevent content from overflowing */
   font-size: 12px;
 }
-input{
+
+input {
   text-align: center;
   font-weight: bold;
 }
@@ -43,7 +52,8 @@ button {
   padding: 8px 12px;
   margin: 10px 0;
   cursor: pointer;
-  background-color: #4CAF50; /* Green color */
+  background-color: #4CAF50;
+  /* Green color */
   color: white;
   border: none;
   border-radius: 5px;
@@ -57,49 +67,51 @@ button:disabled {
 /* Adjust for small screens */
 @media (max-width: 768px) {
   .styled-table {
-      font-size: 10px; /* Smaller text on small screens */
+    font-size: 10px;
+    /* Smaller text on small screens */
   }
 
-  .styled-table th, .styled-table td {
-      padding: 6px 10px;
+  .styled-table th,
+  .styled-table td {
+    padding: 6px 10px;
   }
 
   button {
-      font-size: 12px; /* Smaller button text */
+    font-size: 12px;
+    /* Smaller button text */
   }
 
   /* Make select and input fields more compact */
-  input, select {
-      font-size: 10px;
+  input,
+  select {
+    font-size: 10px;
   }
 }
 
 /* Adjust for very small screens (mobile portrait) */
 @media (max-width: 480px) {
-  .styled-table th, .styled-table td {
-      padding: 4px 8px; /* Tighter padding */
+
+  .styled-table th,
+  .styled-table td {
+    padding: 4px 8px;
+    /* Tighter padding */
   }
 
   button {
-      font-size: 10px; /* Even smaller button text */
-      padding: 6px 10px;
+    font-size: 10px;
+    /* Even smaller button text */
+    padding: 6px 10px;
   }
 
   .loading-overlay {
-      font-size: 12px; /* Smaller loading text */
+    font-size: 12px;
+    /* Smaller loading text */
   }
 
   /* Handle overflow text */
   .status-dropdown-container {
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
   }
-}
-
-.sticky-input {
-  position: relative;
-  z-index: 1; /* Lower than sticky columns */
-  width: 100%;
-  border: 1px solid #ddd;
 }
