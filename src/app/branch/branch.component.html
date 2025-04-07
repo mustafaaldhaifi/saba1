@@ -53,7 +53,7 @@
 
             <td>
                 <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false" #qntFInput="ngModel"
-                    [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="quantity-input"
+                    [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
                     [(ngModel)]="combinedData[i].qntF" type="number" required>
                 <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
             </td>
@@ -64,7 +64,7 @@
 
             <td>
                 <input (ngModelChange)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false" #qntInput="ngModel"
-                    [class.alert-red]="qntInput.invalid && qntInput.touched" class="quantity-input"
+                    [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
                     [(ngModel)]="combinedData[i].qnt" type="number" required>
                 <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
             </td>
