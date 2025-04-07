@@ -62,9 +62,9 @@
             {{ branch.name }}
           </th>
         </tr>
-        <tr>
+        <tr class="fixed-column">
           <th>#</th>
-          <th>Product Name</th>
+          <th class="fixed-column name-column" >Product Name</th>
           <th>Requested Unit</th>
           <th>Remain Unit</th>
           <ng-container *ngFor="let branch of branches">
@@ -76,19 +76,19 @@
       </thead>
       <tbody>
         <!-- Existing Products -->
-        <tr *ngFor="let product of data; let i = index">
+        <tr  class="fixed-column id-column" *ngFor="let product of data; let i = index" >
           <td (click)="deleteProduct(product.id)" class="delete-cell">
             {{ i + 1 }}
           </td>
-          <td>
+          <td class="fixed-column name-column" >
             <input type="text" [value]="product.name" [(ngModel)]="product.name"
               (ngModelChange)="onProductNameChange(i, product)" class="product-input">
           </td>
-          <td>
+          <td class="fixed-column unit-column">
             <input type="text" [value]="product.unit" [(ngModel)]="product.unit"
               (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
           </td>
-          <td>
+          <td class="fixed-column unitf-column">
             <input type="text" [value]="product.unitF" [(ngModel)]="product.unitF"
               (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
           </td>
@@ -128,7 +128,7 @@
         <tr *ngFor="let newProduct of productsToAdd; let i = index">
           <td>New</td>
           <td>
-            <input type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Product name" class="product-input">
+            <input style="width: 100px;" type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Product name" class="product-input">
           </td>
           <td>
             <input type="text" [(ngModel)]="productsToAdd[i].unit" placeholder="Unit" class="unit-input">

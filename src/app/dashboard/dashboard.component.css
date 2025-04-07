@@ -315,3 +315,65 @@ input[type="number"] {
   text-align: center;
   font-weight: bold;
 }
+
+/* Container */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  position: relative;
+  border: 1px solid #ddd;
+  direction: rtl; /* For RTL support */
+}
+
+/* Table */
+table {
+  width: auto;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Fixed Columns */
+.fixed-column {
+  position: sticky;
+  z-index: 2;
+  background-color: white;
+}
+
+.name-column {
+  left: 0;
+  min-width: 200px;
+  border-right: 1px solid #ddd;
+}
+
+.unit-column {
+  left: 200px; /* Same as name-column width */
+  min-width: 100px;
+  border-right: 1px solid #ddd;
+}
+.unitF-column {
+  left: 200px; /* Same as name-column width */
+  min-width: 100px;
+  border-right: 1px solid #ddd;
+}
+
+/* Header Styling */
+thead .fixed-column {
+  z-index: 3;
+  background-color: rgb(75, 79, 145);
+  color: white;
+  top: 0; /* For vertical scrolling */
+}
+
+/* Input Styling */
+.product-input, .unit-input {
+  width: 90%;
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  padding: 5px;
+}
+
+/* Shadow effect when scrolling */
+.fixed-column {
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
