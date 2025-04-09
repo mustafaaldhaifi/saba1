@@ -4,10 +4,10 @@
 
 <div *ngIf="isAdmin">
   <div class="admin-controls">
-    <button class="btn logout-btn" (click)="logout()">
-      Logout
-    </button>
-    <button *ngIf="ifHasChanges == true" class="btn save-btn" (click)="saveChanges()">
+    <a (click)="logout()" class="power-off-icon" style="color: red;">
+      <i class="fas fa-power-off"></i>
+    </a>
+    <button *ngIf="hasChanges() == true" class="btn save-btn" (click)="saveChanges()">
       Save Changes
     </button>
   </div>
@@ -29,8 +29,7 @@
     </div>
 
     <div class="date-buttons d-flex flex-wrap gap-2">
-      <button *ngFor="let item of datesToAdd" class="btn btn-outline-primary position-relative pe-4"
-        >
+      <button *ngFor="let item of datesToAdd" class="btn btn-outline-primary position-relative pe-4">
         {{item.createdAt.toDate() | date:'mediumDate'}}
 
         <span class="delete-icon position-absolute end-0 top-50 translate-middle-y me-2"
@@ -47,8 +46,7 @@
     <h3>Select Order Date</h3>
     <div class="date-buttons">
       <button *ngFor="let item of preOrders" class="btn date-btn" (click)="onSelectDate(item.createdAt)"
-        [class.selected]="selectedDate?.getTime() === item.createdAt.toDate().getTime()"
-        >
+        [class.selected]="selectedDate?.getTime() === item.createdAt.toDate().getTime()">
         {{item.createdAt.toDate() | date:'mediumDate'}} ({{item.count}})
       </button>
     </div>

@@ -343,6 +343,7 @@ export class BranchComponent {
       this.isPreSent = this.preOrders.some((o: any) => o.id != -1);
       this.selectedDate = selectedTimestamp
       this.isToAddMode = false
+      this.ordersToUpdate = []
 
     } catch (error) {
       console.error('Error selecting date:', error);
