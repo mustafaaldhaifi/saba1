@@ -115,3 +115,21 @@ button:disabled {
     white-space: nowrap;
   }
 }
+.table-container {
+  /* overflow-x: auto; */
+  margin: 10px;
+  max-height: 800px;
+  overflow-y: auto;
+}
+
+.f-h {
+  position: sticky;
+  top: 0;
+  background-color: #f8f9fa;
+  z-index: 20;
+  padding: 12px 16px;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  font-size: 1.1em;
+  text-align: center;
+}

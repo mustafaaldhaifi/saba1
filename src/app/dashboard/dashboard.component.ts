@@ -23,7 +23,8 @@ import {
   writeBatch,
   addDoc,
   deleteDoc,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from "firebase/firestore";
 
 interface Product {
@@ -68,6 +69,138 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  async deleteOpenDate(id: string): Promise<void> {
+    this.isLoading = true
+    try {
+      console.log("Deleting document with ID:", id);
+
+      // Get Firestore reference
+      const db = getFirestore();
+      const docRef = doc(db, 'openDates', id);
+
+      // Delete the document
+      await deleteDoc(docRef);
+
+      // Update local array by filtering out the deleted item
+      this.datesToAdd = this.datesToAdd.filter((item: any) => item.id !== id);
+
+      console.log("Document successfully deleted");
+
+
+
+    } catch (error) {
+      console.error("Error deleting document:", error);
+
+      // Optional: Show error message
+
+    }
+    finally {
+      this.isLoading = false
+    }
+  }
+  async addOpenDate() {
+    this.isLoading = true
+    try {
+      if (!this.date3) {
+        throw new Error('No date provided');
+      }
+
+      const db = getFirestore();
+      const batch = writeBatch(db);
+      const docRef = doc(collection(db, 'openDates'));
+
+      // Create the date and validate it
+      const date = new Date(this.date3);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date provided');
+      }
+
+      const newData = {
+        createdAt: Timestamp.fromDate(date),
+        // Add other fields as needed
+      };
+
+      batch.set(docRef, newData);
+      await batch.commit();
+
+      // Now get the newly added document
+      const docSnapshot = await getDoc(docRef);
+
+      if (!docSnapshot.exists()) {
+        throw new Error('Failed to retrieve added document');
+      }
+
+      const a = {
+        id: docSnapshot.id,
+        createdAt: docSnapshot.data()['createdAt']
+      };
+      this.date3 = ""
+      this.datesToAdd.push(a)
+
+
+    } catch (error) {
+      console.error('Error in addOpenDate:', error);
+      throw error;
+    }
+    finally {
+      this.isLoading = false
+    }
+  }
+  async moveDate() {
+    this.isLoading = true
+    const db = getFirestore();
+    const batch = writeBatch(db);
+    const date = new Date("2025-04-08")
+    console.log("date", date);
+
+    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    // Get the date at 23:59:59.999 local time
+    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+    // throw new Error('Method not implemented.');
+    const q = query(collection(db, "branchesOrders"),
+      where("city", '==', this.selectedOption),
+      where("createdAt", ">=", Timestamp.fromDate(startOfDay)),
+      where("createdAt", "<=", Timestamp.fromDate(endOfDay)),
+    );
+
+
+    const snapshot = await getDocs(q);
+    // 3. Add update operations to the batch
+    snapshot.docs.forEach((doc) => {
+      const docRef = doc.ref; // Reference to the document
+      batch.update(docRef, {
+        createdAt: Timestamp.fromDate(new Date("2025-04-07")) // Your new date
+      });
+    });
+
+    const q1 = query(collection(db, "orders"),
+      where("city", '==', this.selectedOption),
+      where("createdAt", ">=", Timestamp.fromDate(startOfDay)),
+      where("createdAt", "<=", Timestamp.fromDate(endOfDay)),
+    );
+
+
+    const snapshot1 = await getDocs(q1);
+    // 3. Add update operations to the batch
+    snapshot1.docs.forEach((doc) => {
+      const docRef = doc.ref; // Reference to the document
+      batch.update(docRef, {
+        createdAt: Timestamp.fromDate(new Date("2025-04-07")) // Your new date
+      });
+    });
+
+    // 4. Commit the batch
+    await batch.commit();
+
+    this.isLoading = false
+    console.log('Batch update successful!');
+  }
+  onMoveChange(arg0: any) {
+    // throw new Error('Method not implemented.');
+    console.log(arg0.toDate());
+
+  }
   async onSelectChange(event: any) {
     console.log('Selected option:', event);  // You can perform any action here
     // Add more logic based on selected option
@@ -97,6 +230,11 @@ export class DashboardComponent implements OnInit {
   ordersToAdd: Order[] = [];
   ordersToUpdate: Order[] = [];
   selectedOption = "ryad"
+  movableDate: any
+
+
+
+  orderMap: Map<string, any> = new Map();
 
   ifHasChanges = false
 
@@ -104,6 +242,29 @@ export class DashboardComponent implements OnInit {
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
+  }
+
+  date3: any
+
+  isDateValid(): boolean {
+    // // Check if Date.parse can interpret it
+    // const timestamp = Date.parse(this.date3);
+    // if (isNaN(timestamp)) {
+    //   return false;
+    // }
+
+    // // Additional check with Date object
+    // const date = new Date(this.date3);
+    // return date.toString() !== 'Invalid Date';
+    let regex: RegExp;
+
+    regex = /^\d{4}-\d{2}-\d{2}$/;
+
+
+    if (!regex.test(this.date3)) return false;
+
+    const date = new Date(this.date3);
+    return !isNaN(date.getTime());
   }
 
 
@@ -146,7 +307,12 @@ export class DashboardComponent implements OnInit {
   async getData(date: Date | null = null): Promise<void> {
     this.isLoading = true;
     try {
-      await this.getPreOrders();
+
+      await Promise.all([
+        await this.getPreOrders(),
+        await this.getDatesToAdd()
+      ]);
+
 
       this.selectedDate = date || Timestamp.now().toDate();
       console.log("seleele", this.selectedDate);
@@ -165,6 +331,13 @@ export class DashboardComponent implements OnInit {
       this.data = products;
       this.orders = orders;
       console.log(orders);
+
+      this.orders.forEach(order => {
+        const key = `${order.branchId}_${order.productId}`;
+        this.orderMap.set(key, order);
+      });
+      console.log("maps", this.orderMap);
+
 
 
       this.addMissingOrders();
@@ -187,17 +360,17 @@ export class DashboardComponent implements OnInit {
     //   endTimestamp: Timestamp.fromDate(endOfDay)
     // };
 
-     // Get the date at midnight local time
-  const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  
-  // Get the date at 23:59:59.999 local time
-  const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+    // Get the date at midnight local time
+    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-  return {
-    startTimestamp: new Timestamp(Math.floor(startOfDay.getTime() / 1000), 0),
-    endTimestamp: new Timestamp(Math.floor(endOfDay.getTime() / 1000), 999000000)
-  };
-    
+    // Get the date at 23:59:59.999 local time
+    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+
+    return {
+      startTimestamp: new Timestamp(Math.floor(startOfDay.getTime() / 1000), 0),
+      endTimestamp: new Timestamp(Math.floor(endOfDay.getTime() / 1000), 999000000)
+    };
+
   }
 
   private async fetchBranches(): Promise<Branch[]> {
@@ -372,6 +545,18 @@ export class DashboardComponent implements OnInit {
     // }
   }
 
+  datesToAdd: any = []
+  async getDatesToAdd(): Promise<void> {
+    const db = getFirestore();
+    const q = query(collection(db, "openDates"));
+    const snapshot = await getDocs(q);
+
+    this.datesToAdd = snapshot.docs.map(doc => ({
+      id: doc.id,
+      createdAt: doc.data()['createdAt']
+    }));
+  }
+
   async deleteOldOrders(): Promise<void> {
     if (!this.preOrders || this.preOrders.length <= 4) return;
 
@@ -516,7 +701,7 @@ export class DashboardComponent implements OnInit {
   }
 
   // Order operations
-  onOrderChange(order: Order, qnt: number): void {
+  onOrderChange(order: Order): void {
     // order.qnt = qnt;
     console.log(order);
 
@@ -823,8 +1008,8 @@ export class DashboardComponent implements OnInit {
     XLSX.utils.book_append_sheet(wb, ws, 'Orders');
 
     // Generate Excel file
-    const date = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `Orders_Export_${date}.xlsx`);
+    const date = this.selectedDate!!.toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Orders${this.selectedOption}_Export_${date}.xlsx`);
   }
 
   prepareWorksheetData(): any[][] {
@@ -886,5 +1071,36 @@ export class DashboardComponent implements OnInit {
     });
 
     return wsData;
+  }
+
+
+
+  // Faster order lookup
+  // getOrder(branchId: string, productId: string) {
+  //   return this.orderMap.get(`${branchId}_${productId}`);
+  // }
+  getOrder(branchId: any, productId: any): any {
+    return this.orders.find((order: any) =>
+      order.branchId === branchId &&
+      order.productId === productId
+    );
+  }
+
+  // TrackBy functions to minimize DOM changes
+  trackByProductId(index: number, product: any): string {
+    return product.id;
+  }
+
+  trackByBranchId(index: number, branch: any): string {
+    return branch.id;
+  }
+
+  trackByOrderId(index: number, order: any): string {
+    return order.id;
+  }
+  // Consolidated change handler
+  onProductChange(product: any) {
+    // Debounce this if needed
+    // this.saveProduct(product);
   }
 }

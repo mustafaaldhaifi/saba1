@@ -2,6 +2,9 @@
 <div class="loading-overlay" *ngIf="isLoading">
     <div class="spinner">Loading...</div>
 </div>
+<a (click)="logout()" class="power-off-icon" style="color: red;">
+    <i class="fas fa-power-off"></i>
+</a>
 
 <!-- Date Selection Buttons -->
 <div *ngFor="let item of preOrders; let i = index">
@@ -10,86 +13,99 @@
         {{item.createdAt?.toDate() | date:'mediumDate'}}
     </button>
 </div>
-<a (click)="logout()" class="power-off-icon" style="color: red;">
-    <i class="fas fa-power-off"></i>
-</a>
+
+
+<!-- <h3 style="text-align: center;">الايام المسموحه لاضافة طلبات</h3> -->
+<div *ngFor="let item of datesToAdd; let i = index">
+    <button (click)="addNewOrder(item.createdAt)" style="width: 100%;background-color: brown;"
+        [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
+        {{item.createdAt?.toDate() | date:'mediumDate'}}
+        <i class="fas fa-plus" style="margin-left: 10px;"></i>
+
+    </button>
+</div>
 <!-- Add New Order Button -->
-<button *ngIf="isToAddMode === false && ifCurrentDateInPreOrders1 === false " (click)="addNewOrder()"
+<!-- <button *ngIf="isToAddMode === false && ifCurrentDateInPreOrders1 === false " (click)="addNewOrder()"
     style="width: 100%;">
     Add New Order
-</button>
+</button> -->
 
 <!-- Selected Date Info -->
 <div *ngIf="selectedDate" style="text-align: center;">
     <hr>
     {{selectedDate.toDate() | date:'mediumDate'}}
+    <!-- {{selectedDate | date:'mediumDate'}} -->
     <div *ngIf="branch">
         {{branch.data.name}}
     </div>
 </div>
 
-<div class="table fixed-header">
-    <!-- Orders Table -->
-    <table *ngIf="branch" class="styled-table">
-        <thead>
-            <tr class="fixed-header">
-                <th>الاصناف</th>
-                <th style="width: 28px;">
-                    <div>الكمية</div>
-                    <div>المتوفرة</div>
-                </th>
-                <th>الوحدة</th>
-                <th style="width: 28px;">
-                    <div>الكمية</div>
-                    <div>المطلوبة</div>
-                </th>
-                <th>الوحدة</th>
-                <th *ngIf="isPreSent === true">حالة الاستلام</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr *ngFor="let item of combinedData; let i = index"
-                [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
-                [style.border-bottom]="'1px solid #dee2e6'">
-                <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
+<div class="table-container">
+    <div class="table fixed-header">
+        <!-- Orders Table -->
+        <table *ngIf="branch" class="styled-table">
+            <thead>
+                <tr vz class="f-h">
+                    <th>الاصناف</th>
+                    <th style="width: 28px;">
+                        <div>الكمية</div>
+                        <div>المتوفرة</div>
+                    </th>
+                    <th>الوحدة</th>
+                    <th style="width: 28px;">
+                        <div>الكمية</div>
+                        <div>المطلوبة</div>
+                    </th>
+                    <th>الوحدة</th>
+                    <th *ngIf="isPreSent === true">حالة الاستلام</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let item of combinedData; let i = index"
+                    [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                    [style.border-bottom]="'1px solid #dee2e6'">
+                    <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
-                <td>
-                    <input (input)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false"
-                        #qntFInput="ngModel" [class.alert-red]="qntFInput.invalid && qntFInput.touched"
-                        class="sticky-input" [(ngModel)]="combinedData[i].qntF" type="number" required>
-                    <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
-                </td>
+                    <td>
+                        <input (input)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false" #qntFInput="ngModel"
+                            [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
+                            [(ngModel)]="combinedData[i].qntF" type="number" required>
+                        <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
+                    </td>
 
-                <td>
-                    {{item.unitF}}
-                </td>
+                    <td>
+                        {{item.unitF}}
+                    </td>
 
-                <td>
-                    <input (input)="onQntChange(i,combinedData[i])" *ngIf="isPreSent === false"
-                        #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
-                        class="sticky-input" [(ngModel)]="combinedData[i].qnt" type="number" required>
-                    <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
-                </td>
+                    <td>
+                        <input (input)="onQntChange(i,combinedData[i])" *ngIf="isPreSent === false" #qntInput="ngModel"
+                            [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
+                            [(ngModel)]="combinedData[i].qnt" type="number" required>
+                        <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
+                    </td>
 
-                <td>
-                    {{item.unit}}
-                </td>
+                    <td>
+                        {{item.unit}}
+                    </td>
 
-                <td *ngIf="isPreSent === true">
-                    <span *ngIf="item.qnt > 0 && !isItemInAdd(item)" class="status-dropdown-container">
-                        <label class="status-dropdown-label">
-                            <select [disabled]="item.status !== '0'" [(ngModel)]="item.status"
-                                (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                                <option value="1">تم استلامها</option>
-                                <option value="2">لم يتم استلامها</option>
-                            </select>
-                        </label>
-                    </span>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+                    <td *ngIf="isPreSent === true">
+                        <span *ngIf="item.qnt > 0 && !isItemInAdd(item)" class="status-dropdown-container">
+                            <label class="status-dropdown-label">
+                                <select [disabled]="item.status !== '0'" [(ngModel)]="item.status"
+                                    (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+                                    <option value="1">تم استلامها</option>
+                                    <option value="2">لم يتم استلامها</option>
+                                </select>
+                            </label>
+                        </span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
+
+
 
 
 <!-- Action Buttons -->

@@ -13,14 +13,20 @@ import { addDoc, collection, doc, getDocs, getFirestore, limit, orderBy, query, 
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+  onSelectDateToAdd(arg0: any) {
+    throw new Error('Method not implemented.');
+  }
 
-  addNewOrder() {
-    this.selectedDate = this.currentTimestamp
+  addNewOrder(date: any) {
+    this.selectedDate = date
+    console.log(date);
+
+    // this.selectedDate = date
     this.combinedData = this.data.map((product: any) => {
       const order = this.branchOrders.find((o: any) => o.productId === product.id);
 
-      console.log("order", order);
-      console.log("product", product);
+      // console.log("order", order);
+      // console.log("product", product);
 
 
       const s = {
@@ -97,6 +103,7 @@ export class BranchComponent {
   combinedData: any[] = [];
   branchOrders: any[] = [];
 
+  selectedDateToAdd: any
   isToAddMode = false
   isPreSent = false
 
@@ -216,6 +223,17 @@ export class BranchComponent {
   }
 
 
+  datesToAdd: any = []
+  async getDatesToAdd(): Promise<void> {
+    const db = getFirestore();
+    const q = query(collection(db, "openDates"));
+    const snapshot = await getDocs(q);
+
+    this.datesToAdd = snapshot.docs.map(doc => ({
+      id: doc.id,
+      createdAt: doc.data()['createdAt']
+    }));
+  }
 
   async getBranch() {
     this.isLoading = true;
@@ -231,10 +249,47 @@ export class BranchComponent {
           console.log("bbbb", this.branch.data);
 
           await Promise.all([
+            this.getDatesToAdd(),
             this.getProducts(),
             // this.getUnits(),
             this.getPreOrders(),
           ]);
+
+          // Start of day (00:00:00.000 UTC)
+          const startOfDay = new Date(this.selectedDate);
+          startOfDay.setUTCHours(0, 0, 0, 0);
+          const startTimestamp = Timestamp.fromDate(startOfDay);
+
+          // End of day (23:59:59.999 UTC)
+          const endOfDay = new Date(this.selectedDate);
+          endOfDay.setUTCHours(23, 59, 59, 999);
+          const endTimestamp = Timestamp.fromDate(endOfDay);
+          // this.preOrders.some((pre: any) =>pre.createdAt in this.datesToAdd.createdAt)
+
+          // console.log("p",this.datesToAdd);
+
+          this.datesToAdd.forEach((date: any, index: number) => {
+            this.preOrders.forEach((pre: any) => {
+              console.log( 'yy',date.createdAt.toDate().toISOString().split('T')[0]);
+              console.log('tt', pre.createdAt.toDate().toISOString().split('T')[0]);
+              if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
+              //  console.log("frfrf",index);
+               
+                this.datesToAdd.splice(index, 1);
+              }
+            });
+          });
+
+          // console.log("a",this.datesToAdd);
+          
+
+
+          // this.datesToAdd.filter((date: any) =>
+          //   !this.preOrders.some((preOrder: any) =>
+          //     preOrder.createdAt.toDate().toISOString().split('T')[0] ===
+          //     date.createdAt.toDate().toISOString().split('T')[0]
+          //   )
+          // );
 
           // await this.getProducts();
           // await this.getPreOrders();

@@ -12,39 +12,119 @@
     </button>
   </div>
 
-  <div class="container">
-    <div class="dropdown-container">
-      <label for="options" class="dropdown-label">Select Option:</label>
-      <select id="options" [(ngModel)]="selectedOption" (ngModelChange)="onSelectChange($event)" class="dropdown">
-        <option value="ryad">الرياض</option>
-        <option value="other">خارج الرياض</option>
-      </select>
+  <div class="date-selection card p-3 mb-4">
+    <h3 class="mb-3 text-primary">Open Dates</h3>
+
+    <div class="d-flex align-items-center mb-3">
+      <input type="date" [(ngModel)]="date3" class="form-control w-auto me-2"
+        [class.is-invalid]="!isDateValid() && date3">
+
+      <button *ngIf="isDateValid()" (click)="addOpenDate()" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Add Date
+      </button>
+    </div>
+
+    <div *ngIf="!isDateValid() && date3" class="text-danger small mb-3">
+      Please select a valid future date
+    </div>
+
+    <div class="date-buttons d-flex flex-wrap gap-2">
+      <button *ngFor="let item of datesToAdd" class="btn btn-outline-primary position-relative pe-4"
+        >
+        {{item.createdAt.toDate() | date:'mediumDate'}}
+
+        <span class="delete-icon position-absolute end-0 top-50 translate-middle-y me-2"
+          (click)="deleteOpenDate(item.id); $event.stopPropagation()" title="Delete date">
+          <i class="fas fa-trash-alt text-danger"></i>
+        </span>
+      </button>
     </div>
   </div>
+
+
   <!-- Date Selection -->
   <div class="date-selection">
     <h3>Select Order Date</h3>
     <div class="date-buttons">
       <button *ngFor="let item of preOrders" class="btn date-btn" (click)="onSelectDate(item.createdAt)"
-        [class.selected]="selectedDate?.getTime() === item.createdAt.toDate().getTime()">
+        [class.selected]="selectedDate?.getTime() === item.createdAt.toDate().getTime()"
+        >
         {{item.createdAt.toDate() | date:'mediumDate'}} ({{item.count}})
       </button>
     </div>
   </div>
 
-  <div *ngIf="selectedDate" class="selected-date">
-    <hr>
-    <h2>{{selectedDate | date:'fullDate'}}</h2>
-  </div>
-  <button class="btn logout-btn" (click)="exportToExcel()">
-    Export
-  </button>
+  <div class="myHead d-flex align-items-center justify-content-between p-3">
+    <div class="d-flex align-items-center gap-4">
+      <div class="dropdown-container">
+        <label for="options" class="dropdown-label me-2">Select Option:</label>
+        <select id="options" [(ngModel)]="selectedOption" (ngModelChange)="onSelectChange($event)"
+          class="dropdown form-select">
+          <option value="ryad">الرياض</option>
+          <option value="other">خارج الرياض</option>
+        </select>
+      </div>
 
+      <div *ngIf="selectedDate" class="selected-date d-flex align-items-center">
+        <h2 class="m-0">{{selectedDate | date:'fullDate'}}</h2>
+      </div>
+    </div>
+
+    <button class="btn btn-primary logout-btn" (click)="exportToExcel()">
+      <i class="fas fa-file-export me-2"></i> Export
+    </button>
+  </div>
+
+  <!-- <div class="myHead">
+
+    <div class="container">
+      <div class="dropdown-container">
+        <label for="options" class="dropdown-label">Select Option:</label>
+        <select id="options" [(ngModel)]="selectedOption" (ngModelChange)="onSelectChange($event)" class="dropdown">
+          <option value="ryad">الرياض</option>
+          <option value="other">خارج الرياض</option>
+        </select>
+      </div>
+    </div>
+
+
+    <div *ngIf="selectedDate" class="selected-date">
+      <hr>
+      <h2>{{selectedDate | date:'fullDate'}}</h2>
+    </div>
+    <button class="btn logout-btn" (click)="exportToExcel()">
+      Export
+    </button>
+  </div> -->
+
+  <!-- <div class="form-group">
+    <label for="dateSelect">Select Date</label>
+    <div class="input-group">
+      <input type="date" class="form-control" id="dateSelect" 
+             [(ngModel)]="selectedDate" name="selectedDate">
+      <div class="input-group-append">
+        <span class="input-group-text"><i class="fa fa-calendar"></i></span>
+      </div>
+    </div>
+  </div> -->
+
+  <!-- <button class="btn logout-btn" (click)="moveDate()">
+    Move
+  </button> -->
+
+  <!-- <button class="btn logout-btn" style="margin: 10px;" (click)="exportToExcel()">
+
+  </button> -->
+  <!-- <select [(ngModel)]="movableDate" (ngModelChange)="onMoveChange($event)" class="status-select">
+    <option *ngFor="let date of preOrders" [value]="date">
+      {{date.createdAt.toDate() | date:'mediumDate'}}
+    </option>
+  </select> -->
   <!-- Products Table -->
   <div class="table-container">
     <table class="styled-table">
       <thead>
-        <tr>
+        <tr class="f-h">
           <th></th>
           <th></th>
           <th></th>
@@ -54,11 +134,13 @@
             {{ branch.name }}
           </th>
         </tr>
-        <tr class="fixed-column">
+        <tr class="s-h">
           <th>#</th>
-          <th class="fixed-column name-column" >Product Name</th>
-          <th>Requested Unit</th>
-          <th>Remain Unit</th>
+          <th class="fixed-column name-column">Product Name</th>
+          <!-- <th >Product Name</th> -->
+
+          <th class="fixed-column unit-column">Requested Unit</th>
+          <th class="fixed-column unitF-column">Remain Unit</th>
           <ng-container *ngFor="let branch of branches">
             <th>Requested Qnt</th>
             <th>Remain Qnt</th>
@@ -68,11 +150,11 @@
       </thead>
       <tbody>
         <!-- Existing Products -->
-        <tr  class="fixed-column id-column" *ngFor="let product of data; let i = index" >
+        <tr class="fixed-column id-column" *ngFor="let product of data; let i = index; trackBy: trackByProductId;">
           <td (click)="deleteProduct(product.id)" class="delete-cell">
             {{ i + 1 }}
           </td>
-          <td class="fixed-column name-column" >
+          <td class="fixed-column name-column">
             <input type="text" [value]="product.name" [(ngModel)]="product.name"
               (ngModelChange)="onProductNameChange(i, product)" class="product-input">
           </td>
@@ -80,47 +162,47 @@
             <input type="text" [value]="product.unit" [(ngModel)]="product.unit"
               (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
           </td>
-          <td class="fixed-column unitf-column">
+          <td class="fixed-column unitF-column">
             <input type="text" [value]="product.unitF" [(ngModel)]="product.unitF"
               (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
           </td>
 
           <!-- Quantity and Status for each branch -->
-          <ng-container *ngFor="let branch of branches">
+          <ng-container *ngFor="let branch of branches; trackBy: trackByBranchId">
             <td class="branch-cell">
-              <div *ngFor="let order of orders;let i1 = index">
-                <div *ngIf="order.branchId === branch.id && order.productId === product.id ">
-                  <input type="number" min="0" [value]="orders[i1].qnt" [(ngModel)]="orders[i1].qnt"
-                    (ngModelChange)="onOrderChange(orders[i1], $event)" class="quantity-input">
-                </div>
-              </div>
+              <!-- Find the matching order once per cell -->
+              <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qnt"
+                  (ngModelChange)="onOrderChange(order)" class="quantity-input">
+              </ng-container>
             </td>
+
             <td class="branch-cell">
-              <div *ngFor="let order of orders;let i2 = index">
-                <div *ngIf="order.branchId === branch.id && order.productId === product.id">
-                  <input type="number" min="0" [value]="orders[i2].qntF" [(ngModel)]="orders[i2].qntF"
-                    (ngModelChange)="onOrderChange(orders[i2], $event)" class="quantity-input">
-                </div>
-              </div>
+              <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qntF"
+                  (ngModelChange)="onOrderChange(order)" class="quantity-input">
+              </ng-container>
             </td>
+
             <td class="branch-cell">
-              <div *ngFor="let order of orders">
-                <div *ngIf="order.branchId === branch.id && order.productId === product.id && order.id">
-                  <select [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)" class="status-select">
-                    <option value="1">Received</option>
-                    <option value="2">Not Received</option>
-                  </select>
-                </div>
-              </div>
+              <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                <select *ngIf="order?.id" [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)"
+                  class="status-select">
+                  <option value="0"></option>
+                  <option value="1">Received</option>
+                  <option value="2">Not Received</option>
+                </select>
+              </ng-container>
             </td>
           </ng-container>
         </tr>
 
         <!-- New Products to Add -->
-        <tr *ngFor="let newProduct of productsToAdd; let i = index">
+        <tr *ngFor="let newProduct of productsToAdd; let i = index; ">
           <td>New</td>
           <td>
-            <input style="width: 100px;" type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Product name" class="product-input">
+            <input style="width: 100px;" type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Product name"
+              class="product-input">
           </td>
           <td>
             <input type="text" [(ngModel)]="productsToAdd[i].unit" placeholder="Unit" class="unit-input">
