@@ -8,7 +8,7 @@
 
 <!-- Date Selection Buttons -->
 <div *ngFor="let item of preOrders; let i = index">
-    <button (click)="onSelectDate(item.createdAt)" style="width: 100%;"
+    <button (click)="onSelectDate(item)" style="width: 100%;"
         [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
         {{item.createdAt?.toDate() | date:'mediumDate'}}
     </button>
@@ -89,15 +89,22 @@
                     </td>
 
                     <td *ngIf="isPreSent === true">
-                        <span *ngIf="item.qnt > 0 && !isItemInAdd(item)" class="status-dropdown-container">
+                        <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                             <label class="status-dropdown-label">
-                                <select [disabled]="item.status !== '0'" [(ngModel)]="item.status"
+                                <select [disabled]="isChangeStatus() == false || isOn === false" [(ngModel)]="item.status"
+                                [style.background-color]="getStatusColor(item.status)"
                                     (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                                    <option value="1">تم استلامها</option>
+                                    <!-- <option value="0">لم يتم الاختيار</option> -->
+                                    <option  value="1">تم استلامها</option>
                                     <option value="2">لم يتم استلامها</option>
+                                    <option value="3">كمية غير مطابقة</option>
+                                    <option value="4">غير مطلوبة</option>
                                 </select>
                             </label>
                         </span>
+                        <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3'"
+                            #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
+                            [(ngModel)]="combinedData[i].qntNotRequirement" (input)="onInputQ($event, i,combinedData[i])" required>
                     </td>
                 </tr>
             </tbody>
@@ -113,6 +120,6 @@
     Send Order
 </button>
 
-<button *ngIf="ordersToUpdate.length > 0" (click)="saveUpdates()" [disabled]="isLoading">
+<button *ngIf="ordersToUpdate.length > 0" (click)="saveUpdates()" [disabled]="isUpdateEnabled() == false">
     Save Updates
 </button>

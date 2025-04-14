@@ -3,7 +3,7 @@ import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { addDoc, collection, doc, getDocs, getFirestore, limit, orderBy, query, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 
 @Component({
   selector: 'app-branch',
@@ -13,11 +13,34 @@ import { addDoc, collection, doc, getDocs, getFirestore, limit, orderBy, query, 
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+  onInputQ($event: Event, _t50: number, item: any) {
+    const newValue = ($event.target as HTMLInputElement).valueAsNumber;
+    // throw new Error('Method not implemented.');
+    console.log(newValue, _t50);
+    console.log(this.combinedData[_t50]);
+    console.log(this.selectedDate);
+
+    this.addToOrdersToUpdate(item)
+    // this.combinedData[_t50].qntNotRequirement = newValue
+  }
   onSelectDateToAdd(arg0: any) {
     throw new Error('Method not implemented.');
   }
 
+  isChangeStatus() {
+    const r = this.preOrders.some((e: any) => e.status !== '1')
+    return r
+  }
   addNewOrder(date: any) {
+    // console.log(this.preOrders);
+
+
+    // console.log("rrr", r);
+
+    if (this.isChangeStatus() == true) {
+      alert("يجب تسجيل حالة الاستلام للطلبة السابقة"); // "Receipt status must be recorded for previous students"
+      return;
+    }
     this.selectedDate = date
     console.log(date);
 
@@ -36,6 +59,8 @@ export class BranchComponent {
         productId: product.id,
         qnt: '',
         qntF: '',
+        unit: product.unit,
+        unitF: product.unitF
       };
 
       console.log("new order", s);
@@ -47,6 +72,20 @@ export class BranchComponent {
     this.isPreSent = false
   }
 
+
+  isUpdateEnabled(): boolean {
+    // All items must have status !== "0"
+    if (!this.combinedData.every(e => e.status !== "0")) return false;
+
+    // For items with status "3", validate qntNotRequirement
+    const status3Items = this.combinedData.filter(e => e.status === "3");
+    return status3Items.every(e =>
+      typeof e.qntNotRequirement === 'number' &&
+      e.qntNotRequirement > 0
+    );
+  }
+
+
   async saveUpdates() {
     this.isLoading = true;
     const db = getFirestore();
@@ -54,7 +93,13 @@ export class BranchComponent {
     // Create a batch instance
     const batch = writeBatch(db);
 
+    const orderRef = doc(db, "orders", this.selectedPreOrder.id);
+
+    // const productRef = doc(db, "branchesOrders", element.id);
     // Loop over the orders to update
+
+    console.log("rfrf0", this.ordersToUpdate);
+
     for (const element of this.ordersToUpdate) {
       const productRef = doc(db, "branchesOrders", element.id);
 
@@ -64,6 +109,9 @@ export class BranchComponent {
       try {
         // Add the update operation to the batch
         batch.update(productRef, updatedData);
+
+        console.log(updatedData);
+
         console.log(`Order with ID: ${element.id} added to batch for update.`);
       } catch (e) {
         console.error("Error preparing batch update for order:", e);
@@ -71,6 +119,8 @@ export class BranchComponent {
     }
 
     try {
+      const s = { status: '1' }
+      batch.update(orderRef, s)
       // Commit the batch (all updates happen in one command)
       await batch.commit();
       this.ordersToUpdate = []
@@ -107,6 +157,7 @@ export class BranchComponent {
   isToAddMode = false
   isPreSent = false
 
+  selectedPreOrder: any
   currentTimestamp: any  // Get the current Firebase Timestamp
 
   constructor(
@@ -253,6 +304,7 @@ export class BranchComponent {
             this.getProducts(),
             // this.getUnits(),
             this.getPreOrders(),
+            this.getSettings(),
           ]);
 
           // Start of day (00:00:00.000 UTC)
@@ -270,18 +322,18 @@ export class BranchComponent {
 
           this.datesToAdd.forEach((date: any, index: number) => {
             this.preOrders.forEach((pre: any) => {
-              console.log( 'yy',date.createdAt.toDate().toISOString().split('T')[0]);
+              console.log('yy', date.createdAt.toDate().toISOString().split('T')[0]);
               console.log('tt', pre.createdAt.toDate().toISOString().split('T')[0]);
               if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
-              //  console.log("frfrf",index);
-               
+                //  console.log("frfrf",index);
+
                 this.datesToAdd.splice(index, 1);
               }
             });
           });
 
           // console.log("a",this.datesToAdd);
-          
+
 
 
           // this.datesToAdd.filter((date: any) =>
@@ -295,8 +347,11 @@ export class BranchComponent {
           // await this.getPreOrders();
 
           if (this.preOrders.length > 0) {
+            this.selectedPreOrder = this.preOrders[0];
             this.selectedDate = this.preOrders[0].createdAt;
-            await this.onSelectDate(this.selectedDate);
+            console.log(this.preOrders[0]);
+
+            await this.onSelectDate(this.selectedPreOrder);
           } else {
             this.selectedDate = this.currentTimestamp
             this.isToAddMode = true
@@ -314,7 +369,9 @@ export class BranchComponent {
     return this.ordersToAdd.some((order: any) => order.productId === item.productId);
   }
 
-  async onSelectDate(selectedTimestamp: Timestamp) {
+  async onSelectDate(order: any) {
+    this.selectedPreOrder = order
+    const selectedTimestamp = this.selectedPreOrder.createdAt
     this.isLoading = true;
     try {
       // Convert selected Timestamp to start and end of day
@@ -345,10 +402,22 @@ export class BranchComponent {
       this.isToAddMode = false
       this.ordersToUpdate = []
 
+      // this.combinedData = this.combinedData.slice(0, 1);
+
     } catch (error) {
       console.error('Error selecting date:', error);
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  getStatusColor(status: any): string {
+    switch (status) {
+      case '1': return '#9fff9f';   // تم استلامها
+      case '2': return 'red';     // لم يتم استلامها
+      case '3': return 'orange';  // كمية غير مطابقة
+      case '4': return 'blue';   // غير مطلوبة
+      default: return 'white';  // Default color
     }
   }
 
@@ -373,20 +442,6 @@ export class BranchComponent {
       };
     });
   }
-  async getUnits() {
-    const db = getFirestore();
-    const productsRef = collection(db, "units");
-    const q = query(productsRef);
-    const querySnapshot = await getDocs(q);
-
-    this.units = querySnapshot.docs.map(doc => {
-      // this.orders.push({ qnt: 0, productId: doc.id });
-      return {
-        id: doc.id,
-        name: doc.data()['name']
-      };
-    });
-  }
 
   logout(): void {
     const auth = getAuth();
@@ -408,6 +463,7 @@ export class BranchComponent {
     this.preOrders = querySnapshot.docs.map(doc => ({
       id: doc.id,
       name: doc.data()['name'],
+      status: doc.data()['status'],
       createdAt: doc.data()['createdAt']
     }));
     console.log("currentTime", this.currentTimestamp);
@@ -488,9 +544,10 @@ export class BranchComponent {
       // 2. Add the summary document
       const summaryRef = doc(collection(db, "orders"));
       batch.set(summaryRef, {
+        status: 0,
         branchId: this.branch.id,
         city: this.branch.data.city,
-        qntNumber: this.ordersToAdd.length,
+        // qntNumber: this.ordersToAdd.length,
         createdAt: this.currentTimestamp // Server-side timestamp
       });
 
@@ -641,10 +698,18 @@ export class BranchComponent {
 
 
   onStatusChange(order: any) {
+    if (order.status == '4') {
+      return
+    }
+
+    const { qntNotRequirement, ...orderWithoutQntNotRequirement } = order;
+
+    // Now productWithoutQntNotRequirement is the same object but without qntNotRequirement
+    console.log(orderWithoutQntNotRequirement);
     // Handle the status change for the order 
     // console.log('Order status updated:', order);
 
-    this.addToOrdersToUpdate(order)
+    this.addToOrdersToUpdate(orderWithoutQntNotRequirement)
 
   }
 
@@ -666,6 +731,31 @@ export class BranchComponent {
   getUnit(unitId: string) {
     const unit = this.units.find((unit: any) => unit.unitFId === unitId);
 
+  }
+
+  isOn: any
+  async getSettings(): Promise<void> {
+    try {
+      const db = getFirestore();
+
+      // Reference to the specific document
+      const docRef = doc(db, "settings", "statusChange");
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const settingsData = docSnap.data();
+        this.isOn = settingsData['isOpen']
+        console.log("Settings data:", settingsData);
+        // You can assign the data to a component property here
+        // this.settings = settingsData; // Assuming you have a settings property
+      } else {
+        console.log("No settings document found!");
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      // You can handle the error here, like showing a user message
+      // this.errorMessage = "Failed to load settings"; // Example error handling
+    }
   }
 }
 

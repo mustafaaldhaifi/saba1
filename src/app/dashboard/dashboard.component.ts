@@ -24,7 +24,9 @@ import {
   addDoc,
   deleteDoc,
   serverTimestamp,
-  getDoc
+  getDoc,
+  and,
+  setDoc
 } from "firebase/firestore";
 
 interface Product {
@@ -40,6 +42,7 @@ interface Branch {
 }
 
 interface Order {
+  qntNotRequirement: any;
   qntF: any;
   id?: string;
   qnt: number;
@@ -69,6 +72,13 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  changePassword(branch: any) {
+    const newPassword = window.prompt(`Please enter new password for ${branch.name}:`);
+    if (newPassword) {
+
+
+    }
+  }
   async deleteOpenDate(id: string): Promise<void> {
     this.isLoading = true
     try {
@@ -144,6 +154,20 @@ export class DashboardComponent implements OnInit {
     }
     finally {
       this.isLoading = false
+    }
+  }
+
+  getStatusColor(status: any): string {
+    switch (status) {
+      case '1': return '#9fff9f';   // تم استلامها
+      case '2': return 'red';     // لم يتم استلامها
+      // case '3': return 'orange';  // كمية غير مطابقة
+      case '4': return 'blue';
+      // case '': return 'white';   // غير مطلوبة
+      case '0': return 'white';   // غير مطلوبة
+
+      // غير مطلوبة
+      default: return 'orange';  // Default color
     }
   }
   async moveDate() {
@@ -310,7 +334,8 @@ export class DashboardComponent implements OnInit {
 
       await Promise.all([
         await this.getPreOrders(),
-        await this.getDatesToAdd()
+        await this.getDatesToAdd(),
+        await this.getSettings()
       ]);
 
 
@@ -325,6 +350,8 @@ export class DashboardComponent implements OnInit {
         this.fetchOrders(startTimestamp, endTimestamp)
       ]);
       console.log("bb", branches);
+      console.log("58oo", orders);
+
 
 
       this.branches = branches;
@@ -423,6 +450,7 @@ export class DashboardComponent implements OnInit {
       id: doc.id,
       qnt: doc.data()['qnt'],
       qntF: doc.data()['qntF'],
+      qntNotRequirement: doc.data()['qntNotRequirement'],
 
       status: doc.data()['status']?.toString() || '',
       productId: doc.data()['productId'],
@@ -443,7 +471,7 @@ export class DashboardComponent implements OnInit {
           newOrders.push({
             qnt: 0,
             qntF: 0,
-
+            qntNotRequirement: undefined,
             status: '',
             productId: product.id,
             branchId: branch.id
@@ -545,6 +573,29 @@ export class DashboardComponent implements OnInit {
     // }
   }
 
+  async getSettings(): Promise<void> {
+    try {
+      const db = getFirestore();
+
+      // Reference to the specific document
+      const docRef = doc(db, "settings", "statusChange");
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const settingsData = docSnap.data();
+        this.isOn = settingsData['isOpen']
+        console.log("Settings data:", settingsData);
+        // You can assign the data to a component property here
+        // this.settings = settingsData; // Assuming you have a settings property
+      } else {
+        console.log("No settings document found!");
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      // You can handle the error here, like showing a user message
+      // this.errorMessage = "Failed to load settings"; // Example error handling
+    }
+  }
   datesToAdd: any = []
   async getDatesToAdd(): Promise<void> {
     const db = getFirestore();
@@ -913,14 +964,20 @@ export class DashboardComponent implements OnInit {
       if (order.id) {
         const docRef = doc(db, 'branchesOrders', order.id);
 
-        const { id, ...productWithoutId } = order;
+
+        const { id, qntNotRequirement, ...productWithoutId } = order;
+
+        // Create the final object - excludes qntNotRequirement if falsy
+        const updateData = qntNotRequirement
+          ? { ...productWithoutId, qntNotRequirement } // Include if exists
+          : productWithoutId;                          // Exclude if falsy
 
         // Now create the new object, including the product without the id and the createdAt timestamp
-        const newData = {
-          ...productWithoutId,        // Include all product data except id
-        };
+        // const newData = {
+        //   ...productWithoutId,        // Include all product data except id
+        // };
 
-        batch.update(docRef, newData);
+        batch.update(docRef, updateData);
       }
     });
 
@@ -984,55 +1041,172 @@ export class DashboardComponent implements OnInit {
   // }
 
 
+  // exportToExcel() {
+  //   // Prepare the worksheet data
+  //   const wsData = this.prepareWorksheetData();
+
+  //   // Create worksheet with correct headers
+  //   const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
+
+  //   // Set column widths
+  //   ws['!cols'] = [
+  //     { wch: 5 },   // #
+  //     { wch: 25 },  // Product Name
+  //     { wch: 15 },  // Requested Unit
+  //     { wch: 15 },  // Remain Unit
+  //     ...Array(this.branches.length * 3).fill({ wch: 12 }) // Branch columns
+  //   ];
+
+  //   // Set row heights
+  //   ws['!rows'] = [{ hpt: 20 }, { hpt: 25 }]; // Header rows
+
+  //   // Create workbook
+  //   const wb: XLSX.WorkBook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+
+  //   // Generate Excel file
+  //   const date = this.selectedDate!!.toISOString().slice(0, 10);
+  //   XLSX.writeFile(wb, `Orders${this.selectedOption}_Export_${date}.xlsx`);
+  // }
+
+  // prepareWorksheetData(): any[][] {
+  //   const wsData = [];
+
+  //   // First header row (branch names)
+  //   const header1 = ['', '', '', ''];
+  //   this.branches.forEach(branch => {
+  //     // header1.push(branch.name, '', ''); // Main branch header spans 3 columns
+  //   });
+  //   wsData.push(header1);
+
+  //   // Second header row (column titles)
+  //   const header2 = ['#', 'Product Name', 'Requested Unit', 'Remain Unit'];
+  //   this.branches.forEach(() => {
+  //     header2.push('Requested Qnt', 'Remain Qnt', 'Status');
+  //   });
+  //   wsData.push(header2);
+
+  //   // Add existing products
+  //   this.data.forEach((product, i) => {
+  //     const row = [
+  //       i + 1,
+  //       product.name,
+  //       product.unit,
+  //       product.unitF
+  //     ];
+
+  //     this.branches.forEach(branch => {
+  //       const order = this.orders.find(o =>
+  //         o.branchId === branch.id && o.productId === product.id
+  //       );
+
+  //       const statusText =
+  //         order?.status === '1' ? 'Received' :
+  //           order?.status === '0' ? 'No Action' :
+  //             order?.status === '2' ? 'Not Received' : // Fixed duplicate '0' case
+  //               order?.status === '3' ? `${order.qntNotRequirement || 0}` :
+  //                 '';
+
+  //       row.push(
+  //         order?.qnt || '',
+  //         order?.qntF || '',
+  //         statusText
+  //         // order?.status === '1' ? 'Received' : (order!.status === '0' ? 'No Action' : (order!.status === '0' ? 'Not Recieved' : ''))
+  //       );
+  //     });
+
+  //     wsData.push(row);
+  //   });
+
+  //   // Add new products
+  //   this.productsToAdd.forEach((newProduct: any) => {
+  //     const row = [
+  //       'New',
+  //       newProduct.name || '',
+  //       newProduct.unit || '',
+  //       newProduct.unitF || ''
+  //     ];
+
+  //     // Empty cells for branches
+  //     this.branches.forEach(() => {
+  //       row.push('', '', '');
+  //     });
+
+  //     wsData.push(row);
+  //   });
+
+  //   return wsData;
+  // }
+
+
   exportToExcel() {
-    // Prepare the worksheet data
-    const wsData = this.prepareWorksheetData();
+    // Prepare the worksheet data and merge ranges
+    const { data, merges } = this.prepareWorksheetData();
 
     // Create worksheet with correct headers
-    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(data);
 
-    // Set column widths
+    // Set merge ranges for branch headers
+    ws['!merges'] = merges;
+
+    // Set column widths (optimized for better display)
     ws['!cols'] = [
       { wch: 5 },   // #
-      { wch: 25 },  // Product Name
+      { wch: 30 },  // Product Name (wider for better readability)
       { wch: 15 },  // Requested Unit
       { wch: 15 },  // Remain Unit
-      ...Array(this.branches.length * 3).fill({ wch: 12 }) // Branch columns
+      ...Array(this.branches.length * 3).fill({ wch: 15 }) // Branch columns
     ];
 
-    // Set row heights
-    ws['!rows'] = [{ hpt: 20 }, { hpt: 25 }]; // Header rows
+    // Set row heights (header rows taller)
+    ws['!rows'] = [
+      { hpx: 30 }, // First header row (merged branch names)
+      { hpx: 25 }  // Second header row (column titles)
+    ];
 
     // Create workbook
     const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
 
-    // Generate Excel file
-    const date = this.selectedDate!!.toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `Orders${this.selectedOption}_Export_${date}.xlsx`);
+    // Generate Excel file with formatted date
+    const dateStr = this.formatDate(this.selectedDate!!);
+    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh'
+    XLSX.writeFile(wb, `Orders_${city}_all_data_${dateStr}.xlsx`);
   }
 
-  prepareWorksheetData(): any[][] {
+  private formatDate(date: Date): string {
+    return date.toISOString().slice(0, 10).replace(/-/g, '');
+  }
+
+  prepareWorksheetData(): { data: any[][], merges: any[] } {
     const wsData = [];
+    const merges: any = [];
 
     // First header row (branch names)
-    const header1 = ['', '', '', ''];
-    this.branches.forEach(branch => {
-      header1.push(branch.name, '', ''); // Main branch header spans 3 columns
+    const header1 = ['#', 'Product Name', 'Requested Unit', 'Remain Unit'];
+    this.branches.forEach((branch, index) => {
+      const startCol = 4 + (index * 3); // Starting column index (0-based)
+      header1.push(branch.name, '', ''); // Branch name spans 3 columns
+
+      // Add merge range for this branch header
+      merges.push({
+        s: { r: 0, c: startCol },    // Start row (0), start column
+        e: { r: 0, c: startCol + 2 } // End row (0), end column
+      });
     });
     wsData.push(header1);
 
     // Second header row (column titles)
-    const header2 = ['#', 'Product Name', 'Requested Unit', 'Remain Unit'];
+    const header2 = ['', '', '', '']; // Empty cells for first 4 columns
     this.branches.forEach(() => {
       header2.push('Requested Qnt', 'Remain Qnt', 'Status');
     });
     wsData.push(header2);
 
     // Add existing products
-    this.data.forEach((product, i) => {
+    this.data.forEach((product, index) => {
       const row = [
-        i + 1,
+        index + 1,
         product.name,
         product.unit,
         product.unitF
@@ -1044,9 +1218,9 @@ export class DashboardComponent implements OnInit {
         );
 
         row.push(
-          order?.qnt || '',
-          order?.qntF || '',
-          order?.status === '1' ? 'Received' : (order!.status === '0' ? 'No Action' : (order!.status === '0' ? 'Not Recieved' : ''))
+          order?.qnt || '0',
+          order?.qntF || '0',
+          this.getStatusDisplay(order)
         );
       });
 
@@ -1062,17 +1236,235 @@ export class DashboardComponent implements OnInit {
         newProduct.unitF || ''
       ];
 
-      // Empty cells for branches
       this.branches.forEach(() => {
-        row.push('', '', '');
+        row.push('', '', 'Pending');
       });
 
       wsData.push(row);
     });
 
-    return wsData;
+    return { data: wsData, merges: merges };
   }
 
+  exportToExcel2() {
+    // Prepare the worksheet data and merge ranges
+    const { data, merges } = this.prepareWorksheetData2();
+
+    // Create worksheet with correct headers
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Set merge ranges for branch headers
+    ws['!merges'] = merges;
+
+    // Set column widths (optimized for better display)
+    ws['!cols'] = [
+      { wch: 5 },   // #
+      { wch: 30 },  // Product Name (wider for better readability)
+      { wch: 15 },  // Requested Unit
+      { wch: 15 },  // Remain Unit
+      ...Array(this.branches.length * 3).fill({ wch: 15 }) // Branch columns
+    ];
+
+    // Set row heights (header rows taller)
+    ws['!rows'] = [
+      { hpx: 30 }, // First header row (merged branch names)
+      { hpx: 25 }  // Second header row (column titles)
+    ];
+
+    // Create workbook
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
+
+    // Generate Excel file with formatted date
+    const dateStr = this.formatDate(this.selectedDate!!);
+    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh'
+    XLSX.writeFile(wb, `Orders_${city}_with_notes_${dateStr}.xlsx`);
+  }
+
+  prepareWorksheetData2(): { data: any[][], merges: any[] } {
+    const wsData = [];
+    const merges: any = [];
+
+    // First header row (branch names)
+    const header1 = ['#', 'Product Name', 'Requested Unit', 'Remain Unit'];
+    this.branches.forEach((branch, index) => {
+      const startCol = 4 + (index * 3); // Starting column index (0-based)
+      header1.push(branch.name, ''); // Branch name spans 3 columns
+
+      // Add merge range for this branch header
+      merges.push({
+        s: { r: 0, c: startCol },    // Start row (0), start column
+        e: { r: 0, c: startCol + 1 } // End row (0), end column
+      });
+    });
+    wsData.push(header1);
+
+    // Second header row (column titles)
+    const header2 = ['', '', '', '']; // Empty cells for first 4 columns
+    this.branches.forEach(() => {
+      header2.push('Requested Qnt', 'Status');
+    });
+    wsData.push(header2);
+
+    // Add existing products
+    this.data.forEach((product, index) => {
+      const row = [
+        index + 1,
+        product.name,
+        product.unit,
+        product.unitF
+      ];
+
+      this.branches.forEach(branch => {
+        const order = this.orders.find(o =>
+          o.branchId === branch.id && o.productId === product.id
+        );
+
+        row.push(
+          order?.qnt || '0',
+          // order?.qntF || '0',
+          this.getStatusDisplay(order)
+        );
+      });
+
+      wsData.push(row);
+    });
+
+    // Add new products
+    this.productsToAdd.forEach((newProduct: any) => {
+      const row = [
+        'New',
+        newProduct.name || '',
+        newProduct.unit || '',
+        newProduct.unitF || ''
+      ];
+
+      this.branches.forEach(() => {
+        row.push('', '', 'Pending');
+      });
+
+      wsData.push(row);
+    });
+
+    return { data: wsData, merges: merges };
+  }
+
+
+  exportToExcel3() {
+    // Prepare the worksheet data and merge ranges
+    const { data, merges } = this.prepareWorksheetData3();
+
+    // Create worksheet with correct headers
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Set merge ranges for branch headers
+    ws['!merges'] = merges;
+
+    // Set column widths (optimized for better display)
+    ws['!cols'] = [
+      { wch: 5 },   // #
+      { wch: 30 },  // Product Name (wider for better readability)
+      { wch: 15 },  // Requested Unit
+      { wch: 15 },  // Remain Unit
+      ...Array(this.branches.length * 3).fill({ wch: 15 }) // Branch columns
+    ];
+
+    // Set row heights (header rows taller)
+    ws['!rows'] = [
+      { hpx: 30 }, // First header row (merged branch names)
+      { hpx: 25 }  // Second header row (column titles)
+    ];
+
+    // Create workbook
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
+
+    // Generate Excel file with formatted date
+    const dateStr = this.formatDate(this.selectedDate!!);
+    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh'
+    XLSX.writeFile(wb, `Orders_${city}_${dateStr}.xlsx`);
+  }
+
+  prepareWorksheetData3(): { data: any[][], merges: any[] } {
+    const wsData = [];
+    const merges: any = [];
+
+    // First header row (branch names)
+    const header1 = ['#', 'Product Name', 'Requested Unit', 'Remain Unit'];
+    this.branches.forEach((branch, index) => {
+      const startCol = 4 + (index * 3); // Starting column index (0-based)
+      header1.push(branch.name); // Branch name spans 3 columns
+
+      // Add merge range for this branch header
+      merges.push({
+        s: { r: 0, c: startCol },    // Start row (0), start column
+        e: { r: 0, c: startCol } // End row (0), end column
+      });
+    });
+    wsData.push(header1);
+
+    // Second header row (column titles)
+    const header2 = ['', '', '', '']; // Empty cells for first 4 columns
+    this.branches.forEach(() => {
+      header2.push('Requested Qnt');
+    });
+    wsData.push(header2);
+
+    // Add existing products
+    this.data.forEach((product, index) => {
+      const row = [
+        index + 1,
+        product.name,
+        product.unit,
+        product.unitF
+      ];
+
+      this.branches.forEach(branch => {
+        const order = this.orders.find(o =>
+          o.branchId === branch.id && o.productId === product.id
+        );
+
+        row.push(
+          order?.qnt || '0',
+          // order?.qntF || '0',
+          // this.getStatusDisplay(order)
+        );
+      });
+
+      wsData.push(row);
+    });
+
+    // Add new products
+    this.productsToAdd.forEach((newProduct: any) => {
+      const row = [
+        'New',
+        newProduct.name || '',
+        newProduct.unit || '',
+        newProduct.unitF || ''
+      ];
+
+      this.branches.forEach(() => {
+        row.push('', '', 'Pending');
+      });
+
+      wsData.push(row);
+    });
+
+    return { data: wsData, merges: merges };
+  }
+
+
+  private getStatusDisplay(order?: any): string {
+    if (!order) return 'Pending';
+
+    switch (order.status) {
+      case '1': return 'Received';
+      case '0': return 'No Action';
+      case '2': return 'Not Received';
+      case '3': return `${order.qntNotRequirement || 0}`;
+      default: return 'Pending';
+    }
+  }
 
 
   // Faster order lookup
@@ -1102,5 +1494,50 @@ export class DashboardComponent implements OnInit {
   onProductChange(product: any) {
     // Debounce this if needed
     // this.saveProduct(product);
+  }
+
+
+  isOn = true;
+
+  async toggle() {
+    this.isLoading = true
+    try {
+      const db = getFirestore();
+      const docRef = doc(db, "settings", "statusChange");
+
+      // First get current value
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const currentValue = docSnap.data()['isOpen'];
+
+        // Update to inverse value
+        await updateDoc(docRef, {
+          isOpen: !currentValue,
+          updatedAt: serverTimestamp()
+        });
+
+        console.log("Status toggled successfully!");
+        // Optional: Update local state
+        this.isOn = !currentValue;
+      } else {
+        console.log("Document doesn't exist, creating it...");
+        // Create document if it doesn't exist
+        await setDoc(docRef, {
+          isOpen: true,
+          createdAt: serverTimestamp()
+        });
+        this.isOn = true;
+      }
+    } catch (error) {
+      console.error("Error toggling status:", error);
+    } finally {
+
+      this.isLoading = false
+    }
+    // this.isOn = !this.isOn;
+    // this.toggleChange.emit(this.isOn);
+    // console.log('any', $event);
+
   }
 }

@@ -133,3 +133,26 @@ button:disabled {
   font-size: 1.1em;
   text-align: center;
 }
+
+.styled-select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 200px;
+  cursor: pointer;
+}
+.dynamic-select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 200px;
+}
+
+/* Dynamic colors for selected value */
+.status-1 { background-color: green; }
+.status-2 { color: red; }
+.status-3 { color: orange; }
+.status-4 { color: green; }

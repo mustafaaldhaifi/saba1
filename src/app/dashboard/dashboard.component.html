@@ -43,6 +43,10 @@
 
   <!-- Date Selection -->
   <div class="date-selection">
+    <label class="toggle-switch">
+      <input type="checkbox" [checked]="isOn" (click)="toggle()">
+      <span class="slider round"></span>
+    </label>
     <h3>Select Order Date</h3>
     <div class="date-buttons">
       <button *ngFor="let item of preOrders" class="btn date-btn" (click)="onSelectDate(item.createdAt)"
@@ -69,7 +73,13 @@
     </div>
 
     <button class="btn btn-primary logout-btn" (click)="exportToExcel()">
-      <i class="fas fa-file-export me-2"></i> Export
+      <i class="fas fa-file-export me-2"></i> Export All
+    </button>
+    <button class="btn btn-primary logout-btn" (click)="exportToExcel2()">
+      <i class="fas fa-file-export me-2"></i> Export Notes
+    </button>
+    <button class="btn btn-primary logout-btn" (click)="exportToExcel3()">
+      <i class="fas fa-file-export me-2"></i> Export Request
     </button>
   </div>
 
@@ -130,6 +140,9 @@
           <th style="background-color: rgb(181, 0, 0);" *ngFor="let branch of branches" colspan="3">
             <!-- Each branch takes 3 columns -->
             {{ branch.name }}
+            <a (click)="changePassword(branch)" class="password-icon" style="color: #3498db;">
+              <i class="fas fa-user-lock"></i>
+            </a>
           </th>
         </tr>
         <tr class="s-h">
@@ -183,12 +196,26 @@
             </td>
 
             <td class="branch-cell">
-              <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+              <!-- <ng-container *ngIf="getOrder(branch.id, product.id) as order">
                 <select *ngIf="order?.id" [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)"
                   class="status-select">
                   <option value="0"></option>
                   <option value="1">Received</option>
                   <option value="2">Not Received</option>
+                  <option value="4">Not Requested</option>
+                 else <option >Not Same ({{order.status}})</option>
+
+                </select>
+              </ng-container> -->
+              <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                <select [style.background-color]="getStatusColor(order.status)" *ngIf="order?.id"
+                  [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)" class="status-select">
+                  <option value="0"></option>
+                  <option value="1">Received</option>
+                  <option value="2">Not Received</option>
+                  <option value="4">Not Requested</option>
+                  <option *ngIf="![0, 1, 2, 4].includes(order.status)" value="{{order.status}}">Not Same
+                    ({{order.qntNotRequirement}})</option>
                 </select>
               </ng-container>
             </td>
