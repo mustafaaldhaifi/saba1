@@ -334,14 +334,13 @@ export class BranchComponent {
           // this.preOrders.some((pre: any) =>pre.createdAt in this.datesToAdd.createdAt)
 
           // console.log("p",this.datesToAdd);
+          this.preOrders.forEach((pre: any) => {
+            this.datesToAdd.forEach((date: any, index: number) => {
 
-          this.datesToAdd.forEach((date: any, index: number) => {
-            this.preOrders.forEach((pre: any) => {
               console.log('yy', date.createdAt.toDate().toISOString().split('T')[0]);
               console.log('tt', pre.createdAt.toDate().toISOString().split('T')[0]);
               if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
                 //  console.log("frfrf",index);
-
                 this.datesToAdd.splice(index, 1);
               }
             });
