@@ -322,18 +322,6 @@ export class BranchComponent {
             this.getSettings(),
           ]);
 
-          // Start of day (00:00:00.000 UTC)
-          const startOfDay = new Date(this.selectedDate);
-          startOfDay.setUTCHours(0, 0, 0, 0);
-          const startTimestamp = Timestamp.fromDate(startOfDay);
-
-          // End of day (23:59:59.999 UTC)
-          const endOfDay = new Date(this.selectedDate);
-          endOfDay.setUTCHours(23, 59, 59, 999);
-          const endTimestamp = Timestamp.fromDate(endOfDay);
-          // this.preOrders.some((pre: any) =>pre.createdAt in this.datesToAdd.createdAt)
-
-          // console.log("p",this.datesToAdd);
           this.preOrders.forEach((pre: any) => {
             this.datesToAdd.forEach((date: any, index: number) => {
 
@@ -554,7 +542,7 @@ export class BranchComponent {
           city: this.branch.data.city,
 
           status: '0',
-          createdAt: this.currentTimestamp // Better than manual timestamp
+          createdAt: this.selectedDate.createdAt // Better than manual timestamp
         });
       });
 
@@ -565,7 +553,7 @@ export class BranchComponent {
         branchId: this.branch.id,
         city: this.branch.data.city,
         // qntNumber: this.ordersToAdd.length,
-        createdAt: this.currentTimestamp // Server-side timestamp
+        createdAt: this.selectedDate.createdAt // Server-side timestamp
       });
 
       // 3. Execute everything as a single batch
