@@ -38,7 +38,7 @@ export class BranchComponent {
     // console.log("rrr", r);
 
     if (this.isChangeStatus() == true) {
-      alert("يجب تسجيل حالة الاستلام للطلبة السابقة"); // "Receipt status must be recorded for previous students"
+      alert("يجب تسجيل حالة الاستلام للطلبية السابقة"); // "Receipt status must be recorded for previous students"
       return;
     }
     this.selectedDate = date
@@ -113,6 +113,21 @@ export class BranchComponent {
         console.log(updatedData);
 
         console.log(`Order with ID: ${element.id} added to batch for update.`);
+        // Find the index of the selected order
+        const orderIndex = this.preOrders.findIndex(
+          (order: any) => order.id === this.selectedPreOrder.id
+        );
+
+        if (orderIndex !== -1) {
+          // Update the status of the found order to '1'
+          const e = {
+            ...this.preOrders[orderIndex],  // Keep existing properties
+            status: '1'                    // Update status
+          };
+          this.preOrders[orderIndex] = e
+          this.selectedPreOrder = e
+        }
+        alert("يعطيك العافية تم التحديث بنجاح")
       } catch (e) {
         console.error("Error preparing batch update for order:", e);
       }
@@ -371,6 +386,8 @@ export class BranchComponent {
 
   async onSelectDate(order: any) {
     this.selectedPreOrder = order
+    console.log('selected', this.selectedPreOrder);
+
     const selectedTimestamp = this.selectedPreOrder.createdAt
     this.isLoading = true;
     try {
@@ -416,7 +433,7 @@ export class BranchComponent {
       case '1': return '#9fff9f';   // تم استلامها
       case '2': return 'red';     // لم يتم استلامها
       case '3': return 'orange';  // كمية غير مطابقة
-      case '4': return 'blue';   // غير مطلوبة
+      // case '4': return 'blue';   // غير مطلوبة
       default: return 'white';  // Default color
     }
   }
@@ -505,8 +522,9 @@ export class BranchComponent {
 
       qnt: doc.data()['qnt'],
       qntF: doc.data()['qntF'],
-      unitId: doc.data()['unitId'],
-      unitFId: doc.data()['unitFId'],
+      // unitId: doc.data()['unitId'],
+      // unitFId: doc.data()['unitFId'],
+      qntNotRequirement: doc.data()['qntNotRequirement'],
       status: doc.data()['status'],
       createdAt: doc.data()['createdAt']
     }));
@@ -621,7 +639,7 @@ export class BranchComponent {
     }
     const doc = querySnapshot.docs[0];
 
-    console.log(doc);
+    // console.log(doc);
 
 
     return { id: doc.id, data: doc.data() };
@@ -630,63 +648,22 @@ export class BranchComponent {
   combineDataWithOrders() {
     this.combinedData = this.data.map((product: any) => {
       const order = this.branchOrders.find((o: any) => o.productId === product.id);
-
-      console.log("order", order);
-      console.log("product", product);
-
       if (order) {
         this.isPreSent = true
       }
-      var unitName
-
-      if (order && order.unitId) {
-        const unit = this.units.find((unit: any) => unit.unitId === order.unitId);
-
-        if (unit) {
-          unitName = unit.name
-        } else {
-          unitName = ""
-        }
-
-
-      } else {
-        unitName = ""
-      }
-
-      var unitNameF
-
-      if (order && order.unitFId) {
-        const unit = this.units.find((unit: any) => unit.unitFId === order.unitFId);
-
-        if (unit) {
-          unitNameF = unit.name
-        } else {
-          unitNameF = ""
-        }
-
-
-      } else {
-        unitNameF = ""
-      }
-
-
       const s = {
-        // ...product,
         id: order ? order.id : -1,
         name: product.name,
-        // units: product.units,
         productId: product.id,
         qnt: order ? order.qnt : '',
         qntF: order ? order.qntF : '',
-
-        // qntF: order ? order.qntF : '',
+        qntNotRequirement: order.qntNotRequirement,
         unit: product ? product.unit : '',
         unitF: product ? product.unitF : '',
-        // unitF: order ? unitNameF : '',
         status: order ? order.status : 0
       };
 
-      console.log("new order", s);
+      // console.log("new order", s);
       return s
     });
   }
@@ -698,7 +675,7 @@ export class BranchComponent {
 
 
   onStatusChange(order: any) {
-    if (order.status == '4') {
+    if (order.status == '3') {
       return
     }
 

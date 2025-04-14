@@ -91,11 +91,11 @@
                     <td *ngIf="isPreSent === true">
                         <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                             <label class="status-dropdown-label">
-                                <select [disabled]="isChangeStatus() == false || isOn === false" [(ngModel)]="item.status"
-                                [style.background-color]="getStatusColor(item.status)"
+                                <select [disabled]="isChangeStatus() == false || isOn === false"
+                                    [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                     (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
                                     <!-- <option value="0">لم يتم الاختيار</option> -->
-                                    <option  value="1">تم استلامها</option>
+                                    <option value="1">تم استلامها</option>
                                     <option value="2">لم يتم استلامها</option>
                                     <option value="3">كمية غير مطابقة</option>
                                     <option value="4">غير مطلوبة</option>
@@ -104,7 +104,8 @@
                         </span>
                         <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3'"
                             #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
-                            [(ngModel)]="combinedData[i].qntNotRequirement" (input)="onInputQ($event, i,combinedData[i])" required>
+                            [(ngModel)]="combinedData[i].qntNotRequirement"
+                            (input)="onInputQ($event, i,combinedData[i])" required>
                     </td>
                 </tr>
             </tbody>
