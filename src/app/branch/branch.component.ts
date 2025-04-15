@@ -542,7 +542,7 @@ export class BranchComponent {
           city: this.branch.data.city,
 
           status: '0',
-          createdAt: this.selectedDate.createdAt // Better than manual timestamp
+          createdAt: this.selectedDate // Better than manual timestamp
         });
       });
 
@@ -553,7 +553,7 @@ export class BranchComponent {
         branchId: this.branch.id,
         city: this.branch.data.city,
         // qntNumber: this.ordersToAdd.length,
-        createdAt: this.selectedDate.createdAt // Server-side timestamp
+        createdAt: this.selectedDate // Server-side timestamp
       });
 
       // 3. Execute everything as a single batch
