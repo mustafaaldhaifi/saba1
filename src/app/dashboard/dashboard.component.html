@@ -153,8 +153,8 @@
           <th class="fixed-column unit-column">Requested Unit</th>
           <th class="fixed-column unitF-column">Remain Unit</th>
           <ng-container *ngFor="let branch of branches">
-            <th>Requested Qnt</th>
-            <th>Remain Qnt</th>
+            <th  (click)="getId2(branch)">Requested Qnt</th>
+            <th (click)="getSameOrders(branch)">Remain Qnt</th>
             <th>Status</th>
           </ng-container>
         </tr>

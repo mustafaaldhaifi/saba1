@@ -42,7 +42,11 @@ export class BranchComponent {
       return;
     }
     this.selectedDate = date
-    console.log(date);
+    console.log("dff",date);
+    console.log("dff",Timestamp.now().toDate());
+
+    console.log(date.toDate());
+
 
     // this.selectedDate = date
     this.combinedData = this.data.map((product: any) => {

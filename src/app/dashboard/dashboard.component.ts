@@ -72,6 +72,50 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  async getSameOrders(_t90: Branch) {
+    this.isLoading = true;
+    // throw new Error('Method not implemented.');
+    const db = getFirestore();
+    const q = query(collection(db, "branchesOrders"),
+      where("branchId", '==', _t90.id),
+      orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+
+    const d = snapshot.docs.map(doc => ({
+      id: doc.id,
+      data: doc.data(),
+      date: doc.data()['createdAt'].toDate()
+    }));
+
+    const f = d.filter((p: any) => p.data.status == '0')
+    // console.log("dat",);
+    // const db = getFirestore();
+    // const batch = writeBatch(db);
+
+    // try {
+    //   // First process all orders deletions
+
+    //   for (const order of f) {
+    //     batch.delete(doc(db, 'branchesOrders', order.id));
+    //     console.log("deleteOrderId", order.id);
+    //   }
+
+    //   // Commit the batch once after all operations are added
+    //   await batch.commit();
+    // } catch (error) {
+    //   console.error('Error deleting orders:', error);
+    //   throw error;
+    // } finally {
+    //   this.isLoading = false;
+    // }
+
+  }
+  getId2(branch: any) {
+    alert()
+    // throw new Error('Method not implemented.');
+    console.log("b-id", branch);
+
+  }
   changePassword(branch: any) {
     const newPassword = window.prompt(`Please enter new password for ${branch.name}:`);
     if (newPassword) {
