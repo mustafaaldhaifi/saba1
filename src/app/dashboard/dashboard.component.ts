@@ -4,7 +4,7 @@ import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import {
   getAuth,
   onAuthStateChanged,
@@ -72,6 +72,55 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  async addTemp() {
+
+    // try {
+    //   const db = getFirestore();
+    //   const batch = writeBatch(db);
+    //   const q = query(collection(db, "products"))
+    //   const snapshot = await getDocs(q);
+
+    //   // console.log(snapshot.docs);
+
+    //   const typeId = this.selectedType.id
+    //   // console.log("ty",typeId);
+
+    //   snapshot.docs.forEach(docSnap => {
+    //     const docRef = doc(db, 'products', docSnap.id);
+    //     // batch.set(docRef, { typeId: typeId }, { merge: true });
+    //     batch.update(docRef, { typeId: typeId });
+    //   });
+    //   await batch.commit()
+    //   console.log("done");
+
+    // } catch (error) {
+    //   console.log(error);
+
+    // }
+
+
+    // batch.set(docRef, {
+    //   branchId: order.branchId,
+    //   createdAt: this.selectedDate
+    // });
+  }
+  async onSelectTypeChange() {
+
+
+    this.isLoading = true
+    if (this.types.length > 0) {
+      // this.selectedType = this.types[0]
+      this.selectedDatey = null
+
+      this.isOn = null;
+      this.isGetData = false
+      this.datesToAdd = []
+      this.data = []
+      await this.getSharedData(false)
+      // await this.getPreOrders()
+    }
+    this.isLoading = false
+  }
   async getSameOrders(_t90: Branch) {
     this.isLoading = true;
     // throw new Error('Method not implemented.');
@@ -88,27 +137,6 @@ export class DashboardComponent implements OnInit {
     }));
 
     const f = d.filter((p: any) => p.data.status == '0')
-    // console.log("dat",);
-    // const db = getFirestore();
-    // const batch = writeBatch(db);
-
-    // try {
-    //   // First process all orders deletions
-
-    //   for (const order of f) {
-    //     batch.delete(doc(db, 'branchesOrders', order.id));
-    //     console.log("deleteOrderId", order.id);
-    //   }
-
-    //   // Commit the batch once after all operations are added
-    //   await batch.commit();
-    // } catch (error) {
-    //   console.error('Error deleting orders:', error);
-    //   throw error;
-    // } finally {
-    //   this.isLoading = false;
-    // }
-
   }
   getId2(branch: any) {
     alert()
@@ -170,6 +198,7 @@ export class DashboardComponent implements OnInit {
       }
 
       const newData = {
+        typeId: this.selectedType.id,
         createdAt: Timestamp.fromDate(date),
         // Add other fields as needed
       };
@@ -270,25 +299,34 @@ export class DashboardComponent implements OnInit {
 
   }
   async onSelectChange(event: any) {
-    console.log('Selected option:', event);  // You can perform any action here
-    // Add more logic based on selected option
-    // if (event != this.selectedOption) {
-    console.log('Selected option:', event);  // You can perform any action here
+    this.selectedOption = event
 
     this.isLoading = true
-    this.selectedOption = event
-    await this.getPreOrders();
-    await this.getData()
-    // Handle 'Ryad' selection
-    // }
+    if (this.types.length > 0) {
+      this.selectedType = this.types[0]
+      this.selectedDatey = null
+      this.isOn = null;
+      this.isGetData = false
+      this.datesToAdd = []
+      this.data = []
+      await this.getSharedData()
+    }
+    this.isLoading = false
   }
+
+
   isLoading = false;
   isAdmin = false;
-  selectedDate: Date | null = null;
+  isGetData = false
+
+  selectedDatey: any;
+
 
   data: Product[] = [];
   branches: Branch[] = [];
   orders: Order[] = [];
+  types: any = [];
+
 
   preOrders: GroupedPreOrder[] = [];
   actualPreOrders: PreOrder[] = [];
@@ -298,6 +336,7 @@ export class DashboardComponent implements OnInit {
   ordersToAdd: Order[] = [];
   ordersToUpdate: Order[] = [];
   selectedOption = "ryad"
+  selectedType: any
   movableDate: any
 
 
@@ -367,26 +406,72 @@ export class DashboardComponent implements OnInit {
 
       if (this.isAdmin) {
 
-        await this.getData();
+        await this.getFirstData()
+        // await this.getData();
+
       }
     });
   }
+  ifEnabledSearech() {
 
-  async getData(date: Date | null = null): Promise<void> {
+    if (this.selectedDatey && this.selectedOption && this.selectedType) {
+      return true
+    }
+    return false
+  }
+
+  async getSharedData(getTypes = true) {
+    if (getTypes) {
+      await this.getTypes();
+    }
+
+    // await this.fetchProducts()
+    await this.getPreOrders();
+    await this.getDatesToAdd();
+    await this.getSettings();
+    // await this.getData()
+    await this.search()
+  }
+
+
+  async getFirstData() {
+    this.isLoading = true
+    try {
+
+      // this.isLoading = true
+      await this.getSharedData()
+      // await Promise.all([
+      //   await this.getTypes(),
+      //   await this.getPreOrders(),
+      //   await this.getDatesToAdd(),
+      //   await this.getSettings()
+      // ]);
+
+      this.addMissingOrders();
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async search(): Promise<void> {
     this.isLoading = true;
     try {
 
-      await Promise.all([
-        await this.getPreOrders(),
-        await this.getDatesToAdd(),
-        await this.getSettings()
-      ]);
+      // await Promise.all([
+      //   await this.getDatesToAdd(),
+      //   await this.getSettings()
+      // ]);
 
+      // this.selectedDate = this.preOrders[0].createdAt.toDate();
 
-      this.selectedDate = date || Timestamp.now().toDate();
-      console.log("seleele", this.selectedDate);
+      // if (!this.selectedDatey) {
+      //   this.selectedDatey = Timestamp.now()
+      // }
+      console.log("seleele", this.selectedDatey);
 
-      const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(this.selectedDate);
+      const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(this.selectedDatey ? this.selectedDatey.createdAt.toDate() : Timestamp.now().toDate());
 
       const [branches, products, orders] = await Promise.all([
         this.fetchBranches(),
@@ -408,16 +493,16 @@ export class DashboardComponent implements OnInit {
         this.orderMap.set(key, order);
       });
       console.log("maps", this.orderMap);
-
-
-
       this.addMissingOrders();
+
+      this.isGetData = true
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
       this.isLoading = false;
     }
   }
+
 
   private getDateRangeTimestamps(date: Date): { startTimestamp: Timestamp; endTimestamp: Timestamp } {
     // const startOfDay = new Date(date);
@@ -432,6 +517,8 @@ export class DashboardComponent implements OnInit {
     // };
 
     // Get the date at midnight local time
+    console.log("dddd", date);
+
     const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
     // Get the date at 23:59:59.999 local time
@@ -460,6 +547,7 @@ export class DashboardComponent implements OnInit {
     const db = getFirestore();
     const q = query(collection(db, "products"),
       where("city", '==', this.selectedOption),
+      where("typeId", "==", this.selectedType.id),
       orderBy("createdAt", "asc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({
@@ -483,6 +571,7 @@ export class DashboardComponent implements OnInit {
     const q = query(
       collection(db, "branchesOrders"),
       where("city", '==', this.selectedOption),
+      where("typeId", "==", this.selectedType.id),
       where("createdAt", ">=", start),
       where("createdAt", "<=", end),
       orderBy("createdAt")
@@ -531,12 +620,14 @@ export class DashboardComponent implements OnInit {
     const db = getFirestore();
     const q = query(collection(db, "orders"),
       where("city", '==', this.selectedOption),
+      where("typeId", '==', this.selectedType.id),
       orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
     this.actualPreOrders = snapshot.docs.map(doc => ({
       id: doc.id,
       branchId: doc.data()['branchId'],
+      typeId: doc.data()['typeId'],
       createdAt: doc.data()['createdAt']
     }));
 
@@ -544,85 +635,33 @@ export class DashboardComponent implements OnInit {
 
 
     this.groupPreOrdersByDate();
-
     await this.deleteOldOrders();
-    // if (this.preOrders.length > 4) {
-
-    //   const ordersToRemain = this.preOrders.slice(0, 4);
-
-    //   const ordersGroupedToDelete = this.preOrders.slice(4);
-    //   var dateToDelete = [];
-    //   const db = getFirestore();
-    //   const batch = writeBatch(db);
-    //   try {
-    //     for (let index = 0; index < ordersGroupedToDelete.length; index++) {
-    //       // console.log("deleyte", ordersGroupedToDelete[index]);
-
-
-    //       ordersGroupedToDelete.forEach(async (element: GroupedPreOrder) => {
-
-    //         element.orders.forEach((order: PreOrder) => {
-    //           batch.delete(doc(db, 'orders', order.id));
-    //           console.log("deleteOrderId", order);
-
-    //         })
-    //       })
-    //     }
-
-    //     ordersGroupedToDelete.forEach(async (element: GroupedPreOrder) => {
-
-
-    //       const date = element.createdAt.toDate();
-
-    //       // Get start of day (00:00:00.000)
-    //       const startOfDay = new Date(date);
-    //       startOfDay.setHours(0, 0, 0, 0);
-
-    //       // Get end of day (23:59:59.999)
-    //       const endOfDay = new Date(date);
-    //       endOfDay.setHours(23, 59, 59, 999);
-
-    //       const ordersQuery = query(collection(db, 'branchesOrders'), where("createdAt", ">=", startOfDay),
-    //         where("createdAt", "<=", endOfDay));
-    //       const snapshot = await getDocs(ordersQuery);
-
-
-    //       snapshot.forEach(doc => {
-    //         console.log("docDeleBranchOrder", doc);
-
-    //         batch.delete(doc.ref);
-    //       });
-
-    //     })
-
-    //     // Delete product
-
-
-    //     // Delete associated orders
-
-
-    //     // await batch.commit();
-    //     this.preOrders = ordersToRemain;
-    //     // this.data = this.data.filter(product => product.id !== id);
-    //   } catch (error) {
-    //     console.error('Error deleting product:', error);
-    //   } finally {
-    //     this.isLoading = false;
-    //   }
-
-
-
-
-
-    // }
   }
 
+  async getTypes(): Promise<void> {
+    const db = getFirestore();
+    const q = query(collection(db, "types"));
+    const snapshot = await getDocs(q);
+
+    this.types = snapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data()['name']
+    }));
+    if (this.types.length > 0) {
+      this.selectedType = this.types[0]
+    }
+  }
   async getSettings(): Promise<void> {
     try {
       const db = getFirestore();
 
       // Reference to the specific document
-      const docRef = doc(db, "settings", "statusChange");
+      const docRef = doc(db, "settings", this.selectedType.id);
+
+
+      console.log("sss", this.selectedType);
+
+
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -643,7 +682,8 @@ export class DashboardComponent implements OnInit {
   datesToAdd: any = []
   async getDatesToAdd(): Promise<void> {
     const db = getFirestore();
-    const q = query(collection(db, "openDates"));
+    const q = query(collection(db, "openDates"),
+      where("typeId", "==", this.selectedType.id),);
     const snapshot = await getDocs(q);
 
     this.datesToAdd = snapshot.docs.map(doc => ({
@@ -733,11 +773,13 @@ export class DashboardComponent implements OnInit {
     });
 
     this.preOrders = Array.from(grouped.values());
+    if (this.preOrders.length > 0) {
+      this.selectedDatey = this.preOrders[0]
+    }
+
   }
 
-  async onSelectDate(date: Timestamp): Promise<void> {
-    await this.getData(date.toDate());
-  }
+
 
   logout(): void {
     const auth = getAuth();
@@ -748,7 +790,7 @@ export class DashboardComponent implements OnInit {
 
   // Product CRUD operations
   addToProductsToAdd(): void {
-    this.productsToAdd.push({ name: "", unit: "", unitF: "", city: this.selectedOption, createdAt: Timestamp.now() });
+    this.productsToAdd.push({ name: "", unit: "", unitF: "", city: this.selectedOption, typeId: this.selectedType.id, createdAt: Timestamp.now() });
     this.ifHasChanges = true
   }
 
@@ -893,7 +935,7 @@ export class DashboardComponent implements OnInit {
     await batch.commit();
     this.productsToAdd = [];
     // window.location.reload();
-    await this.getData()
+    // await this.getData()
 
 
   }
@@ -940,7 +982,7 @@ export class DashboardComponent implements OnInit {
             const docRef = doc(collection(db, 'orders'));
             batch.set(docRef, {
               branchId: order.branchId,
-              createdAt: this.selectedDate
+              createdAt: this.selectedDatey.createdAt
             });
           }
           processedBranches.add(order.branchId);
@@ -951,7 +993,7 @@ export class DashboardComponent implements OnInit {
         batch.set(branchesOrderRef, {
           ...order,
           city: this.selectedOption,
-          createdAt: this.selectedDate
+          createdAt: this.selectedDatey.createdAt
         });
       }
 
@@ -1183,146 +1225,391 @@ export class DashboardComponent implements OnInit {
   // }
 
 
-  exportToExcel() {
-    // Prepare the worksheet data and merge ranges
-    const { data, merges } = this.prepareWorksheetData();
 
-    // Create worksheet with correct headers
-    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(data);
-
-    // Set merge ranges for branch headers
-    ws['!merges'] = merges;
-
-    // Set column widths (optimized for better display)
-    ws['!cols'] = [
-      { wch: 5 },   // #
-      { wch: 30 },  // Product Name (wider for better readability)
-      { wch: 15 },  // Requested Unit
-      { wch: 15 },  // Remain Unit
-      ...Array(this.branches.length * 3).fill({ wch: 15 }) // Branch columns
-    ];
-
-    // Set row heights (header rows taller)
-    ws['!rows'] = [
-      { hpx: 30 }, // First header row (merged branch names)
-      { hpx: 25 }  // Second header row (column titles)
-    ];
-
-    // Create workbook
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
-
-    // Generate Excel file with formatted date
-    const dateStr = this.formatDate(this.selectedDate!!);
-    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh'
-    XLSX.writeFile(wb, `Orders_${city}_all_data_${dateStr}.xlsx`);
-  }
 
   private formatDate(date: Date): string {
     return date.toISOString().slice(0, 10).replace(/-/g, '');
   }
 
-  prepareWorksheetData(): { data: any[][], merges: any[] } {
+  exportToExcel() {
+    // Prepare data and styling
     const wsData = [];
-    const merges: any = [];
+    const merges: any[] = [];
+    const cellStyles: { [key: string]: any } = {};
+
+
 
     // First header row (branch names)
     const header1 = ['#', 'Product Name', 'Requested Unit', 'Remain Unit'];
     this.branches.forEach((branch, index) => {
-      const startCol = 4 + (index * 3); // Starting column index (0-based)
-      header1.push(branch.name, '', ''); // Branch name spans 3 columns
-
-      // Add merge range for this branch header
-      merges.push({
-        s: { r: 0, c: startCol },    // Start row (0), start column
-        e: { r: 0, c: startCol + 2 } // End row (0), end column
-      });
+      const startCol = 4 + (index * 3);
+      header1.push(branch.name, '', '');
+      merges.push({ s: { r: 0, c: startCol }, e: { r: 0, c: startCol + 2 } });
     });
     wsData.push(header1);
 
     // Second header row (column titles)
-    const header2 = ['', '', '', '']; // Empty cells for first 4 columns
-    this.branches.forEach(() => {
-      header2.push('Requested Qnt', 'Remain Qnt', 'Status');
-    });
+    const header2 = ['', '', '', ''];
+    this.branches.forEach(() => header2.push('Requested Qnt', 'Remain Qnt', 'Status'));
     wsData.push(header2);
 
-    // Add existing products
-    this.data.forEach((product, index) => {
-      const row = [
-        index + 1,
-        product.name,
-        product.unit,
-        product.unitF
-      ];
+    // Existing products
+    this.data.forEach((product, rowIndex) => {
+      const row = [rowIndex + 1, product.name, product.unit, product.unitF];
 
-      this.branches.forEach(branch => {
-        const order = this.orders.find(o =>
-          o.branchId === branch.id && o.productId === product.id
-        );
+      this.branches.forEach((branch, branchIndex) => {
+        const order = this.orders.find(o => o.branchId === branch.id && o.productId === product.id);
+        const status = this.getStatusDisplay(order);
 
         row.push(
-          order?.qnt || '0',
-          order?.qntF || '0',
-          this.getStatusDisplay(order)
+          order?.qnt,
+          order?.qntF,
+          status
         );
+
+        // Style for status cell
+        const statusCol = 4 + (branchIndex * 3) + 2;
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 2, c: statusCol });
+        const d = this.statusStyles(status);
+
+        if (status && d) {
+          cellStyles[cellAddress] = this.statusStyles(status);
+        }
       });
 
       wsData.push(row);
     });
 
-    // Add new products
-    this.productsToAdd.forEach((newProduct: any) => {
-      const row = [
-        'New',
-        newProduct.name || '',
-        newProduct.unit || '',
-        newProduct.unitF || ''
-      ];
 
-      this.branches.forEach(() => {
-        row.push('', '', 'Pending');
-      });
 
-      wsData.push(row);
-    });
+    // Create worksheet
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
 
-    return { data: wsData, merges: merges };
-  }
-
-  exportToExcel2() {
-    // Prepare the worksheet data and merge ranges
-    const { data, merges } = this.prepareWorksheetData2();
-
-    // Create worksheet with correct headers
-    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(data);
-
-    // Set merge ranges for branch headers
+    // Apply merges
     ws['!merges'] = merges;
 
-    // Set column widths (optimized for better display)
+    // Column widths
     ws['!cols'] = [
-      { wch: 5 },   // #
-      { wch: 30 },  // Product Name (wider for better readability)
-      { wch: 15 },  // Requested Unit
-      { wch: 15 },  // Remain Unit
-      ...Array(this.branches.length * 3).fill({ wch: 15 }) // Branch columns
+      { wch: 5 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 15 },
+      ...Array(this.branches.length * 3).fill({ wch: 15 })
     ];
 
-    // Set row heights (header rows taller)
+    // Row heights
     ws['!rows'] = [
-      { hpx: 30 }, // First header row (merged branch names)
-      { hpx: 25 }  // Second header row (column titles)
+      { hpx: 30 },
+      { hpx: 25 }
     ];
+
+    // Apply styles to status cells
+    Object.keys(cellStyles).forEach(cellAddress => {
+      if (ws[cellAddress]) {
+        ws[cellAddress].s = {
+          fill: cellStyles[cellAddress].fill,
+          alignment: { horizontal: 'center', vertical: 'center' },
+          font: { color: { rgb: "000000" } }
+        };
+      }
+    });
 
     // Create workbook
     const wb: XLSX.WorkBook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
 
-    // Generate Excel file with formatted date
-    const dateStr = this.formatDate(this.selectedDate!!);
-    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh'
+    // Generate filename and save
+    const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
+    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    XLSX.writeFile(wb, `Orders_${city}_all_data_${dateStr}.xlsx`);
+  }
+  exportToExcel2() {
+    // Prepare data and styling
+    const wsData = [];
+    const merges: any[] = [];
+    const cellStyles: { [key: string]: any } = {};
+
+
+
+    // First header row (branch names)
+    const header1 = ['#', 'Product Name', 'Requested Unit'];
+    this.branches.forEach((branch, index) => {
+      const startCol = 3 + (index * 2);
+      header1.push(branch.name, '');
+      merges.push({ s: { r: 0, c: startCol }, e: { r: 0, c: startCol + 1 } });
+    });
+    wsData.push(header1);
+
+    // Second header row (column titles)
+    const header2 = ['', '', ''];
+    this.branches.forEach(() => header2.push('Requested Qnt', 'Status'));
+    wsData.push(header2);
+
+    // Existing products
+    this.data.forEach((product, rowIndex) => {
+      const row = [rowIndex + 1, product.name, product.unit];
+
+      this.branches.forEach((branch, branchIndex) => {
+        const order = this.orders.find(o => o.branchId === branch.id && o.productId === product.id);
+        const status = this.getStatusDisplay(order);
+
+        row.push(
+          order?.qnt,
+          status
+        );
+
+        // Style for status cell
+        const statusCol = 2 + (branchIndex * 2) + 2;
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 2, c: statusCol });
+        const d = this.statusStyles(status);
+
+        if (status && d) {
+          cellStyles[cellAddress] = this.statusStyles(status);
+        }
+      });
+
+      wsData.push(row);
+    });
+    // Create worksheet
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Apply merges
+    ws['!merges'] = merges;
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 15 },
+      ...Array(this.branches.length * 3).fill({ wch: 15 })
+    ];
+
+    // Row heights
+    ws['!rows'] = [
+      { hpx: 30 },
+      { hpx: 25 }
+    ];
+
+    // Apply styles to status cells
+    Object.keys(cellStyles).forEach(cellAddress => {
+      if (ws[cellAddress]) {
+        ws[cellAddress].s = {
+          fill: cellStyles[cellAddress].fill,
+          alignment: { horizontal: 'center', vertical: 'center' },
+          font: { color: { rgb: "000000" } }
+        };
+      }
+    });
+
+    // Create workbook
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
+
+    // Generate filename and save
+    const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
+    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
     XLSX.writeFile(wb, `Orders_${city}_with_notes_${dateStr}.xlsx`);
+  }
+  exportToExcel3() {
+    // Prepare data and styling
+    const wsData = [];
+    const merges: any[] = [];
+    const cellStyles: { [key: string]: any } = {};
+
+
+
+    // First header row (branch names)
+    var header1 = ['#', 'Product Name', 'Requested Unit'];
+    if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
+      header1 = ['#', 'المنتج', 'الوحدة'];
+    }
+    this.branches.forEach((branch, index) => {
+      // const startCol = 3 + (index * 1);
+      header1.push(branch.name);
+      // merges.push({ s: { r: 0, c: startCol }, e: { r: 0, c: startCol + 1 } });
+    });
+    wsData.push(header1);
+
+    // Second header row (column titles)
+    const header2 = ['', '', ''];
+    if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
+      this.branches.forEach(() => header2.push('الكمية الطلوبة'));
+    } else
+      this.branches.forEach(() => header2.push('Requested Qnt'));
+    wsData.push(header2);
+
+    // Existing products
+    this.data.forEach((product, rowIndex) => {
+      const row = [rowIndex + 1, product.name, product.unit];
+
+      this.branches.forEach((branch, branchIndex) => {
+        const order = this.orders.find(o => o.branchId === branch.id && o.productId === product.id);
+        const status = this.getStatusDisplay(order);
+
+        row.push(
+          order?.qnt,
+        );
+      });
+
+      wsData.push(row);
+    });
+    // Create worksheet
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Apply merges
+    ws['!merges'] = merges;
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 15 },
+      ...Array(this.branches.length * 3).fill({ wch: 15 })
+    ];
+
+    // Row heights
+    ws['!rows'] = [
+      { hpx: 30 },
+      { hpx: 25 }
+    ];
+
+    // Apply styles to status cells
+    Object.keys(cellStyles).forEach(cellAddress => {
+      if (ws[cellAddress]) {
+        ws[cellAddress].s = {
+          fill: cellStyles[cellAddress].fill,
+          alignment: { horizontal: 'center', vertical: 'center' },
+          font: { color: { rgb: "000000" } }
+        };
+      }
+    });
+
+    // Create workbook
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
+
+    // Generate filename and save
+    const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
+    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    XLSX.writeFile(wb, `Orders_${city}_with_notes_${dateStr}.xlsx`);
+  }
+
+
+
+  // exportToExcel() {
+  //   // Prepare the worksheet data and merge ranges
+  //   const { data, merges } = this.prepareWorksheetData();
+
+  //   // Create worksheet with correct headers
+  //   const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(data);
+
+  //   // Set merge ranges for branch headers
+  //   ws['!merges'] = merges;
+
+  //   // Set column widths (optimized for better display)
+  //   ws['!cols'] = [
+  //     { wch: 5 },   // #
+  //     { wch: 30 },  // Product Name (wider for better readability)
+  //     { wch: 15 },  // Requested Unit
+  //     { wch: 15 },  // Remain Unit
+  //     ...Array(this.branches.length * 3).fill({ wch: 15 }) // Branch columns
+  //   ];
+
+  //   // Set row heights (header rows taller)
+  //   ws['!rows'] = [
+  //     { hpx: 30 }, // First header row (merged branch names)
+  //     { hpx: 25 }  // Second header row (column titles)
+  //   ];
+
+  //   // Create workbook
+  //   const wb: XLSX.WorkBook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
+
+  //   // Generate Excel file with formatted date
+  //   const dateStr = this.formatDate(this.selectedDate!!);
+  //   const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh'
+  //   XLSX.writeFile(wb, `Orders_${city}_all_data_${dateStr}.xlsx`);
+  // }
+  // prepareWorksheetData(): { data: any[][], merges: any[] } {
+  //   const wsData = [];
+  //   const merges: any = [];
+
+  //   // First header row (branch names)
+  //   const header1 = ['#', 'Product Name', 'Requested Unit', 'Remain Unit'];
+  //   this.branches.forEach((branch, index) => {
+  //     const startCol = 4 + (index * 3); // Starting column index (0-based)
+  //     header1.push(branch.name, '', ''); // Branch name spans 3 columns
+
+  //     // Add merge range for this branch header
+  //     merges.push({
+  //       s: { r: 0, c: startCol },    // Start row (0), start column
+  //       e: { r: 0, c: startCol + 2 } // End row (0), end column
+  //     });
+  //   });
+  //   wsData.push(header1);
+
+  //   // Second header row (column titles)
+  //   const header2 = ['', '', '', '']; // Empty cells for first 4 columns
+  //   this.branches.forEach(() => {
+  //     header2.push('Requested Qnt', 'Remain Qnt', 'Status');
+  //   });
+  //   wsData.push(header2);
+
+  //   // Add existing products
+  //   this.data.forEach((product, index) => {
+  //     const row = [
+  //       index + 1,
+  //       product.name,
+  //       product.unit,
+  //       product.unitF
+  //     ];
+
+  //     this.branches.forEach(branch => {
+  //       const order = this.orders.find(o =>
+  //         o.branchId === branch.id && o.productId === product.id
+  //       );
+
+  //       row.push(
+  //         order?.qnt || '0',
+  //         order?.qntF || '0',
+  //         this.getStatusDisplay(order)
+  //       );
+  //     });
+
+  //     wsData.push(row);
+  //   });
+
+  //   // Add new products
+  //   this.productsToAdd.forEach((newProduct: any) => {
+  //     const row = [
+  //       'New',
+  //       newProduct.name || '',
+  //       newProduct.unit || '',
+  //       newProduct.unitF || ''
+  //     ];
+
+  //     this.branches.forEach(() => {
+  //       row.push('', '', 'Pending');
+  //     });
+
+  //     wsData.push(row);
+  //   });
+
+  //   return { data: wsData, merges: merges };
+  // }
+
+  statusStyles(value: any) {
+    const styles: { [key: string]: any } = {
+      'No Action': { fill: { fgColor: { rgb: "CCCCCC" } } },     // Gray
+      'Received': { fill: { fgColor: { rgb: "00FF00" } } },      // Green
+      'Not Received': { fill: { fgColor: { rgb: "FF0000" } } },  // Red
+      'Not Requested': { fill: { fgColor: { rgb: "FFFFFF" } } }, // White
+    };
+
+    // Return the matched style or fallback (yellow)
+    return styles[value] || { fill: { fgColor: { rgb: "FFFF00" } } };
   }
 
   prepareWorksheetData2(): { data: any[][], merges: any[] } {
@@ -1365,7 +1652,7 @@ export class DashboardComponent implements OnInit {
         );
 
         row.push(
-          order?.qnt || '0',
+          order?.qnt || '-0',
           // order?.qntF || '0',
           this.getStatusDisplay(order)
         );
@@ -1393,41 +1680,6 @@ export class DashboardComponent implements OnInit {
     return { data: wsData, merges: merges };
   }
 
-
-  exportToExcel3() {
-    // Prepare the worksheet data and merge ranges
-    const { data, merges } = this.prepareWorksheetData3();
-
-    // Create worksheet with correct headers
-    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(data);
-
-    // Set merge ranges for branch headers
-    ws['!merges'] = merges;
-
-    // Set column widths (optimized for better display)
-    ws['!cols'] = [
-      { wch: 5 },   // #
-      { wch: 30 },  // Product Name (wider for better readability)
-      { wch: 15 },  // Requested Unit
-      { wch: 15 },  // Remain Unit
-      ...Array(this.branches.length * 3).fill({ wch: 15 }) // Branch columns
-    ];
-
-    // Set row heights (header rows taller)
-    ws['!rows'] = [
-      { hpx: 30 }, // First header row (merged branch names)
-      { hpx: 25 }  // Second header row (column titles)
-    ];
-
-    // Create workbook
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
-
-    // Generate Excel file with formatted date
-    const dateStr = this.formatDate(this.selectedDate!!);
-    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh'
-    XLSX.writeFile(wb, `Orders_${city}_${dateStr}.xlsx`);
-  }
 
   prepareWorksheetData3(): { data: any[][], merges: any[] } {
     const wsData = [];
@@ -1502,11 +1754,12 @@ export class DashboardComponent implements OnInit {
     if (!order) return 'Pending';
 
     switch (order.status) {
-      case '1': return 'Received';
       case '0': return 'No Action';
+      case '1': return 'Received';
       case '2': return 'Not Received';
-      case '3': return `${order.qntNotRequirement || 0}`;
-      default: return 'Pending';
+      case '4': return 'Not Requested';
+      default: return order.qntNotRequirement;
+      // default: return 'Pending';
     }
   }
 
@@ -1541,13 +1794,13 @@ export class DashboardComponent implements OnInit {
   }
 
 
-  isOn = true;
+  isOn: any;
 
   async toggle() {
     this.isLoading = true
     try {
       const db = getFirestore();
-      const docRef = doc(db, "settings", "statusChange");
+      const docRef = doc(db, "settings", this.selectedType.id);
 
       // First get current value
       const docSnap = await getDoc(docRef);
@@ -1575,6 +1828,7 @@ export class DashboardComponent implements OnInit {
       }
     } catch (error) {
       console.error("Error toggling status:", error);
+      this.isOn = !this.isOn;
     } finally {
 
       this.isLoading = false

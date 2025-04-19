@@ -1,9 +1,22 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// 👇 Import the main PDFMake build
+import * as pdfMake from 'pdfmake/build/pdfmake';
+
+// 👇 Import the fonts and assign VFS
+import * as pdfFonts from 'pdfmake/build/vfs_fonts';
+
+// // ✅ Correctly assign vfs
+// (pdfMake as any).vfs = pdfFonts.vfs;
+// import 'src/assets/fonts/amiri-font.ttf';
 
 @Component({
   selector: 'app-branch',
@@ -13,6 +26,67 @@ import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy,
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+  async onSelectTypeChange() {
+    this.isLoading = true
+    this.preOrders = []
+    this.combinedData = []
+    this.selectedDate = null
+
+    await Promise.all([
+
+      this.getDatesToAdd(),
+      this.getProducts(),
+      // this.getUnits(),
+      this.getPreOrders(),
+      this.getSettings(),
+    ]);
+
+    if (this.selectedPreOrder) {
+      // this.selectedPreOrder = order
+      console.log('selected', this.selectedPreOrder);
+
+      const selectedTimestamp = this.selectedPreOrder.createdAt
+      this.isLoading = true;
+      try {
+        // Convert selected Timestamp to start and end of day
+        const selectedDate = selectedTimestamp.toDate();
+
+        // Start of day (00:00:00.000 UTC)
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const startTimestamp = Timestamp.fromDate(startOfDay);
+
+        // End of day (23:59:59.999 UTC)
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        const endTimestamp = Timestamp.fromDate(endOfDay);
+
+        // Get orders for the selected date
+        this.branchOrders = await this.getBranchOrders(startTimestamp, endTimestamp);
+
+        // Update combined data with orders from selected date
+
+        console.log("rtrtr", selectedDate);
+        console.log("rtrtr2", startOfDay);
+        console.log("rtrtr3", endOfDay);
+
+        this.combineDataWithOrders();
+        this.isPreSent = this.preOrders.some((o: any) => o.id != -1);
+        // this.selectedDate = selectedTimestamp
+        this.isToAddMode = false
+        this.ordersToUpdate = []
+
+        // this.combinedData = this.combinedData.slice(0, 1);
+
+      } catch (error) {
+        console.error('Error selecting date:', error);
+      } finally {
+        this.isLoading = false;
+      }
+    }
+
+
+  }
   onInputQ($event: Event, _t50: number, item: any) {
     const newValue = ($event.target as HTMLInputElement).valueAsNumber;
     // throw new Error('Method not implemented.');
@@ -42,11 +116,6 @@ export class BranchComponent {
       return;
     }
     this.selectedDate = date
-    console.log("dff",date);
-    console.log("dff",Timestamp.now().toDate());
-
-    console.log(date.toDate());
-
 
     // this.selectedDate = date
     this.combinedData = this.data.map((product: any) => {
@@ -167,12 +236,13 @@ export class BranchComponent {
   branch: any;
   data: any = [];
   orders: any = [];
-  units: any = [];
   selectedDate: any;
   combinedData: any[] = [];
   branchOrders: any[] = [];
+  types: any[] = [];
 
-  selectedDateToAdd: any
+  selectedType: any
+
   isToAddMode = false
   isPreSent = false
 
@@ -194,6 +264,20 @@ export class BranchComponent {
       await this.getBranch();
     }
 
+  }
+
+  async getTypes(): Promise<void> {
+    const db = getFirestore();
+    const q = query(collection(db, "types"));
+    const snapshot = await getDocs(q);
+
+    this.types = snapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data()['name']
+    }));
+    if (this.types.length > 0) {
+      this.selectedType = this.types[0]
+    }
   }
 
 
@@ -296,7 +380,10 @@ export class BranchComponent {
   datesToAdd: any = []
   async getDatesToAdd(): Promise<void> {
     const db = getFirestore();
-    const q = query(collection(db, "openDates"));
+    const q = query(collection(db, "openDates"),
+
+      where("typeId", "==", this.selectedType.id),
+    );
     const snapshot = await getDocs(q);
 
     this.datesToAdd = snapshot.docs.map(doc => ({
@@ -318,13 +405,15 @@ export class BranchComponent {
           this.branch = await this.getRelatedBranche(name!);
           console.log("bbbb", this.branch.data);
 
-          await Promise.all([
-            this.getDatesToAdd(),
-            this.getProducts(),
-            // this.getUnits(),
-            this.getPreOrders(),
-            this.getSettings(),
-          ]);
+          await this.getTypes(),
+            await Promise.all([
+
+              this.getDatesToAdd(),
+              this.getProducts(),
+              // this.getUnits(),
+              this.getPreOrders(),
+              this.getSettings(),
+            ]);
 
           this.preOrders.forEach((pre: any) => {
             this.datesToAdd.forEach((date: any, index: number) => {
@@ -358,12 +447,14 @@ export class BranchComponent {
             console.log(this.preOrders[0]);
 
             await this.onSelectDate(this.selectedPreOrder);
-          } else {
-            this.selectedDate = this.currentTimestamp
-            this.isToAddMode = true
+          }
+          else {
+            // this.selectedDate = this.currentTimestamp
+            // this.isToAddMode = true
           }
 
           this.combineDataWithOrders();
+
           this.isLoading = false;
         }
       } else {
@@ -371,6 +462,16 @@ export class BranchComponent {
       }
     });
   }
+
+  // groupDataPdf() {
+  //   this.groupedData = []
+  //   const chunkSize = 10;
+  //   for (let i = 0; i < this.combinedData.length; i += chunkSize) {
+  //     this.groupedData.push(this.combinedData.slice(i, i + chunkSize));
+  //   }
+  //   this.rowIndexes = Array.from({ length: chunkSize }, (_, i) => i);
+  //   console.log(this.groupedData);
+  // }
   isItemInAdd(item: any): boolean {
     return this.ordersToAdd.some((order: any) => order.productId === item.productId);
   }
@@ -434,6 +535,7 @@ export class BranchComponent {
     const productsRef = collection(db, "products");
     const q = query(productsRef,
       where("city", '==', this.branch.data.city),
+      where("typeId", "==", this.selectedType.id),
 
       orderBy("createdAt", "asc"));
     const querySnapshot = await getDocs(q);
@@ -464,6 +566,8 @@ export class BranchComponent {
     const q = query(
       productsRef,
       where("branchId", "==", this.branch.id),
+      where("typeId", "==", this.selectedType.id),
+
       orderBy("createdAt", "desc")
     );
 
@@ -541,6 +645,7 @@ export class BranchComponent {
         batch.set(orderRef, {
           branchId: this.branch.id,
           productId: element.productId,
+          typeId: this.selectedType.id,
           qnt: element.qnt,
           qntF: element.qntF,
           city: this.branch.data.city,
@@ -556,6 +661,7 @@ export class BranchComponent {
         status: 0,
         branchId: this.branch.id,
         city: this.branch.data.city,
+        typeId: this.selectedType.id,
         // qntNumber: this.ordersToAdd.length,
         createdAt: this.selectedDate // Server-side timestamp
       });
@@ -575,6 +681,57 @@ export class BranchComponent {
       this.isLoading = false;
     }
   }
+
+  @ViewChild('pdfTableRef') pdfTableRef!: ElementRef;
+  groupedData: any = [];
+  rowIndexes: number[] = [];
+  exportToPDF(): void {
+    // const headers = ['Name', 'الرصيد', 'الوحدة', 'المطلوب', 'الوحدة'];
+  
+    // const body = this.combinedData.map(item => [
+    //   item.name || '',
+    //   item.qntF || '',
+    //   item.unitF || '',
+    //   item.qnt || '',
+    //   item.unit || ''
+    // ]);
+  
+    // const docDefinition: any = {
+    //   content: [
+    //     {
+    //       text: 'طلبية المستودع',
+    //       style: 'header',
+    //       alignment: 'center',
+    //       margin: [0, 0, 0, 10]
+    //     },
+    //     {
+    //       table: {
+    //         headerRows: 1,
+    //         widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+    //         body: [headers, ...body]
+    //       },
+    //       layout: {
+    //         fillColor: (rowIndex: number) => rowIndex === 0
+    //           ? '#8b8471' // header color
+    //           : rowIndex % 2 === 0 ? '#f5f5f5' : null
+    //       }
+    //     }
+    //   ],
+    //   defaultStyle: {
+    //     fontSize: 12,
+    //     alignment: 'right'
+    //   },
+    //   styles: {
+    //     header: {
+    //       fontSize: 16,
+    //       bold: true
+    //     }
+    //   }
+    // };
+  
+    // pdfMake.createPdf(docDefinition).download('طلبية.pdf');
+  }
+  
 
   // async addOrders() {
   //   if (this.ordersToAdd.length === 0) return;
@@ -639,24 +796,51 @@ export class BranchComponent {
   combineDataWithOrders() {
     this.combinedData = this.data.map((product: any) => {
       const order = this.branchOrders.find((o: any) => o.productId === product.id);
+
       if (order) {
-        this.isPreSent = true
+        this.isPreSent = true;
       }
-      const s = {
-        id: order ? order.id : -1,
+
+      const qnt = order?.qnt ?? '';
+      const status = qnt == '0' ? '4' : (order?.status ?? '0');
+
+      return {
+        id: order?.id ?? -1,
         name: product.name,
         productId: product.id,
-        qnt: order ? order.qnt : '',
-        qntF: order ? order.qntF : '',
-        qntNotRequirement: order.qntNotRequirement,
-        unit: product ? product.unit : '',
-        unitF: product ? product.unitF : '',
-        status: order ? order.status : 0
+        qnt: qnt,
+        qntF: order?.qntF ?? '',
+        qntNotRequirement: order?.qntNotRequirement ?? false,
+        unit: product?.unit ?? '',
+        unitF: product?.unitF ?? '',
+        status: status
       };
-
-      // console.log("new order", s);
-      return s
     });
+
+
+    // this.groupDataPdf();
+
+    // this.combinedData = this.data.map((product: any) => {
+    //   const order = this.branchOrders.find((o: any) => o.productId === product.id);
+    //   if (order) {
+    //     this.isPreSent = true
+    //   }
+    //   const s = {
+    //     id: order ? order.id : -1,
+    //     name: product.name,
+    //     productId: product.id,
+    //     qnt: order ? order.qnt : '',
+    //     qntF: order ? order.qntF : '',
+    //     qntNotRequirement: order.qntNotRequirement,
+    //     unit: product ? product.unit : '',
+    //     unitF: product ? product.unitF : '',
+    //     status: order ? order.status : 0
+    //   };
+
+
+    //   // console.log("new order", s);
+    //   return s
+    // });
   }
 
   add() {
@@ -696,18 +880,13 @@ export class BranchComponent {
 
   }
 
-  getUnit(unitId: string) {
-    const unit = this.units.find((unit: any) => unit.unitFId === unitId);
-
-  }
-
   isOn: any
   async getSettings(): Promise<void> {
     try {
       const db = getFirestore();
 
       // Reference to the specific document
-      const docRef = doc(db, "settings", "statusChange");
+      const docRef = doc(db, "settings", this.selectedType.id);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {

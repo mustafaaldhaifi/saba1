@@ -156,3 +156,46 @@ button:disabled {
 .status-2 { color: red; }
 .status-3 { color: orange; }
 .status-4 { color: green; }
+
+
+@media screen and (max-width: 768px) {
+  .styled-table {
+    font-size: 12px;
+    /* Responsive styles that you want to IGNORE for export */
+  }
+}
+
+.pdf-export-mode .styled-table {
+  width: 100% !important;
+  font-size: 14px !important;
+  table-layout: fixed !important;
+}
+
+.pdf-export-mode td,
+.pdf-export-mode th {
+  white-space: nowrap;
+}
+
+.hh1 tr th{
+  font-size: 22px;
+  font-weight: bold;
+  text-align: end;
+  background-color: rgb(139, 132, 113);
+  border: 1px solid black;
+}
+
+.bb1 td {
+  font-size: 30px;
+  font-weight: bold;
+  text-align: end;
+  background-color: rgb(139, 132, 113);
+  border: 1px solid black;
+}
+
+.custom-td {
+  font-size: 22px;
+  font-weight: bold;
+  text-align: end;
+  /* background-color: rgb(139, 132, 113); */
+  border: 1px solid black;
+}

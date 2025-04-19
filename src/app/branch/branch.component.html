@@ -6,6 +6,14 @@
     <i class="fas fa-power-off"></i>
 </a>
 
+<div class="dropdown-container mb-3">
+    <label for="options" class="dropdown-label me-2">Select Type:</label>
+    <select id="options" [(ngModel)]="selectedType" class="dropdown form-select" (ngModelChange)="onSelectTypeChange()">
+        <option *ngFor="let item of types" [ngValue]="item">
+            {{ item.name }}
+        </option>
+    </select>
+</div>
 <!-- Date Selection Buttons -->
 <div *ngFor="let item of preOrders; let i = index">
     <button (click)="onSelectDate(item)" style="width: 100%;"
@@ -40,78 +48,88 @@
     </div>
 </div>
 
-<div class="table-container">
-    <div class="table fixed-header">
-        <!-- Orders Table -->
-        <table *ngIf="branch" class="styled-table">
-            <thead>
-                <tr vz class="f-h">
-                    <th>الاصناف</th>
-                    <th style="width: 28px;">
-                        <div>الكمية</div>
-                        <div>المتوفرة</div>
-                    </th>
-                    <th>الوحدة</th>
-                    <th style="width: 28px;">
-                        <div>الكمية</div>
-                        <div>المطلوبة</div>
-                    </th>
-                    <th>الوحدة</th>
-                    <th *ngIf="isPreSent === true">حالة الاستلام</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr *ngFor="let item of combinedData; let i = index"
-                    [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
-                    [style.border-bottom]="'1px solid #dee2e6'">
-                    <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
+<!-- <button (click)="exportToPDF()">Export to PDF</button> -->
+<table>
 
-                    <td>
-                        <input (input)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false" #qntFInput="ngModel"
-                            [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
-                            [(ngModel)]="combinedData[i].qntF" type="number" required>
-                        <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
-                    </td>
+</table>
 
-                    <td>
-                        {{item.unitF}}
-                    </td>
 
-                    <td>
-                        <input (input)="onQntChange(i,combinedData[i])" *ngIf="isPreSent === false" #qntInput="ngModel"
-                            [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
-                            [(ngModel)]="combinedData[i].qnt" type="number" required>
-                        <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
-                    </td>
+<ng-container *ngIf="selectedDate">
+    <div class="table-container">
+        <div class="table fixed-header">
+            <!-- Orders Table -->
+            <table *ngIf="branch" class="styled-table">
+                <thead>
+                    <tr vz class="f-h">
+                        <th>الاصناف</th>
+                        <th style="width: 28px;">
+                            <div>الكمية</div>
+                            <div>المتوفرة</div>
+                        </th>
+                        <th>الوحدة</th>
+                        <th style="width: 28px;">
+                            <div>الكمية</div>
+                            <div>المطلوبة</div>
+                        </th>
+                        <th>الوحدة</th>
+                        <th *ngIf="isPreSent === true">حالة الاستلام</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of combinedData; let i = index"
+                        [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                        [style.border-bottom]="'1px solid #dee2e6'">
+                        <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
-                    <td>
-                        {{item.unit}}
-                    </td>
+                        <td>
+                            <input (input)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false"
+                                #qntFInput="ngModel" [class.alert-red]="qntFInput.invalid && qntFInput.touched"
+                                class="sticky-input" [(ngModel)]="combinedData[i].qntF" type="number" required>
+                            <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
+                        </td>
 
-                    <td *ngIf="isPreSent === true">
-                        <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
-                            <label class="status-dropdown-label">
-                                <select [disabled]="isChangeStatus() == false || isOn === false"
-                                    [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
-                                    (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                                    <!-- <option value="0">لم يتم الاختيار</option> -->
-                                    <option value="1">تم استلامها</option>
-                                    <option value="2">لم يتم استلامها</option>
-                                    <option value="3">كمية غير مطابقة</option>
-                                    <option value="4">غير مطلوبة</option>
-                                </select>
-                            </label>
-                        </span>
-                        <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3'"
-                            #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
-                            [(ngModel)]="combinedData[i].qntNotRequirement"
-                            (input)="onInputQ($event, i,combinedData[i])" required>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                        <td>
+                            {{item.unitF}}
+                        </td>
+
+                        <td>
+                            <input (input)="onQntChange(i,combinedData[i])" *ngIf="isPreSent === false"
+                                #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
+                                class="sticky-input" [(ngModel)]="combinedData[i].qnt" type="number" required>
+                            <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
+                        </td>
+
+                        <td>
+                            {{item.unit}}
+                        </td>
+
+                        <td *ngIf="isPreSent === true">
+                            <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
+                                <label class="status-dropdown-label">
+                                    <select [disabled]="isChangeStatus() == false || isOn === false"
+                                        [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
+                                        (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+                                        <!-- <option value="0">لم يتم الاختيار</option> -->
+                                        <option value="1">تم استلامها</option>
+                                        <option value="2">لم يتم استلامها</option>
+                                        <option value="3">كمية غير مطابقة</option>
+                                        <option value="4">غير مطلوبة</option>
+                                    </select>
+                                </label>
+                            </span>
+                            <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3'"
+                                #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
+                                [(ngModel)]="combinedData[i].qntNotRequirement"
+                                (input)="onInputQ($event, i,combinedData[i])" required>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
+</ng-container>
+
+
 
 
 
