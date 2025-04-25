@@ -200,7 +200,7 @@ export class BranchComponent {
           this.preOrders[orderIndex] = e
           this.selectedPreOrder = e
         }
-        alert("يعطيك العافية تم التحديث بنجاح")
+        
       } catch (e) {
         console.error("Error preparing batch update for order:", e);
       }
@@ -211,6 +211,7 @@ export class BranchComponent {
       batch.update(orderRef, s)
       // Commit the batch (all updates happen in one command)
       await batch.commit();
+      alert("يعطيك العافية تم التحديث بنجاح")
       this.ordersToUpdate = []
       console.log("All orders updated successfully.");
     } catch (e) {
