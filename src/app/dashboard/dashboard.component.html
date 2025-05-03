@@ -7,6 +7,9 @@
     <a (click)="logout()" class="power-off-icon" style="color: red;">
       <i class="fas fa-power-off"></i>
     </a>
+    <h6>
+      {{version}}
+    </h6>
     <button *ngIf="hasChanges() == true" class="btn save-btn" (click)="saveChanges()">
       Save Changes
     </button>
@@ -62,7 +65,7 @@
     </button>
   </div>
 
-  <div class="date-selection card p-3 mb-4" >
+  <div class="date-selection card p-3 mb-4">
     <label class="toggle-switch">
       <input type="checkbox" [checked]="isOn" (click)="toggle()">
       <span class="slider round"></span>
@@ -96,7 +99,7 @@
   </div>
 
 
-  <div >
+  <div>
 
     <div class="myHead d-flex align-items-center justify-content-between p-3">
       <div *ngIf="selectedDatey" class="selected-date d-flex align-items-center">
@@ -126,6 +129,12 @@
               <a (click)="changePassword(branch)" class="password-icon" style="color: #3498db;">
                 <i class="fas fa-user-lock"></i>
               </a>
+              <!-- *ngIf="selectedType.id == 'WbAP06wLDRvZFTYUtkjU'" -->
+              <a style="margin-left: 10px; cursor: pointer;" (click)="exportPdf(branch)">
+                <i class="fas fa-file-pdf"></i>
+
+              </a>
+
             </th>
           </tr>
           <tr class="s-h">

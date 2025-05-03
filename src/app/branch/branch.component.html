@@ -5,6 +5,9 @@
 <a (click)="logout()" class="power-off-icon" style="color: red;">
     <i class="fas fa-power-off"></i>
 </a>
+<h6>
+    {{version}}
+</h6>
 
 <div class="dropdown-container mb-3">
     <label for="options" class="dropdown-label me-2">Select Type:</label>
@@ -106,7 +109,8 @@
                         <td *ngIf="isPreSent === true">
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
-                                    <select [disabled]="isChangeStatus() == false || isOn === false"
+                                    <select
+                                        [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1'"
                                         [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
                                         <!-- <option value="0">لم يتم الاختيار</option> -->
@@ -120,6 +124,7 @@
                             <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3'"
                                 #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
                                 [(ngModel)]="combinedData[i].qntNotRequirement"
+                                [disabled]="selectedPreOrder.status == '1'"
                                 (input)="onInputQ($event, i,combinedData[i])" required>
                         </td>
                     </tr>

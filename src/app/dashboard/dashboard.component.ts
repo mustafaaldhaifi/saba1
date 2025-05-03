@@ -28,6 +28,10 @@ import {
   and,
   setDoc
 } from "firebase/firestore";
+import { ApiService } from '../api.service';
+import { PdfService } from '../pdf.service';
+import { environment } from '../../env';
+
 
 interface Product {
   unitF: any;
@@ -72,6 +76,34 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  exportPdf(branch: any) {
+    const pdfService = new PdfService();
+    // console.log('sddsds');
+    // var data = [];
+
+    // const isBranch = false
+    // for (let index = 0; index < 50; index++) {
+    //   if (isBranch) {
+    //     data.push([`name ${index}`, `gm ${index}`, index]);
+    //   } else {
+    //     data.push([`n ${index}`, `rem ${index}`, `gm ${index}`, index, `kg ${index}`,]);
+    //   }
+
+    // }
+    // console.log('sss', data);
+    // console.log('sss', data.length);
+    // console.log('sss', data[1][44]);
+    // console.log('sss', data[1].length);
+
+
+
+
+    const date = this.selectedDatey.createdAt.toDate();
+
+    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+    pdfService.export(this.getOrders(branch.id), false, formattedDate, branch.name)
+  }
   async addTemp() {
 
     // try {
@@ -345,10 +377,13 @@ export class DashboardComponent implements OnInit {
 
   ifHasChanges = false
 
+  version : any
   constructor(
     private router: Router,
-    @Inject(PLATFORM_ID) private platformId: Object
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private apiService: ApiService
   ) {
+     this.version = environment.version
   }
 
   date3: any
@@ -1774,6 +1809,51 @@ export class DashboardComponent implements OnInit {
       order.productId === productId
     );
   }
+  // getOrders(branchId: any): any {
+  //   var data: any = this.data;
+
+  //   // const finded = this.orders.find((order: any) => order.branchId === branchId);
+  //   const arr = [];
+  //   for (let index = 0; index < data.length; index++) {
+  //     const product = data[index];
+
+  //     const order = this.getOrder(branchId, product.id)
+  //     if (order) {
+  //       arr.push(product.name)
+  //       arr.push(order.qntF)
+  //       arr.push(product.unitF)
+  //       arr.push(product.qnt)
+  //       arr.push(product.unit)
+  //     }
+  //   }
+  //   data.push(arr)
+
+  //   return data;
+  // }
+  getOrders(branchId: any): any[][] {
+    const data = this.data;
+    const result: any[][] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const product = data[i];
+      const order = this.getOrder(branchId, product.id);
+
+      if (order) {
+        result.push([
+          product.name,
+          order.qntF,
+          product.unitF,
+          order.qnt,
+          product.unit
+        ]);
+      }
+    }
+    // console.log('data', data);
+
+
+    return result;
+  }
+
 
   // TrackBy functions to minimize DOM changes
   trackByProductId(index: number, product: any): string {
