@@ -31,6 +31,7 @@ import {
 import { ApiService } from '../api.service';
 import { PdfService } from '../pdf.service';
 import { environment } from '../../env';
+import { collectionNames } from '../Shareds';
 
 
 interface Product {
@@ -377,13 +378,13 @@ export class DashboardComponent implements OnInit {
 
   ifHasChanges = false
 
-  version : any
+  version: any
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService
   ) {
-     this.version = environment.version
+    this.version = environment.version
   }
 
   date3: any
@@ -515,6 +516,30 @@ export class DashboardComponent implements OnInit {
       ]);
       console.log("bb", branches);
       console.log("58oo", orders);
+      // const orderToclean = orders.filter((order: any) => order.qnt == undefined)
+      // Step 1: Filter orders with undefined qnt
+      // const filteredOrders = orders.map((order, index) => ({ ...order, index }))
+      //   .filter(order => order.qnt === undefined);
+      // console.log("orderToclean", filteredOrders);
+
+      // // Step 2: Count branchId occurrences
+      // const branchIdCount: Record<string, number> = {};
+      // filteredOrders.forEach(order => {
+      //   const branchId = order.branchId;
+      //   branchIdCount[branchId] = (branchIdCount[branchId] || 0) + 1;
+      // });
+
+      // // Step 3: Get indexes of orders with duplicated branchId
+      // const duplicatedIndexes = filteredOrders
+      //   .filter(order => branchIdCount[order.branchId] > 1)
+      //   .map(order => order.index);
+
+      // console.log(duplicatedIndexes);
+
+      // Step 1: Filter orders where qnt is undefined
+
+
+
 
 
 
@@ -726,6 +751,62 @@ export class DashboardComponent implements OnInit {
       createdAt: doc.data()['createdAt']
     }));
   }
+
+  async addAndDelete() {
+    const filteredOrders = this.orders.filter(order => order.qnt === undefined);
+
+    // Count occurrences of each branchId
+    const branchIdCount: Record<string, number> = {};
+    filteredOrders.forEach(order => {
+      const branchId = order.branchId;
+      branchIdCount[branchId] = (branchIdCount[branchId] || 0) + 1;
+    });
+
+    // Get branchIds that appear only once
+    const uniqueBranchIds = Object.keys(branchIdCount).filter(branchId => branchIdCount[branchId] === 1);
+
+    // Get full order objects with those unique branchIds
+    const uniqueBranchOrders = filteredOrders.filter(order => uniqueBranchIds.includes(order.branchId));
+
+    const idsToProcess = uniqueBranchOrders.map(order => ({
+      id: order.id,
+      branchId: order.branchId
+    }));
+
+    console.log(uniqueBranchOrders);
+    
+
+    const batch = writeBatch(this.apiService.db);
+
+    // // Set createdAt to fixed date: Saturday, May 3, 2025
+    // const fixedCreatedAt = Timestamp.fromDate(new Date('2025-05-03T00:00:00'));
+
+    try {
+      // 1. DELETE from `branchesOrders`
+      idsToProcess.forEach(item => {
+        batch.delete(doc(this.apiService.db, collectionNames.branchesOrders, item.id!!));
+      });
+
+      // 2. ADD to `orders` collection for each branch
+      idsToProcess.forEach(item => {
+        const summaryRef = doc(collection(this.apiService.db, collectionNames.orders)); // Auto-generated ID
+        batch.set(summaryRef, {
+          status: 0,
+          branchId: item.branchId,
+          city: this.selectedOption,
+          typeId: this.selectedType.id,
+          createdAt: this.selectedDatey.createdAt
+        });
+      });
+
+      // 3. COMMIT the batch
+      await batch.commit();
+      console.log('Batch operation successful.');
+    } catch (error) {
+      console.error('Batch operation failed:', error);
+    }
+  }
+
 
   async deleteOldOrders(): Promise<void> {
     if (!this.preOrders || this.preOrders.length <= 4) return;
