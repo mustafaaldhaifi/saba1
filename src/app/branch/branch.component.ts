@@ -151,7 +151,7 @@ export class BranchComponent {
       });
 
       // 2. Add the summary document
-      const summaryRef = doc(collection(this.apiService.db, collectionNames.branchesOrders));
+      const summaryRef = doc(collection(this.apiService.db, collectionNames.orders));
       batch.set(summaryRef, {
         status: 0,
         branchId: this.branch.id,
