@@ -196,14 +196,14 @@ export class PdfService {
       theme: 'striped', // optional, helps with visibility
       didParseCell: function (data) {
         if (data.section === 'body') {
-          data.cell.styles.lineWidth = { top: 0, bottom: 0, left: 0.2, right: 0.2 };
+          data.cell.styles.lineWidth = { top: 0, bottom: 0.2, left: 0.2, right: 0.2 };
           data.cell.styles.lineColor = [0, 0, 0]; // أسود
         }
       },
     });
 
     // Save the document
-    doc.save('example.pdf');
+    doc.save(`${branchName}_${date}.pdf`);
   }
 
   items({

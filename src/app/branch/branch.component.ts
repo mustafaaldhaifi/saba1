@@ -7,6 +7,7 @@ import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy,
 import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
+import { PdfService } from '../pdf.service';
 
 @Component({
   selector: 'app-branch',
@@ -16,7 +17,47 @@ import { environment } from '../../env';
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+  exportPdf() {
+    const pdfService = new PdfService();
+    const date = this.selectedDate.toDate();
 
+    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const data = this.getOrders(this.branch.id)
+    console.log("dattttaaa", data);
+
+    pdfService.export(data, true, formattedDate, this.branch.data.name)
+  }
+  getOrders(branchId: any): any[][] {
+    const data = this.data;
+    console.log(data);
+
+    const result: any[][] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const product = data[i];
+      const order = this.getOrder2(branchId, product.id);
+      console.log("branchId",branchId);
+
+      console.log("product.id",product.id);
+
+      console.log("orrrddder",order);
+      
+
+      if (order) {
+        result.push([
+          product.name,
+          // order.qntF,
+          // product.unitF,
+          order.qnt,
+          product.unit
+        ]);
+      }
+    }
+    // console.log('data', data);
+
+
+    return result;
+  }
 
   ifCurrentDateInPreOrders1 = false
   ordersToAdd: any = [];
@@ -44,7 +85,7 @@ export class BranchComponent {
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
-    private apiService: ApiService
+    private apiService: ApiService,
   ) {
     this.version = environment.version
     // initializeApp(environment.firebase);
@@ -414,6 +455,8 @@ export class BranchComponent {
     this.addToOrdersToAdd(order)
   }
   async onSelectTypeChange() {
+    console.log("selllleee",this.selectedType);
+    
     this.isLoading = true
     this.preOrders = []
     this.combinedData = []
@@ -556,8 +599,12 @@ export class BranchComponent {
       default: return 'white';  // Default color
     }
   }
-  getOrder(productId: string) {
-    return this.orders.find((order: any) => order.productId === productId);
+  getOrder2(branchId: any, productId: any): any {
+    console.log("ordersss",this.branchOrders);
+    
+    return this.branchOrders.find((order: any) =>
+      order.productId === productId
+    );
   }
   combineDataWithOrders() {
     this.combinedData = this.data.map((product: any) => {

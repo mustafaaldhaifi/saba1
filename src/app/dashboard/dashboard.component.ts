@@ -755,6 +755,8 @@ export class DashboardComponent implements OnInit {
   async addAndDelete() {
     const filteredOrders = this.orders.filter(order => order.qnt === undefined);
 
+    console.log('filteredOrders',filteredOrders);
+
     // Count occurrences of each branchId
     const branchIdCount: Record<string, number> = {};
     filteredOrders.forEach(order => {
@@ -776,35 +778,35 @@ export class DashboardComponent implements OnInit {
     console.log(uniqueBranchOrders);
     
 
-    const batch = writeBatch(this.apiService.db);
+    // const batch = writeBatch(this.apiService.db);
 
-    // // Set createdAt to fixed date: Saturday, May 3, 2025
-    // const fixedCreatedAt = Timestamp.fromDate(new Date('2025-05-03T00:00:00'));
+    // // // Set createdAt to fixed date: Saturday, May 3, 2025
+    // // const fixedCreatedAt = Timestamp.fromDate(new Date('2025-05-03T00:00:00'));
 
-    try {
-      // 1. DELETE from `branchesOrders`
-      idsToProcess.forEach(item => {
-        batch.delete(doc(this.apiService.db, collectionNames.branchesOrders, item.id!!));
-      });
+    // try {
+    //   // 1. DELETE from `branchesOrders`
+    //   idsToProcess.forEach(item => {
+    //     batch.delete(doc(this.apiService.db, collectionNames.branchesOrders, item.id!!));
+    //   });
 
-      // 2. ADD to `orders` collection for each branch
-      idsToProcess.forEach(item => {
-        const summaryRef = doc(collection(this.apiService.db, collectionNames.orders)); // Auto-generated ID
-        batch.set(summaryRef, {
-          status: 0,
-          branchId: item.branchId,
-          city: this.selectedOption,
-          typeId: this.selectedType.id,
-          createdAt: this.selectedDatey.createdAt
-        });
-      });
+    //   // 2. ADD to `orders` collection for each branch
+    //   idsToProcess.forEach(item => {
+    //     const summaryRef = doc(collection(this.apiService.db, collectionNames.orders)); // Auto-generated ID
+    //     batch.set(summaryRef, {
+    //       status: 0,
+    //       branchId: item.branchId,
+    //       city: this.selectedOption,
+    //       typeId: this.selectedType.id,
+    //       createdAt: this.selectedDatey.createdAt
+    //     });
+    //   });
 
-      // 3. COMMIT the batch
-      await batch.commit();
-      console.log('Batch operation successful.');
-    } catch (error) {
-      console.error('Batch operation failed:', error);
-    }
+    //   // 3. COMMIT the batch
+    //   await batch.commit();
+    //   console.log('Batch operation successful.');
+    // } catch (error) {
+    //   console.error('Batch operation failed:', error);
+    // }
   }
 
 
@@ -892,6 +894,9 @@ export class DashboardComponent implements OnInit {
     if (this.preOrders.length > 0) {
       this.selectedDatey = this.preOrders[0]
     }
+
+    console.log("preee",this.preOrders);
+    
 
   }
 
