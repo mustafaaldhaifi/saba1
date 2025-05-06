@@ -195,9 +195,17 @@ export class PdfService {
       startY: 25,
       theme: 'striped', // optional, helps with visibility
       didParseCell: function (data) {
+        // Convert `data.table.head[0]` to `unknown` first, then to `string[]`
+        const headerRow = (data.table.head[0] as unknown) as string[];  // Cast to unknown first, then string[]
+        const columnHeaderCell = headerRow[data.column.index];  // Get the column header by index
+
+        if (data.section === 'body' && columnHeaderCell === 'المطلوب') {
+          data.cell.styles.fillColor = [255, 255, 0]; // Yellow background for "المطلوب" column
+        }
+        // تنسيق الحدود
         if (data.section === 'body') {
           data.cell.styles.lineWidth = { top: 0, bottom: 0.2, left: 0.2, right: 0.2 };
-          data.cell.styles.lineColor = [0, 0, 0]; // أسود
+          data.cell.styles.lineColor = [0, 0, 0];
         }
       },
     });

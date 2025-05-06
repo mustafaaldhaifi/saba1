@@ -25,7 +25,9 @@
     </button>
 </div>
 
-<button *ngIf="selectedType && selectedType.id == 'WbAP06wLDRvZFTYUtkjU'" (click)="exportPdf()"> Export Pdf</button>
+<!-- <button *ngIf="selectedType && selectedType.id == 'WbAP06wLDRvZFTYUtkjU'" (click)="exportPdf()"> Export Pdf</button> -->
+<button *ngIf="selectedDate" (click)="exportPdf()"> Export Pdf</button>
+
 
 <!-- <h3 style="text-align: center;">الايام المسموحه لاضافة طلبات</h3> -->
 <div *ngFor="let item of datesToAdd; let i = index">

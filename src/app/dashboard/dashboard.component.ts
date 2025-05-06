@@ -615,6 +615,7 @@ export class DashboardComponent implements OnInit {
       name: doc.data()['name'],
       unit: doc.data()['unit'],
       unitF: doc.data()['unitF'],
+      createdAt: doc.data()['createdAt'],
     }));
   }
 
@@ -752,61 +753,37 @@ export class DashboardComponent implements OnInit {
     }));
   }
 
-  async addAndDelete() {
-    const filteredOrders = this.orders.filter(order => order.qnt === undefined);
+  async addProductsToCity() {
 
-    console.log('filteredOrders',filteredOrders);
 
-    // Count occurrences of each branchId
-    const branchIdCount: Record<string, number> = {};
-    filteredOrders.forEach(order => {
-      const branchId = order.branchId;
-      branchIdCount[branchId] = (branchIdCount[branchId] || 0) + 1;
-    });
 
-    // Get branchIds that appear only once
-    const uniqueBranchIds = Object.keys(branchIdCount).filter(branchId => branchIdCount[branchId] === 1);
+    const batch = writeBatch(this.apiService.db);
 
-    // Get full order objects with those unique branchIds
-    const uniqueBranchOrders = filteredOrders.filter(order => uniqueBranchIds.includes(order.branchId));
+    // // Set createdAt to fixed date: Saturday, May 3, 2025
+    // const fixedCreatedAt = Timestamp.fromDate(new Date('2025-05-03T00:00:00'));
 
-    const idsToProcess = uniqueBranchOrders.map(order => ({
-      id: order.id,
-      branchId: order.branchId
-    }));
+    try {
 
-    console.log(uniqueBranchOrders);
-    
+      this.data.forEach((item: any) => {
+        // const item: Item = { id: 1, name: 'Alice' };
 
-    // const batch = writeBatch(this.apiService.db);
+        const { id, ...dataWithoutId } = item;
 
-    // // // Set createdAt to fixed date: Saturday, May 3, 2025
-    // // const fixedCreatedAt = Timestamp.fromDate(new Date('2025-05-03T00:00:00'));
+        dataWithoutId.city = 'other'; // Now this is valid
+        dataWithoutId.typeId = this.selectedType.id; // Now this is valid
 
-    // try {
-    //   // 1. DELETE from `branchesOrders`
-    //   idsToProcess.forEach(item => {
-    //     batch.delete(doc(this.apiService.db, collectionNames.branchesOrders, item.id!!));
-    //   });
+        console.log(dataWithoutId);
 
-    //   // 2. ADD to `orders` collection for each branch
-    //   idsToProcess.forEach(item => {
-    //     const summaryRef = doc(collection(this.apiService.db, collectionNames.orders)); // Auto-generated ID
-    //     batch.set(summaryRef, {
-    //       status: 0,
-    //       branchId: item.branchId,
-    //       city: this.selectedOption,
-    //       typeId: this.selectedType.id,
-    //       createdAt: this.selectedDatey.createdAt
-    //     });
-    //   });
+        const summaryRef = doc(collection(this.apiService.db, collectionNames.products)); // Auto-generated ID
+        batch.set(summaryRef, dataWithoutId);
+      });
 
-    //   // 3. COMMIT the batch
-    //   await batch.commit();
-    //   console.log('Batch operation successful.');
-    // } catch (error) {
-    //   console.error('Batch operation failed:', error);
-    // }
+      // 3. COMMIT the batch
+      await batch.commit();
+      console.log('Batch operation successful.');
+    } catch (error) {
+      console.error('Batch operation failed:', error);
+    }
   }
 
 
@@ -895,8 +872,8 @@ export class DashboardComponent implements OnInit {
       this.selectedDatey = this.preOrders[0]
     }
 
-    console.log("preee",this.preOrders);
-    
+    console.log("preee", this.preOrders);
+
 
   }
 
