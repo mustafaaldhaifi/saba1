@@ -103,7 +103,7 @@ export class DashboardComponent implements OnInit {
 
     const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-    pdfService.export(this.getOrders(branch.id), false, formattedDate, branch.name)
+    pdfService.export(this.getOrders(branch.id), false, formattedDate, branch.name, this.selectedType.name_en)
   }
   async addTemp() {
 
@@ -706,7 +706,9 @@ export class DashboardComponent implements OnInit {
 
     this.types = snapshot.docs.map(doc => ({
       id: doc.id,
-      name: doc.data()['name']
+      name: doc.data()['name'],
+      name_en: doc.data()['name_en'],
+
     }));
     if (this.types.length > 0) {
       this.selectedType = this.types[0]

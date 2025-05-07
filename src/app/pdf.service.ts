@@ -8,7 +8,7 @@ import autoTable, { Color, FontStyle, HAlignType } from 'jspdf-autotable';
 })
 export class PdfService {
 
-  export(data: any, isBranch: boolean = false, date: string, branchName: string) {
+  export(data: any, isBranch: boolean = false, date: string, branchName: string, typeName: string) {
     const doc = new jsPDF();
     doc.setFont('ARIAL', 'normal');
     doc.setFontSize(12);
@@ -211,7 +211,7 @@ export class PdfService {
     });
 
     // Save the document
-    doc.save(`${branchName}_${date}.pdf`);
+    doc.save(`${typeName}_${branchName}_Order_${date}.pdf`);
   }
 
   items({

@@ -73,12 +73,13 @@
                             <div>المتوفرة</div>
                         </th>
                         <th>الوحدة</th>
-                        <th style="width: 28px;">
+                        <th style="width: 28px;" *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
                             <div>الكمية</div>
                             <div>المطلوبة</div>
                         </th>
-                        <th>الوحدة</th>
-                        <th *ngIf="isPreSent === true">حالة الاستلام</th>
+                        <th *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">الوحدة</th>
+                        <th *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">حالة
+                            الاستلام</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -98,18 +99,18 @@
                             {{item.unitF}}
                         </td>
 
-                        <td>
+                        <td *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
                             <input (input)="onQntChange(i,combinedData[i])" *ngIf="isPreSent === false"
                                 #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
                                 class="sticky-input" [(ngModel)]="combinedData[i].qnt" type="number" required>
                             <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
                         </td>
 
-                        <td>
+                        <td *ngIf="selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
                             {{item.unit}}
                         </td>
 
-                        <td *ngIf="isPreSent === true">
+                        <td *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
                                     <select

@@ -24,8 +24,10 @@ export class BranchComponent {
     const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const data = this.getOrders(this.branch.id)
     console.log("dattttaaa", data);
+    console.log("typeee", this.selectedType);
 
-    pdfService.export(data, true, formattedDate, this.branch.data.name)
+
+    pdfService.export(data, true, formattedDate, this.branch.data.name, this.selectedType.name_en)
   }
   getOrders(branchId: any): any[][] {
     const data = this.data;
@@ -36,12 +38,12 @@ export class BranchComponent {
     for (let i = 0; i < data.length; i++) {
       const product = data[i];
       const order = this.getOrder2(branchId, product.id);
-      console.log("branchId",branchId);
+      console.log("branchId", branchId);
 
-      console.log("product.id",product.id);
+      console.log("product.id", product.id);
 
-      console.log("orrrddder",order);
-      
+      console.log("orrrddder", order);
+
 
       if (order) {
         result.push([
@@ -264,7 +266,9 @@ export class BranchComponent {
     const snapshot = await this.apiService.getData(collectionNames.types);
     this.types = snapshot.docs.map(doc => ({
       id: doc.id,
-      name: doc.data()['name']
+      name: doc.data()['name'],
+      name_en: doc.data()['name_en'],
+
     }));
 
     if (this.types.length > 0) {
@@ -455,8 +459,8 @@ export class BranchComponent {
     this.addToOrdersToAdd(order)
   }
   async onSelectTypeChange() {
-    console.log("selllleee",this.selectedType);
-    
+    console.log("selllleee", this.selectedType);
+
     this.isLoading = true
     this.preOrders = []
     this.combinedData = []
@@ -568,6 +572,12 @@ export class BranchComponent {
   }
   isFullFilled(): boolean {
     // Check if combinedData exists and is an array
+    if (this.selectedType && this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU') {
+      const a = this.combinedData.every((d: any) => {
+        return this.isPositiveNumber(d.qntF);
+      });
+      return a
+    }
     if (!this.ordersToAdd || !Array.isArray(this.combinedData)) {
       return false;
     }
@@ -600,8 +610,8 @@ export class BranchComponent {
     }
   }
   getOrder2(branchId: any, productId: any): any {
-    console.log("ordersss",this.branchOrders);
-    
+    console.log("ordersss", this.branchOrders);
+
     return this.branchOrders.find((order: any) =>
       order.productId === productId
     );
