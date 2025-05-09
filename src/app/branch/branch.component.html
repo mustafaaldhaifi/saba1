@@ -110,14 +110,14 @@
                             {{item.unit}}
                         </td>
 
-                        <td *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
+                        <td *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU' && selectedType.id != 'Ikt6pyFoTwvwn7GBIPvv' ">
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
                                     <select
                                         [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1'"
                                         [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                                        <!-- <option value="0">لم يتم الاختيار</option> -->
+                                   
                                         <option value="1">تم استلامها</option>
                                         <option value="2">لم يتم استلامها</option>
                                         <option value="3">كمية غير مطابقة</option>
@@ -126,6 +126,25 @@
                                 </label>
                             </span>
                             <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3'"
+                                #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
+                                [(ngModel)]="combinedData[i].qntNotRequirement"
+                                [disabled]="selectedPreOrder.status == '1'"
+                                (input)="onInputQ($event, i,combinedData[i])" required>
+                        </td>
+                        <td *ngIf="isPreSent === true && selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">
+                            <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
+                                <label class="status-dropdown-label">
+                                    <select
+                                        [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1'"
+                                        [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
+                                        (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+                                
+                                        <option value="1">تم استلامها</option>
+                                        <option value="2">لم يتم استلامها</option>
+                                    </select>
+                                </label>
+                            </span>
+                            <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '1'"
                                 #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
                                 [(ngModel)]="combinedData[i].qntNotRequirement"
                                 [disabled]="selectedPreOrder.status == '1'"

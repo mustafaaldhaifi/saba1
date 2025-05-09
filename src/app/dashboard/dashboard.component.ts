@@ -1853,6 +1853,20 @@ export class DashboardComponent implements OnInit {
   private getStatusDisplay(order?: any): string {
     if (!order) return 'Pending';
 
+    if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
+      switch (order.status) {
+        case '0': return 'No Action';
+        case '2': return 'Not Received';
+        default: return order.qntNotRequirement;
+        // default: return 'Pending';
+      }
+
+      // if (order.status == '1') {
+      //   return order.qntNotRequirement;
+      // }
+      // else
+      //   return 'Not Received';
+    }
     switch (order.status) {
       case '0': return 'No Action';
       case '1': return 'Received';

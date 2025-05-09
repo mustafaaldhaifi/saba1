@@ -204,7 +204,9 @@
                   <select [style.background-color]="getStatusColor(order.status)" *ngIf="order?.id"
                     [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)" class="status-select">
                     <option value="0"></option>
-                    <option value="1">Received</option>
+                    <option value="1">Received <span
+                        *ngIf="selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">({{order.qntNotRequirement}})</span>
+                    </option>
                     <option value="2">Not Received</option>
                     <option value="4">Not Requested</option>
                     <option *ngIf="![0, 1, 2, 4].includes(order.status)" value="{{order.status}}">Not Same
