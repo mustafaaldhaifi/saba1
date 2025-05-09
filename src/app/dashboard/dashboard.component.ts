@@ -77,6 +77,43 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  async reset(branch: Branch) {
+    this.isLoading = true
+
+    // const bra
+    const orders = this.preOrders.find((order: any) => order.createdAt === this.selectedDatey.createdAt)?.orders
+    console.log("orders : ", orders);
+    const orderId = orders?.find((order: any) => order.branchId == branch.id)!!.id
+    console.log("order id to delete: ",);
+
+    const ordersBranch = this.orders.filter((order: any) =>
+      order.branchId === branch.id && order.id
+      // order.productId === productId
+    );
+    console.log("ordersBranch To delete", ordersBranch);
+
+    const batch = writeBatch(this.apiService.db);
+
+
+    try {
+      if (orderId) {
+        batch.delete(doc(this.apiService.db, collectionNames.orders, orderId));
+      }
+      // First process all orders deletions
+      for (const element of ordersBranch) {
+        batch.delete(doc(this.apiService.db, collectionNames.branchesOrders, element.id!!));
+        // console.log("deleteOrderId", order.id);
+      }
+      // Commit the batch once after all operations are added
+      await batch.commit();
+
+    } catch (error) {
+      console.error('Error deleting orders:', error);
+      throw error;
+    } finally {
+      this.isLoading = false;
+    }
+  }
   exportPdf(branch: any) {
     const pdfService = new PdfService();
     // console.log('sddsds');
@@ -816,6 +853,8 @@ export class DashboardComponent implements OnInit {
 
         const ordersQuery = query(
           collection(db, 'branchesOrders'),
+          where("typeId", "==", this.selectedType.id),
+          where("city", "==", this.selectedOption),
           where("createdAt", ">=", startOfDay),
           where("createdAt", "<=", endOfDay)
         );
@@ -942,6 +981,12 @@ export class DashboardComponent implements OnInit {
     // order.qnt = qnt;
     console.log(order);
 
+    const element = {
+      order,
+      city: this.selectedOption,
+
+    }
+
     this.updateOrderCollections(order);
     this.ifHasChanges = true
 
@@ -1057,7 +1102,11 @@ export class DashboardComponent implements OnInit {
   }
 
   private async addOrders(): Promise<void> {
+
     if (!this.ordersToAdd.length) return;
+
+    console.log("start Add", this.ordersToAdd);
+
 
     const db = getFirestore();
     const batch = writeBatch(db);
@@ -1143,6 +1192,10 @@ export class DashboardComponent implements OnInit {
   // }
 
   private async updateOrders(): Promise<void> {
+    if (!this.ordersToUpdate.length) return;
+
+    console.log("start Update", this.ordersToUpdate);
+
     const db = getFirestore();
     const batch = writeBatch(db);
 

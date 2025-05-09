@@ -107,11 +107,7 @@ export class BranchComponent {
   /// Save
   async saveUpdates() {
     this.isLoading = true;
-    const db = getFirestore();
-
-    // Create a batch instance
     const batch = writeBatch(this.apiService.db);
-
     const orderRef = doc(this.apiService.db, collectionNames.orders, this.selectedPreOrder.id);
 
     // const productRef = doc(db, "branchesOrders", element.id);
@@ -673,6 +669,8 @@ export class BranchComponent {
     } else {
       this.ordersToUpdate.push(order);
     }
+    console.log("Dddd", this.ordersToUpdate);
+
   }
   addNewOrder(date: any) {
     if (this.isChangeStatus() == true) {
