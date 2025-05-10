@@ -32,6 +32,7 @@ import { ApiService } from '../api.service';
 import { PdfService } from '../pdf.service';
 import { environment } from '../../env';
 import { collectionNames } from '../Shareds';
+import { ProductsService } from '../products.service';
 
 
 interface Product {
@@ -139,8 +140,10 @@ export class DashboardComponent implements OnInit {
     const date = this.selectedDatey.createdAt.toDate();
 
     const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const isMonthally = this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU'
 
-    pdfService.export(this.getOrders(branch.id), false, formattedDate, branch.name, this.selectedType.name_en)
+    console.log('isMonthally', isMonthally);
+    pdfService.export(this.getOrders(branch.id, isMonthally), false, formattedDate, branch.name, this.selectedType.name_en, isMonthally)
   }
   async addTemp() {
 
@@ -409,6 +412,8 @@ export class DashboardComponent implements OnInit {
   selectedType: any
   movableDate: any
 
+  productUpdates: any
+
 
 
   orderMap: Map<string, any> = new Map();
@@ -419,7 +424,8 @@ export class DashboardComponent implements OnInit {
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private productService: ProductsService
   ) {
     this.version = environment.version
   }
@@ -546,6 +552,7 @@ export class DashboardComponent implements OnInit {
 
       const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(this.selectedDatey ? this.selectedDatey.createdAt.toDate() : Timestamp.now().toDate());
 
+
       const [branches, products, orders] = await Promise.all([
         this.fetchBranches(),
         this.fetchProducts(),
@@ -553,27 +560,6 @@ export class DashboardComponent implements OnInit {
       ]);
       console.log("bb", branches);
       console.log("58oo", orders);
-      // const orderToclean = orders.filter((order: any) => order.qnt == undefined)
-      // Step 1: Filter orders with undefined qnt
-      // const filteredOrders = orders.map((order, index) => ({ ...order, index }))
-      //   .filter(order => order.qnt === undefined);
-      // console.log("orderToclean", filteredOrders);
-
-      // // Step 2: Count branchId occurrences
-      // const branchIdCount: Record<string, number> = {};
-      // filteredOrders.forEach(order => {
-      //   const branchId = order.branchId;
-      //   branchIdCount[branchId] = (branchIdCount[branchId] || 0) + 1;
-      // });
-
-      // // Step 3: Get indexes of orders with duplicated branchId
-      // const duplicatedIndexes = filteredOrders
-      //   .filter(order => branchIdCount[order.branchId] > 1)
-      //   .map(order => order.index);
-
-      // console.log(duplicatedIndexes);
-
-      // Step 1: Filter orders where qnt is undefined
 
 
 
@@ -640,21 +626,73 @@ export class DashboardComponent implements OnInit {
     }));
   }
 
-  private async fetchProducts(): Promise<Product[]> {
+  async exportProductsToFile(): Promise<void> {
     const db = getFirestore();
     const q = query(collection(db, "products"),
-      where("city", '==', this.selectedOption),
-      where("typeId", "==", this.selectedType.id),
-      orderBy("createdAt", "asc"));
+
+    );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
+
+    const products = snapshot.docs.map(doc => ({
       id: doc.id,
-      name: doc.data()['name'],
-      unit: doc.data()['unit'],
-      unitF: doc.data()['unitF'],
-      createdAt: doc.data()['createdAt'],
+      ...doc.data()
     }));
+
+    const jsonStr = JSON.stringify(products, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "products";
+    a.click();
+    window.URL.revokeObjectURL(url);
   }
+
+  private async fetchProducts(): Promise<Product[]> {
+    const city = this.selectedOption;
+    const typeId = this.selectedType.id;
+
+    const productsInfo = this.productService.getProductsFromLocal(city, typeId);
+
+    this.productUpdates = await this.productService.getLastupdate(city, typeId, this.apiService);
+
+    console.log("productUpdates2", this.productUpdates);
+    console.log("productsInfo", productsInfo);
+
+
+    const shouldFetchFromServer = !productsInfo || this.productService.compareDate2(this.productUpdates.updatedAt, productsInfo.fetchedAt);
+
+    if (shouldFetchFromServer) {
+      const db = getFirestore();
+      const q = query(
+        collection(db, "products"),
+        where("city", '==', city),
+        where("typeId", "==", typeId),
+        orderBy("createdAt", "asc")
+      );
+
+      const snapshot = await getDocs(q);
+
+      const products = snapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data()['name'],
+        unit: doc.data()['unit'],
+        unitF: doc.data()['unitF'],
+        createdAt: doc.data()['createdAt'],
+      }));
+
+      this.productService.updateProductInLocal(products, city, typeId);
+
+      console.log("products get from server");
+
+      return products;
+    } else {
+      console.log("products get from Local");
+      return productsInfo.products;
+    }
+  }
+
 
   private async fetchOrders(start: Timestamp, end: Timestamp): Promise<Order[]> {
     console.log("start1", start);
@@ -1047,58 +1085,76 @@ export class DashboardComponent implements OnInit {
   }
 
   private async addProducts(): Promise<void> {
-    const db = getFirestore();
-    const batch = writeBatch(db);
-    let timeOffset = 0;
+    try {
+      const db = getFirestore();
+      const batch = writeBatch(db);
 
-    this.productsToAdd.forEach(async (product: any) => {
-      if (product.name) {
-        // const tempId = doc(collection(db, 'products')).id;
-        const docRef = doc(collection(db, 'products'));
-        // Remove the 'id' property from the product object
-        const { id, ...productWithoutId } = product;
+      // ✅ Corrected document path for updating productUpdates
+      const docRef2 = doc(db, 'productUpdates', this.productUpdates.id);
 
-        // Now create the new object, including the product without the id and the createdAt timestamp
-        const newData = {
-          ...productWithoutId,        // Include all product data except id
-          // city: this.selectedOption,
-          // createdAt: Timestamp.now() // Add createdAt timestamp
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
 
-        };
-        // await new Promise(resolve => setTimeout(resolve, 5)); // 10ms delay
+      // ✅ Loop through products safely
+      for (const product of this.productsToAdd) {
+        if (product.name) {
+          const docRef = doc(collection(db, 'products'));
+          const { id, createdAt, ...productWithoutId } = product;
 
-        batch.set(docRef, newData);
-        timeOffset += 1;
-        // this.data.push({
-        //   id: tempId,
-        //   name: product.name,
-        // })
+          const newData = {
+            ...productWithoutId,
+            // You can optionally add:
+            // createdAt: Timestamp.now(),
+            // city: this.selectedOption,
+          };
+
+          batch.set(docRef, newData);
+        }
       }
 
-    });
+      await batch.commit();
+      this.productsToAdd = []
+      this.productService.updateProductInLocal(this.data, this.selectedOption, this.selectedType.id)
+    } catch (error) {
 
-    await batch.commit();
-    this.productsToAdd = [];
-    // window.location.reload();
-    // await this.getData()
+    }
 
 
+    // Optionally refresh UI or data after adding
+    // await this.getData();
   }
 
+
   private async updateProducts(): Promise<void> {
-    const db = getFirestore();
-    const batch = writeBatch(db);
+    try {
+      const db = getFirestore();
+      const batch = writeBatch(db);
 
-    this.productsToUpdate.forEach(product => {
-      const docRef = doc(db, 'products', product.id);
-      const { id, ...productWithoutId } = product;
+      // ✅ Corrected document path for updating productUpdates
+      console.log("productUpdates", this.productUpdates);
 
-      // Update the document with the remaining fields
-      batch.update(docRef, productWithoutId);
-    });
+      const docRef2 = doc(db, 'productUpdates', this.productUpdates.id);
 
-    await batch.commit();
-    this.productsToUpdate = [];
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
+      this.productsToUpdate.forEach((product: any) => {
+        const docRef = doc(db, 'products', product.id);
+        const { id, createdAt, ...productWithoutId } = product;
+
+        // Update the document with the remaining fields
+        batch.update(docRef, productWithoutId);
+      });
+
+      await batch.commit();
+      this.productsToUpdate = [];
+    } catch (error) {
+      console.log(error);
+
+    }
+
   }
 
   private async addOrders(): Promise<void> {
@@ -1962,30 +2018,26 @@ export class DashboardComponent implements OnInit {
 
   //   return data;
   // }
-  getOrders(branchId: any): any[][] {
+  getOrders(branchId: any, isMonthly: boolean): any[][] {
     const data = this.data;
     const result: any[][] = [];
-
+  
     for (let i = 0; i < data.length; i++) {
       const product = data[i];
       const order = this.getOrder(branchId, product.id);
-
+  
       if (order) {
         result.push([
           product.name,
           order.qntF,
           product.unitF,
-          order.qnt,
-          product.unit
+          ...(!isMonthly ? [order.qnt, product.unit] : [])
         ]);
       }
     }
-    // console.log('data', data);
-
-
+  
     return result;
   }
-
 
   // TrackBy functions to minimize DOM changes
   trackByProductId(index: number, product: any): string {

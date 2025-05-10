@@ -8,7 +8,7 @@ import autoTable, { Color, FontStyle, HAlignType } from 'jspdf-autotable';
 })
 export class PdfService {
 
-  export(data: any, isBranch: boolean = false, date: string, branchName: string, typeName: string) {
+  export(data: any, isBranch: boolean = false, date: string, branchName: string, typeName: string, isMonthly: boolean) {
     const doc = new jsPDF();
     doc.setFont('ARIAL', 'normal');
     doc.setFontSize(12);
@@ -24,7 +24,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 3 : 4, // دمج العمودين الأول والثاني في هذا السطر
+          colSpan: isBranch ? 3 : isMonthly ? 3 : 4, // دمج العمودين الأول والثاني في هذا السطر
         },
         {
           content: ` ${date} : التاريخ`,
@@ -36,7 +36,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 3 : 6, // دمج العمودين الثالث والرابع في هذا السطر
+          colSpan: isBranch ? 3 : isMonthly ? 3 : 6, // دمج العمودين الثالث والرابع في هذا السطر
         },
         {
           content: `${branchName} : اسم الفرع`,
@@ -48,7 +48,7 @@ export class PdfService {
 
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 3 : 5, // دمج العمودين الثالث والرابع في هذا السطر
+          colSpan: isBranch ? 3 : isMonthly ? 3 : 5, // دمج العمودين الثالث والرابع في هذا السطر
         },
       ],
     ];
@@ -61,15 +61,20 @@ export class PdfService {
 
         // this.items({ name: 'الرصيد', fontSize: 7 }),
         // this.items({ name: 'الوحدة' }),
-        this.items({ name: 'المطلوب' }),
-        this.items({ name: 'الوحدة' }),
+        ...(isMonthly === false ? [this.items({ name: 'المطلوب' })] : []),
+        ...(isMonthly === false ? [this.items({ name: 'الوحده' })] : []),
+
+        // this.items({ name: 'المطلوب' }),
+        // this.items({ name: 'الوحدة' }),
         this.items({ name: 'الاصناف' }),
         ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
         ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
         // this.items({ name: 'الرصيد', fontSize: 7 }),
         // this.items({ name: 'الوحدة' }),
-        this.items({ name: 'المطلوب' }),
-        this.items({ name: 'الوحدة' }),
+        ...(isMonthly === false ? [this.items({ name: 'المطلوب' })] : []),
+        ...(isMonthly === false ? [this.items({ name: 'الوحده' })] : []),
+        // this.items({ name: 'المطلوب' }),
+        // this.items({ name: 'الوحدة' }),
         this.items({ name: 'الاصناف' }),
         ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
         ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
@@ -81,12 +86,16 @@ export class PdfService {
     ];
 
     var rows = [];
+    const maxRows = isMonthly ? 50 : 36; // total rows
 
-    for (let index = 0; index < 36; index++) {
+    for (let index = 0; index < maxRows; index++) {
       if (isBranch == false) {
         rows.push(['', '', '', '', '', '', '', '', ''])
       } else {
-        rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
+        // rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
+        const colCount = topHeader2[0].length;
+        rows.push(new Array(colCount).fill(''));
+
       }
     }
 
@@ -109,7 +118,7 @@ export class PdfService {
     //   // rows[i] = row;
 
     // }
-    const maxRows = 35; // total rows
+    // const maxRows = isMonthly ? 50 : 36; // total rows
     const cellsPerRow = data[0].length;
 
     for (let i = 0; i < data.length; i++) {

@@ -8,6 +8,7 @@ import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
 import { PdfService } from '../pdf.service';
+import { ProductsService } from '../products.service';
 
 @Component({
   selector: 'app-branch',
@@ -26,8 +27,11 @@ export class BranchComponent {
     console.log("dattttaaa", data);
     console.log("typeee", this.selectedType);
 
+    const isMonthally = this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU'
 
-    pdfService.export(data, true, formattedDate, this.branch.data.name, this.selectedType.name_en)
+    console.log('isMonthally', isMonthally);
+
+    pdfService.export(data, true, formattedDate, this.branch.data.name, this.selectedType.name_en, isMonthally)
   }
   getOrders(branchId: any): any[][] {
     const data = this.data;
@@ -88,6 +92,7 @@ export class BranchComponent {
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
+    private productsServices: ProductsService
   ) {
     this.version = environment.version
     // initializeApp(environment.firebase);
@@ -293,22 +298,46 @@ export class BranchComponent {
     });
   }
   async getProducts() {
-    const constraints = [
-      where("city", '==', this.branch.data.city),
-      where("typeId", "==", this.selectedType.id),
-      orderBy("createdAt", "asc")
-    ];
-    const snapshot = await this.apiService.getData(collectionNames.products, constraints)
-    this.data = snapshot.docs.map(doc => {
-      this.orders.push({ qnt: 0, productId: doc.id });
-      return {
-        id: doc.id,
-        name: doc.data()['name'],
-        unit: doc.data()['unit'],
-        unitF: doc.data()['unitF'],
-      };
-    });
+    const city = this.branch.data.city;
+    const typeId = this.selectedType.id;
+
+    const productsInfo = this.productsServices.getProductsFromLocal(city, typeId);
+
+    const shouldFetchFromServer = !productsInfo ||
+      await this.productsServices.compareDate(city, typeId, productsInfo.fetchedAt, this.apiService);
+
+    console.log('shouldFetchFromServer', shouldFetchFromServer);
+
+    if (shouldFetchFromServer) {
+      const constraints = [
+        where("city", "==", city),
+        where("typeId", "==", typeId),
+        orderBy("createdAt", "asc")
+      ];
+
+      const snapshot = await this.apiService.getData(collectionNames.products, constraints);
+
+      this.data = snapshot.docs.map(doc => {
+        this.orders.push({ qnt: 0, productId: doc.id });
+        return {
+          id: doc.id,
+          name: doc.data()['name'],
+          unit: doc.data()['unit'],
+          unitF: doc.data()['unitF'],
+        };
+      });
+
+      console.log("products get from server");
+
+      // Save new products to local
+      this.productsServices.updateProductInLocal(this.data, city, typeId);
+    } else {
+      console.log("products get from Local");
+
+      this.data = productsInfo.products;
+    }
   }
+
   async getDatesToAdd(): Promise<void> {
     const constraints = [
       where("typeId", "==", this.selectedType.id)
