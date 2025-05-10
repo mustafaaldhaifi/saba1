@@ -23,17 +23,18 @@ export class BranchComponent {
     const date = this.selectedDate.toDate();
 
     const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const data = this.getOrders(this.branch.id)
-    console.log("dattttaaa", data);
     console.log("typeee", this.selectedType);
 
     const isMonthally = this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU'
 
     console.log('isMonthally', isMonthally);
+    const data = this.getOrders(this.branch.id, isMonthally)
+    console.log("dattttaaa", data);
+
 
     pdfService.export(data, true, formattedDate, this.branch.data.name, this.selectedType.name_en, isMonthally)
   }
-  getOrders(branchId: any): any[][] {
+  getOrders(branchId: any, isMonthally: boolean): any[][] {
     const data = this.data;
     console.log(data);
 
@@ -50,13 +51,24 @@ export class BranchComponent {
 
 
       if (order) {
-        result.push([
-          product.name,
-          // order.qntF,
-          // product.unitF,
-          order.qnt,
-          product.unit
-        ]);
+        if (isMonthally) {
+          result.push([
+            product.name,
+            order.qntF,
+            product.unitF,
+            // order.qnt,
+            // product.unit
+          ]);
+        } else {
+          result.push([
+            product.name,
+            // order.qntF,
+            // product.unitF,
+            order.qnt,
+            product.unit
+          ]);
+        }
+
       }
     }
     // console.log('data', data);

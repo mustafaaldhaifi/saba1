@@ -52,38 +52,120 @@ export class PdfService {
         },
       ],
     ];
+    const headerRow: any[] = [];
 
-    const topHeader2 = [
-      [
-        this.items({ name: 'الاصناف' }),
-        ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
-        ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
+    if (!isBranch) {
+      headerRow.push(this.items({ name: 'الاصناف' }));
+      headerRow.push(this.items({ name: 'الرصيد', fontSize: 7 }));
+      headerRow.push(this.items({ name: 'الوحدة', fontSize: 7 }));
 
-        // this.items({ name: 'الرصيد', fontSize: 7 }),
-        // this.items({ name: 'الوحدة' }),
-        ...(isMonthly === false ? [this.items({ name: 'المطلوب' })] : []),
-        ...(isMonthly === false ? [this.items({ name: 'الوحده' })] : []),
+      if (!isMonthly) {
+        headerRow.push(this.items({ name: 'المطلوب' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      }
 
-        // this.items({ name: 'المطلوب' }),
-        // this.items({ name: 'الوحدة' }),
-        this.items({ name: 'الاصناف' }),
-        ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
-        ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
-        // this.items({ name: 'الرصيد', fontSize: 7 }),
-        // this.items({ name: 'الوحدة' }),
-        ...(isMonthly === false ? [this.items({ name: 'المطلوب' })] : []),
-        ...(isMonthly === false ? [this.items({ name: 'الوحده' })] : []),
-        // this.items({ name: 'المطلوب' }),
-        // this.items({ name: 'الوحدة' }),
-        this.items({ name: 'الاصناف' }),
-        ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
-        ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
-        // this.items({ name: 'الرصيد', fontSize: 7 }),
-        // this.items({ name: 'الوحدة' }),
-        this.items({ name: 'المطلوب' }),
-        this.items({ name: 'الوحدة' }),
-      ],
-    ];
+      headerRow.push(this.items({ name: 'الاصناف' }));
+      headerRow.push(this.items({ name: 'الرصيد', fontSize: 7 }));
+      headerRow.push(this.items({ name: 'الوحدة', fontSize: 7 }));
+
+      if (!isMonthly) {
+        headerRow.push(this.items({ name: 'المطلوب' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      }
+
+      headerRow.push(this.items({ name: 'الاصناف' }));
+      headerRow.push(this.items({ name: 'الرصيد', fontSize: 7 }));
+      headerRow.push(this.items({ name: 'الوحدة', fontSize: 7 }));
+
+      if (!isMonthly) {
+        headerRow.push(this.items({ name: 'المطلوب' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      }
+
+    } else {
+      // إذا كان isBranch = true
+      headerRow.push(this.items({ name: 'الاصناف' }));
+
+      if (isMonthly) {
+        headerRow.push(this.items({ name: 'الرصيد' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      } else {
+        headerRow.push(this.items({ name: 'المطلوب' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      }
+
+      headerRow.push(this.items({ name: 'الاصناف' }));
+
+      if (isMonthly) {
+        headerRow.push(this.items({ name: 'الرصيد' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      } else {
+        headerRow.push(this.items({ name: 'المطلوب' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      }
+
+      headerRow.push(this.items({ name: 'الاصناف' }));
+
+      if (isMonthly) {
+        headerRow.push(this.items({ name: 'الرصيد' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      } else {
+        headerRow.push(this.items({ name: 'المطلوب' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
+      }
+    }
+
+    const topHeader2 = [headerRow];
+
+    // const topHeader2 = [
+    //   [
+    //     this.items({ name: 'الاصناف' }),
+    //     ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
+    //     ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
+
+    //     // this.items({ name: 'الرصيد', fontSize: 7 }),
+    //     // this.items({ name: 'الوحدة' }),
+    //     ...(isMonthly === true ? [this.items({ name: 'المطلوب' })] : []),
+    //     ...(isMonthly === true ? [this.items({ name: 'الوحده' })] : []),
+
+    //     // this.items({ name: 'المطلوب' }),
+    //     // this.items({ name: 'الوحدة' }),
+    //     this.items({ name: 'الاصناف' }),
+    //     ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
+    //     ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
+    //     // this.items({ name: 'الرصيد', fontSize: 7 }),
+    //     // this.items({ name: 'الوحدة' }),
+    //     ...(isMonthly === true ? [this.items({ name: 'المطلوب' })] : []),
+    //     ...(isMonthly === true ? [this.items({ name: 'الوحده' })] : []),
+    //     // this.items({ name: 'المطلوب' }),
+    //     // this.items({ name: 'الوحدة' }),
+    //     this.items({ name: 'الاصناف' }),
+    //     ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
+    //     ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
+    //     // this.items({ name: 'الرصيد', fontSize: 7 }),
+    //     // this.items({ name: 'الوحدة' }),
+    //     this.items({ name: 'المطلوب' }),
+    //     this.items({ name: 'الوحدة' }),
+    //   ],
+    // ];
+    // /////
+    // topHeader2[0].push(this.items({ name: 'الاصناف' }))
+    // if (isBranch) {
+    //   if (isMonthly) {
+    //     topHeader2[0].push(this.items({ name: 'الرصيد' }))
+    //   } else {
+    //     topHeader2[0].push(this.items({ name: 'المطلوب' }))
+    //   }
+    //   topHeader2[0].push(this.items({ name: 'الوحده' }))
+    // } else {
+
+    //   if (isMonthly) {
+    //     topHeader2[0].push(this.items({ name: 'الرصيد' }))
+    //   } else {
+    //     topHeader2[0].push(this.items({ name: 'المطلوب' }))
+    //   }
+    //   topHeader2[0].push(this.items({ name: 'الوحده' }))
+    // }
 
     var rows = [];
     const maxRows = isMonthly ? 50 : 36; // total rows
