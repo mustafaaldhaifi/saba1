@@ -9,6 +9,7 @@ import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
 import { PdfService } from '../pdf.service';
 import { ProductsService } from '../products.service';
+import { OrdersService } from '../orders.service copy';
 
 @Component({
   selector: 'app-branch',
@@ -77,14 +78,13 @@ export class BranchComponent {
     return result;
   }
 
-  ifCurrentDateInPreOrders1 = false
+  // ifCurrentDateInPreOrders1 = false
   ordersToAdd: any = [];
   ordersToUpdate: any = [];
   preOrders: any = [];
   isLoading = false;
   branch: any;
   data: any = [];
-  orders: any = [];
   selectedDate: any;
   combinedData: any[] = [];
   branchOrders: any[] = [];
@@ -98,13 +98,15 @@ export class BranchComponent {
   groupedData: any = [];
   rowIndexes: number[] = [];
   isOn: any
+  orderUpdates: any
 
   version: any
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
-    private productsServices: ProductsService
+    private productsServices: ProductsService,
+    private orderService: OrdersService
   ) {
     this.version = environment.version
     // initializeApp(environment.firebase);
@@ -131,6 +133,14 @@ export class BranchComponent {
     // Loop over the orders to update
 
     console.log("rfrf0", this.ordersToUpdate);
+
+    // ✅ Corrected document path for updating 
+    const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
+
+    batch.update(docRef2, {
+      updatedAt: Timestamp.now(),
+    });
+
 
     for (const element of this.ordersToUpdate) {
       const productRef = doc(this.apiService.db, collectionNames.branchesOrders, element.id);
@@ -187,7 +197,17 @@ export class BranchComponent {
     this.isLoading = true;
     // const db = getFirestore();
     const batch = writeBatch(this.apiService.db); // Initialize batch
+
+
+
     try {
+      // ✅ Corrected document path for updating 
+      const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
+
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
       // 1. Add all order items
       this.ordersToAdd.forEach((element: any) => {
         console.log("element", element);
@@ -254,6 +274,12 @@ export class BranchComponent {
             ]);
 
           this.preOrders.forEach((pre: any) => {
+            console.log("pre", pre);
+            console.log("pre", pre.createdAt);
+            console.log("pre", pre.createdAt.toDate());
+
+
+
             this.datesToAdd.forEach((date: any, index: number) => {
               if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
                 this.datesToAdd.splice(index, 1);
@@ -289,65 +315,79 @@ export class BranchComponent {
     }
   }
   async getPreOrders() {
-    const constraints = [
-      where("branchId", "==", this.branch.id),
-      where("typeId", "==", this.selectedType.id),
-      orderBy("createdAt", "desc")
-    ];
-    const snapshot = await this.apiService.getData(collectionNames.orders, constraints)
-    this.preOrders = snapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data()['name'],
-      status: doc.data()['status'],
-      createdAt: doc.data()['createdAt']
-    }));
-    const date = new Date()
-    const currentDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    this.ifCurrentDateInPreOrders1 = this.preOrders.some((o: any) => {
-      const orderDate = o.createdAt.toDate();
-      const orderDateStr = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
-      return orderDateStr === currentDateStr;
-    });
+
+    const city = this.branch.data.city;
+    const typeId = this.selectedType.id;
+    this.orderUpdates = await this.orderService.getLastupdate(city, typeId, this.apiService)
+
+    this.preOrders = await this.orderService.getOrders(city, typeId, this.branch.id, this.orderUpdates, this.apiService)
+    console.log("preOrders:", this.preOrders);
+
+    // const constraints = [
+    //   where("branchId", "==", this.branch.id),
+    //   where("typeId", "==", this.selectedType.id),
+    //   orderBy("createdAt", "desc")
+    // ];
+    // const snapshot = await this.apiService.getData(collectionNames.orders, constraints)
+    // this.preOrders = snapshot.docs.map(doc => ({
+    //   id: doc.id,
+    //   name: doc.data()['name'],
+    //   status: doc.data()['status'],
+    //   createdAt: doc.data()['createdAt']
+    // }));
+    // const date = new Date()
+    // const currentDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    // this.ifCurrentDateInPreOrders1 = this.preOrders.some((o: any) => {
+    //   const orderDate = o.createdAt.toDate();
+    //   const orderDateStr = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
+    //   return orderDateStr === currentDateStr;
+    // });
   }
   async getProducts() {
     const city = this.branch.data.city;
     const typeId = this.selectedType.id;
 
-    const productsInfo = this.productsServices.getProductsFromLocal(city, typeId);
 
-    const shouldFetchFromServer = !productsInfo ||
-      await this.productsServices.compareDate(city, typeId, productsInfo.fetchedAt, this.apiService);
+    // const productsInfo = this.productService.getProductsFromLocal(city, typeId);
 
-    console.log('shouldFetchFromServer', shouldFetchFromServer);
+    const productUpdates = await this.productsServices.getLastupdate(city, typeId, this.apiService);
 
-    if (shouldFetchFromServer) {
-      const constraints = [
-        where("city", "==", city),
-        where("typeId", "==", typeId),
-        orderBy("createdAt", "asc")
-      ];
+    this.data = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService)
 
-      const snapshot = await this.apiService.getData(collectionNames.products, constraints);
+    // const productsInfo = this.productsServices.getProductsFromLocal(city, typeId);
 
-      this.data = snapshot.docs.map(doc => {
-        this.orders.push({ qnt: 0, productId: doc.id });
-        return {
-          id: doc.id,
-          name: doc.data()['name'],
-          unit: doc.data()['unit'],
-          unitF: doc.data()['unitF'],
-        };
-      });
+    // const shouldFetchFromServer = !productsInfo ||
+    //   await this.productsServices.compareDate(city, typeId, productsInfo.fetchedAt, this.apiService);
 
-      console.log("products get from server");
+    // console.log('shouldFetchFromServer', shouldFetchFromServer);
 
-      // Save new products to local
-      this.productsServices.updateProductInLocal(this.data, city, typeId);
-    } else {
-      console.log("products get from Local");
+    // if (shouldFetchFromServer) {
+    //   const constraints = [
+    //     where("city", "==", city),
+    //     where("typeId", "==", typeId),
+    //     orderBy("createdAt", "asc")
+    //   ];
 
-      this.data = productsInfo.products;
-    }
+    //   const snapshot = await this.apiService.getData(collectionNames.products, constraints);
+
+    //   this.data = snapshot.docs.map(doc => {
+    //     return {
+    //       id: doc.id,
+    //       name: doc.data()['name'],
+    //       unit: doc.data()['unit'],
+    //       unitF: doc.data()['unitF'],
+    //     };
+    //   });
+
+    //   console.log("products get from server");
+
+    //   // Save new products to local
+    //   this.productsServices.updateProductInLocal(this.data, city, typeId);
+    // } else {
+    //   console.log("products get from Local");
+
+    //   this.data = productsInfo.products;
+    // }
   }
 
   async getDatesToAdd(): Promise<void> {

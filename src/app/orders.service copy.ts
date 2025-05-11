@@ -1,35 +1,56 @@
 import { Injectable } from '@angular/core';
 import { collection, doc, Firestore, getDocs, orderBy, query, setDoc, Timestamp, where } from 'firebase/firestore';
 import { ApiService } from './api.service';
+import { collectionNames } from './Shareds';
 
 @Injectable({
   providedIn: 'root'
 })
-export class ProductsService {
+export class OrdersService {
 
-  private name = 'products';
-  private productsInfo: any[] = [];
+  private name = 'orders';
+  private ordersInfo: any[] = [];
 
   constructor() {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(this.name);
-      const productsInfo = stored ? JSON.parse(stored) : [];
+      const ordersInfo = stored ? JSON.parse(stored) : [];
 
-      if (!Array.isArray(productsInfo)) {
+      if (!Array.isArray(ordersInfo)) {
         this.saveToLocal([]);
       } else {
-        this.productsInfo = productsInfo;
+        this.ordersInfo = ordersInfo;
       }
     }
   }
 
   private saveToLocal(data: any[]) {
-    this.productsInfo = data;
+    this.ordersInfo = data;
     localStorage.setItem(this.name, JSON.stringify(data));
   }
 
-  getProductsFromLocal(city: string, typeId: string) {
-    return this.productsInfo.find((item: any) => item.city === city && item.typeId === typeId);
+  getOrdersFromLocal(city: string, typeId: string) {
+    const orderInfo = this.ordersInfo.find((item: any) => item.city === city && item.typeId === typeId);
+  
+    if (orderInfo && orderInfo.orders) {
+      const updatedOrders = orderInfo.orders.map((item: any) => {
+        if (item.createdAt && item.createdAt.seconds !== undefined) {
+          return {
+            ...item,
+            createdAt: new Timestamp(item.createdAt.seconds, item.createdAt.nanoseconds),
+          };
+        } else {
+          return item;
+        }
+      });
+  
+      return {
+        ...orderInfo,
+        orders: updatedOrders,
+      };
+    }
+  
+    return null;
   }
 
   async compareDate(city: string, typeId: string, fetchedAt: Date, apiService: ApiService): Promise<boolean> {
@@ -68,31 +89,31 @@ export class ProductsService {
 
 
 
-  addProductToLocal(products: any, city: string, typeId: string) {
-    this.productsInfo.push({ city, typeId, products });
-    this.saveToLocal(this.productsInfo);
+  addOrderToLocal(orders: any, city: string, typeId: string) {
+    this.ordersInfo.push({ city, typeId, orders });
+    this.saveToLocal(this.ordersInfo);
   }
 
-  updateProductInLocal(products: any, city: string, typeId: string) {
-    const index = this.productsInfo.findIndex(
+  updateOrderInLocal(orders: any, city: string, typeId: string) {
+    const index = this.ordersInfo.findIndex(
       (item: any) => item.city === city && item.typeId === typeId
     );
 
     const now = new Date();
 
     if (index !== -1) {
-      this.productsInfo[index].products = products;
-      this.productsInfo[index].fetchedAt = now;
+      this.ordersInfo[index].orders = orders;
+      this.ordersInfo[index].fetchedAt = now;
     } else {
-      this.productsInfo.push({
+      this.ordersInfo.push({
         city,
         typeId,
-        products,
+        orders,
         fetchedAt: now
       });
     }
 
-    this.saveToLocal(this.productsInfo);
+    this.saveToLocal(this.ordersInfo);
   }
 
   async getLastupdate(city: string, typeId: string, apiService: ApiService): Promise<{ id: string, updatedAt: Date } | false> {
@@ -101,10 +122,10 @@ export class ProductsService {
       where("typeId", "==", typeId),
     ];
 
-    const snapshot = await apiService.getData("productUpdates", constraints);
+    const snapshot = await apiService.getData("orderUpdates", constraints);
 
     if (snapshot.empty) {
-      const docRef = doc(collection(apiService.db, "productUpdates"));
+      const docRef = doc(collection(apiService.db, "orderUpdates"));
 
       const now = Timestamp.now();
       await setDoc(docRef, {
@@ -131,44 +152,39 @@ export class ProductsService {
     return sorted[0]; // { id, updatedAt }
   }
 
-  async getProducts(city: string, typeId: string, productUpdates: any, apiService: ApiService): Promise<any[]> {
-    // const city = this.selectedOption;
-    // const typeId = this.selectedType.id;
+  async getOrders(city: string, typeId: string, branchId: any, orderUpdates: any, apiService: ApiService): Promise<any[]> {
+    const ordersInfo = this.getOrdersFromLocal(city, typeId);
 
-    const productsInfo = this.getProductsFromLocal(city, typeId);
+    console.log("ordersInfo", ordersInfo);
+    console.log(orderUpdates);
 
-    // this.productUpdates = await this.getLastupdate(city, typeId, apiService);
-
-    // console.log("productUpdates2", this.productUpdates);
-    // console.log("productsInfo", productsInfo);
-
-
-    const shouldFetchFromServer = !productsInfo || this.compareDate2(productUpdates.updatedAt, productsInfo.fetchedAt);
+    const shouldFetchFromServer = !ordersInfo || this.compareDate2(orderUpdates.updatedAt, ordersInfo.fetchedAt);
 
     if (shouldFetchFromServer) {
-      const q = query(
-        collection(apiService.db, "products"),
-        where("city", '==', city),
-        where("typeId", "==", typeId),
-        orderBy("createdAt", "asc")
-      );
+      var constraints = [];
+      if (branchId) {
+        constraints.push(where("branchId", "==", branchId))
+      } else {
+        constraints.push(where("city", "==", city))
+      }
+      constraints.push(where("typeId", "==", typeId))
+      constraints.push(orderBy("createdAt", "desc"))
 
-      const snapshot = await getDocs(q);
 
-      const products = snapshot.docs.map(doc => ({
+      const snapshot = await apiService.getData(collectionNames.orders, constraints)
+      const orders = snapshot.docs.map(doc => ({
         id: doc.id,
-        name: doc.data()['name'],
-        unit: doc.data()['unit'],
-        unitF: doc.data()['unitF'],
-        createdAt: doc.data()['createdAt'],
+        branchId: doc.data()['branchId'],
+        typeId: doc.data()['typeId'],
+        createdAt: doc.data()['createdAt']
       }));
 
-      this.updateProductInLocal(products, city, typeId);
-      console.log("products get from server");
-      return products;
+      this.updateOrderInLocal(orders, city, typeId);
+      console.log("orders get from server");
+      return orders;
     } else {
-      console.log("products get from Local");
-      return productsInfo.products;
+      console.log("orders get from Local");
+      return ordersInfo.orders;
     }
   }
 

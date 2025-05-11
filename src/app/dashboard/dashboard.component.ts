@@ -33,6 +33,7 @@ import { PdfService } from '../pdf.service';
 import { environment } from '../../env';
 import { collectionNames } from '../Shareds';
 import { ProductsService } from '../products.service';
+import { OrdersService } from '../orders.service copy';
 
 
 interface Product {
@@ -425,7 +426,8 @@ export class DashboardComponent implements OnInit {
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
-    private productService: ProductsService
+    private productService: ProductsService,
+    private orderService: OrdersService
   ) {
     this.version = environment.version
   }
@@ -653,44 +655,45 @@ export class DashboardComponent implements OnInit {
     const city = this.selectedOption;
     const typeId = this.selectedType.id;
 
-    const productsInfo = this.productService.getProductsFromLocal(city, typeId);
+    // const productsInfo = this.productService.getProductsFromLocal(city, typeId);
 
     this.productUpdates = await this.productService.getLastupdate(city, typeId, this.apiService);
 
-    console.log("productUpdates2", this.productUpdates);
-    console.log("productsInfo", productsInfo);
+    return await this.productService.getProducts(city, typeId, this.productUpdates, this.apiService)
+    // console.log("productUpdates2", this.productUpdates);
+    // console.log("productsInfo", productsInfo);
 
 
-    const shouldFetchFromServer = !productsInfo || this.productService.compareDate2(this.productUpdates.updatedAt, productsInfo.fetchedAt);
+    // const shouldFetchFromServer = !productsInfo || this.productService.compareDate2(this.productUpdates.updatedAt, productsInfo.fetchedAt);
 
-    if (shouldFetchFromServer) {
-      const db = getFirestore();
-      const q = query(
-        collection(db, "products"),
-        where("city", '==', city),
-        where("typeId", "==", typeId),
-        orderBy("createdAt", "asc")
-      );
+    // if (shouldFetchFromServer) {
+    //   const db = getFirestore();
+    //   const q = query(
+    //     collection(db, "products"),
+    //     where("city", '==', city),
+    //     where("typeId", "==", typeId),
+    //     orderBy("createdAt", "asc")
+    //   );
 
-      const snapshot = await getDocs(q);
+    //   const snapshot = await getDocs(q);
 
-      const products = snapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data()['name'],
-        unit: doc.data()['unit'],
-        unitF: doc.data()['unitF'],
-        createdAt: doc.data()['createdAt'],
-      }));
+    //   const products = snapshot.docs.map(doc => ({
+    //     id: doc.id,
+    //     name: doc.data()['name'],
+    //     unit: doc.data()['unit'],
+    //     unitF: doc.data()['unitF'],
+    //     createdAt: doc.data()['createdAt'],
+    //   }));
 
-      this.productService.updateProductInLocal(products, city, typeId);
+    //   this.productService.updateProductInLocal(products, city, typeId);
 
-      console.log("products get from server");
+    //   console.log("products get from server");
 
-      return products;
-    } else {
-      console.log("products get from Local");
-      return productsInfo.products;
-    }
+    //   return products;
+    // } else {
+    //   console.log("products get from Local");
+    //   return productsInfo.products;
+    // }
   }
 
 
@@ -752,22 +755,31 @@ export class DashboardComponent implements OnInit {
     this.orders.push(...newOrders);
   }
 
+  orderUpdates: any
   async getPreOrders(): Promise<void> {
-    const db = getFirestore();
-    const q = query(collection(db, "orders"),
-      where("city", '==', this.selectedOption),
-      where("typeId", '==', this.selectedType.id),
-      orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
+    const city = this.selectedOption;
+    const typeId = this.selectedType.id;
+    this.orderUpdates = await this.orderService.getLastupdate(city, typeId, this.apiService)
 
-    this.actualPreOrders = snapshot.docs.map(doc => ({
-      id: doc.id,
-      branchId: doc.data()['branchId'],
-      typeId: doc.data()['typeId'],
-      createdAt: doc.data()['createdAt']
-    }));
+    this.actualPreOrders = await this.orderService.getOrders(city, typeId, null, this.orderUpdates, this.apiService)
+    console.log("preOrders:", this.preOrders);
 
-    console.log("act", this.actualPreOrders);
+
+    // const db = getFirestore();
+    // const q = query(collection(db, "orders"),
+    //   where("city", '==', this.selectedOption),
+    //   where("typeId", '==', this.selectedType.id),
+    //   orderBy("createdAt", "desc"));
+    // const snapshot = await getDocs(q);
+
+    // this.actualPreOrders = snapshot.docs.map(doc => ({
+    //   id: doc.id,
+    //   branchId: doc.data()['branchId'],
+    //   typeId: doc.data()['typeId'],
+    //   createdAt: doc.data()['createdAt']
+    // }));
+
+    // console.log("act", this.actualPreOrders);
 
 
     this.groupPreOrdersByDate();
@@ -1169,6 +1181,12 @@ export class DashboardComponent implements OnInit {
     const processedBranches = new Set<string>(); // Track processed branches
 
     try {
+      // ✅ Corrected document path for updating 
+      const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
+
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
       // Process all orders in a single batch
       for (const order of this.ordersToAdd) {
         // Only check branch uniqueness if not already processed
@@ -1250,34 +1268,47 @@ export class DashboardComponent implements OnInit {
   private async updateOrders(): Promise<void> {
     if (!this.ordersToUpdate.length) return;
 
-    console.log("start Update", this.ordersToUpdate);
+    try {
+      console.log("start Update", this.ordersToUpdate);
 
-    const db = getFirestore();
-    const batch = writeBatch(db);
+      const db = getFirestore();
+      const batch = writeBatch(db);
 
-    this.ordersToUpdate.forEach(order => {
-      if (order.id) {
-        const docRef = doc(db, 'branchesOrders', order.id);
+      // ✅ Corrected document path for updating 
+      const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
+
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
+      this.ordersToUpdate.forEach(order => {
+        if (order.id) {
+          const docRef = doc(db, 'branchesOrders', order.id);
 
 
-        const { id, qntNotRequirement, ...productWithoutId } = order;
+          const { id, qntNotRequirement, ...productWithoutId } = order;
 
-        // Create the final object - excludes qntNotRequirement if falsy
-        const updateData = qntNotRequirement
-          ? { ...productWithoutId, qntNotRequirement } // Include if exists
-          : productWithoutId;                          // Exclude if falsy
+          // Create the final object - excludes qntNotRequirement if falsy
+          const updateData = qntNotRequirement
+            ? { ...productWithoutId, qntNotRequirement } // Include if exists
+            : productWithoutId;                          // Exclude if falsy
 
-        // Now create the new object, including the product without the id and the createdAt timestamp
-        // const newData = {
-        //   ...productWithoutId,        // Include all product data except id
-        // };
+          // Now create the new object, including the product without the id and the createdAt timestamp
+          // const newData = {
+          //   ...productWithoutId,        // Include all product data except id
+          // };
 
-        batch.update(docRef, updateData);
-      }
-    });
+          batch.update(docRef, updateData);
+        }
+      });
 
-    await batch.commit();
-    this.ordersToUpdate = [];
+      await batch.commit();
+      this.ordersToUpdate = [];
+    } catch (error) {
+      console.log(error);
+
+    }
+
   }
 
   // exportToExcel() {
@@ -2021,11 +2052,11 @@ export class DashboardComponent implements OnInit {
   getOrders(branchId: any, isMonthly: boolean): any[][] {
     const data = this.data;
     const result: any[][] = [];
-  
+
     for (let i = 0; i < data.length; i++) {
       const product = data[i];
       const order = this.getOrder(branchId, product.id);
-  
+
       if (order) {
         result.push([
           product.name,
@@ -2035,7 +2066,7 @@ export class DashboardComponent implements OnInit {
         ]);
       }
     }
-  
+
     return result;
   }
 
