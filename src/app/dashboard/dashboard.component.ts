@@ -98,6 +98,14 @@ export class DashboardComponent implements OnInit {
 
 
     try {
+
+      // ✅ Corrected document path for updating 
+      const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
+
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
       if (orderId) {
         batch.delete(doc(this.apiService.db, collectionNames.orders, orderId));
       }
@@ -109,6 +117,8 @@ export class DashboardComponent implements OnInit {
       // Commit the batch once after all operations are added
       await batch.commit();
 
+      console.log("success");
+      
     } catch (error) {
       console.error('Error deleting orders:', error);
       throw error;
@@ -2008,7 +2018,8 @@ export class DashboardComponent implements OnInit {
       //   return 'Not Received';
     }
     switch (order.status) {
-      case '0': return 'No Action';
+      // case '0': return 'No Action';
+      case '0': return 'Not Requested';
       case '1': return 'Received';
       case '2': return 'Not Received';
       case '4': return 'Not Requested';

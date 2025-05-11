@@ -79,7 +79,10 @@
                         </th>
                         <th *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">الوحدة</th>
                         <th *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">حالة
-                            الاستلام</th>
+                            الاستلام
+                            <span *ngIf="selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">بالكيلو</span>
+                        
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -110,14 +113,15 @@
                             {{item.unit}}
                         </td>
 
-                        <td *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU' && selectedType.id != 'Ikt6pyFoTwvwn7GBIPvv' ">
+                        <td
+                            *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU' && selectedType.id != 'Ikt6pyFoTwvwn7GBIPvv' ">
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
                                     <select
                                         [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1'"
                                         [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                                   
+
                                         <option value="1">تم استلامها</option>
                                         <option value="2">لم يتم استلامها</option>
                                         <option value="3">كمية غير مطابقة</option>
@@ -138,7 +142,7 @@
                                         [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1'"
                                         [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-                                
+
                                         <option value="1">تم استلامها</option>
                                         <option value="2">لم يتم استلامها</option>
                                     </select>
