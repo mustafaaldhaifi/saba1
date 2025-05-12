@@ -524,19 +524,46 @@ export class DashboardComponent implements OnInit {
   }
 
   async getSharedData(getTypes = true) {
-    if (getTypes) {
-      await this.getTypes();
+    try {
+      // إذا كنا نريد جلب الأنواع، نجلبها أولاً
+      if (getTypes) {
+        await this.getTypes();
+      }
+  
+      // نجلب البيانات الأخرى بالتوازي لتحسين الأداء
+      const [preOrders, dates, settings, branches] = await Promise.all([
+        this.getPreOrders(),
+        this.getDatesToAdd(),
+        this.getSettings(),
+        this.fetchBranches()
+      ]);
+  
+      // تخزين النتائج بعد الجلب
+      this.branches = branches;
+  
+      // يمكن تنفيذ أشياء أخرى هنا بعد استكمال كل البيانات المطلوبة
+      // await this.getData();
+      // await this.search();
+  
+    } catch (error) {
+      console.error('Error fetching shared data:', error);
     }
-
-    // await this.fetchProducts()
-    await this.getPreOrders();
-    await this.getDatesToAdd();
-    await this.getSettings();
-    this.branches = await this.fetchBranches();
-
-    // await this.getData()
-    // await this.search()
   }
+
+  // async getSharedData(getTypes = true) {
+  //   if (getTypes) {
+  //     await this.getTypes();
+  //   }
+
+  //   // await this.fetchProducts()
+  //   await this.getPreOrders();
+  //   await this.getDatesToAdd();
+  //   await this.getSettings();
+  //   this.branches = await this.fetchBranches();
+
+  //   // await this.getData()
+  //   // await this.search()
+  // }
 
 
   async getFirstData() {
