@@ -7,6 +7,9 @@ import { collectionNames } from './Shareds';
   providedIn: 'root'
 })
 export class OrdersService {
+  remove() {
+    localStorage.removeItem(this.name);
+  }
 
   private name = 'orders';
   private ordersInfo: any[] = [];
@@ -31,7 +34,7 @@ export class OrdersService {
 
   getOrdersFromLocal(city: string, typeId: string) {
     const orderInfo = this.ordersInfo.find((item: any) => item.city === city && item.typeId === typeId);
-  
+
     if (orderInfo && orderInfo.orders) {
       const updatedOrders = orderInfo.orders.map((item: any) => {
         if (item.createdAt && item.createdAt.seconds !== undefined) {
@@ -43,13 +46,13 @@ export class OrdersService {
           return item;
         }
       });
-  
+
       return {
         ...orderInfo,
         orders: updatedOrders,
       };
     }
-  
+
     return null;
   }
 
@@ -176,6 +179,7 @@ export class OrdersService {
         id: doc.id,
         branchId: doc.data()['branchId'],
         typeId: doc.data()['typeId'],
+        status: doc.data()['status'],
         createdAt: doc.data()['createdAt']
       }));
 

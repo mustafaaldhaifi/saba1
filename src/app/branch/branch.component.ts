@@ -723,12 +723,22 @@ export class BranchComponent {
     // All items must have status !== "0"
     if (!this.combinedData.every(e => e.status !== "0")) return false;
 
-    // For items with status "3", validate qntNotRequirement
-    const status3Items = this.combinedData.filter(e => e.status === "3");
-    return status3Items.every(e =>
-      typeof e.qntNotRequirement === 'number' &&
-      e.qntNotRequirement > 0
-    );
+    if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
+      const status3Items = this.combinedData.filter(e => e.status === "1");
+      return status3Items.every(e =>
+        typeof e.qntNotRequirement === 'number' &&
+        e.qntNotRequirement > 0
+      );
+    }
+    else {
+      // For items with status "3", validate qntNotRequirement
+      const status3Items = this.combinedData.filter(e => e.status === "3");
+      return status3Items.every(e =>
+        typeof e.qntNotRequirement === 'number' &&
+        e.qntNotRequirement > 0
+      );
+    }
+
   }
   isChangeStatus() {
     const r = this.preOrders.some((e: any) => e.status !== '1')
@@ -780,6 +790,7 @@ export class BranchComponent {
   logout(): void {
     const auth = getAuth();
     signOut(auth).then(() => {
+      this.orderService.remove()
       this.router.navigate(['/login']);
     }).catch(console.error);
   }

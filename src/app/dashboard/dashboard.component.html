@@ -108,15 +108,18 @@
       <div *ngIf="selectedDatey" class="selected-date d-flex align-items-center">
         <h2 class="m-0">{{selectedDatey.createdAt.toDate() | date:'fullDate'}}</h2>
       </div>
-      <button class="btn btn-primary logout-btn" (click)="exportToExcel()">
-        <i class="fas fa-file-export me-2"></i> Export All
-      </button>
-      <button class="btn btn-primary logout-btn" (click)="exportToExcel2()">
-        <i class="fas fa-file-export me-2"></i> Export Notes
-      </button>
-      <button class="btn btn-primary logout-btn" (click)="exportToExcel3()">
-        <i class="fas fa-file-export me-2"></i> Export Request
-      </button>
+      <span *ngIf="orders.length > 0" >
+        <button class="btn btn-primary logout-btn" (click)="exportToExcel()">
+          <i class="fas fa-file-export me-2"></i> Export All
+        </button>
+        <button class="btn btn-primary logout-btn" (click)="exportToExcel2()">
+          <i class="fas fa-file-export me-2"></i> Export Notes
+        </button>
+        <button class="btn btn-primary logout-btn" (click)="exportToExcel3()">
+          <i class="fas fa-file-export me-2"></i> Export Request
+        </button>
+      </span>
+
     </div>
     <div class="table-container">
       <table class="styled-table">
@@ -126,20 +129,48 @@
             <th></th>
             <th></th>
             <th></th>
-            <th style="background-color: rgb(181, 0, 0);" *ngFor="let branch of branches" colspan="3">
-              <!-- Each branch takes 3 columns -->
-              {{ branch.name }}
-              <a (click)="changePassword(branch)" class="password-icon" style="color: #3498db;">
-                <i class="fas fa-user-lock"></i>
-              </a>
-              <!-- *ngIf="selectedType.id == 'WbAP06wLDRvZFTYUtkjU'" -->
-              <a style="margin-left: 10px; cursor: pointer;" (click)="exportPdf(branch)">
-                <i class="fas fa-file-pdf"></i>
-              </a>
+            <th *ngFor="let branch of branches" colspan="3" style="
+              background-color: #b50000;
+              color: white;
+              padding: 10px;
+              text-align: center;
+              vertical-align: middle;
+              font-weight: bold;
+              position: relative;
+            ">
+              <div style="display: flex; flex-direction: column; align-items: center;">
+                <span>{{ branch.name }}</span>
 
-              <!-- <button (click)="reset(branch)">reset</button> -->
+                <div style="margin-top: 5px; display: flex; gap: 10px; align-items: center;">
+                  <!-- <a (click)="changePassword(branch)" class="password-icon" style="color: #f1c40f;" title="تغيير كلمة المرور">
+                  <i class="fas fa-user-lock"></i>
+                </a> -->
 
+                  <a *ngIf="orders.length > 0" (click)="exportPdf(branch)" style=" cursor: pointer;" title="تصدير PDF">
+                    <i class="fas fa-file-pdf"></i>
+                  </a>
+
+                  <!-- تمت الإضافة -->
+                  <div style="display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-check-circle" [style.color]="getDetail(branch) ? '#27ae60' : '#ccc'"
+                      title="تمت الإضافة"></i>
+                    <span style="font-size: 12px;">تمت الإضافة</span>
+                  </div>
+
+                  <!-- تم التحديث -->
+                  <div style="display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-sync-alt"
+                      [style.color]="getDetail(branch) && getDetail(branch)!.status == '1' ? '#27ae60' : '#ccc'"
+                      title="تم التحديث"></i>
+                    <span style="font-size: 12px;">تم التحديث</span>
+                  </div>
+
+                  <!-- <button (click)="reset(branch)">reset</button> -->
+
+                </div>
+              </div>
             </th>
+
           </tr>
           <tr class="s-h">
             <th>#</th>

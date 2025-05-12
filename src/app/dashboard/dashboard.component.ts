@@ -34,6 +34,7 @@ import { environment } from '../../env';
 import { collectionNames } from '../Shareds';
 import { ProductsService } from '../products.service';
 import { OrdersService } from '../orders.service copy';
+import { BranchesService } from '../branches.service';
 
 
 interface Product {
@@ -62,6 +63,7 @@ interface PreOrder {
   id: string;
   branchId: string;
   createdAt: Timestamp;
+  status: string;
   count?: number;
 }
 
@@ -118,7 +120,7 @@ export class DashboardComponent implements OnInit {
       await batch.commit();
 
       console.log("success");
-      
+
     } catch (error) {
       console.error('Error deleting orders:', error);
       throw error;
@@ -200,6 +202,7 @@ export class DashboardComponent implements OnInit {
       this.isGetData = false
       this.datesToAdd = []
       this.data = []
+      this.orders = []
       await this.getSharedData(false)
       // await this.getPreOrders()
     }
@@ -393,6 +396,7 @@ export class DashboardComponent implements OnInit {
       this.isGetData = false
       this.datesToAdd = []
       this.data = []
+      this.orders = []
       await this.getSharedData()
     }
     this.isLoading = false
@@ -437,12 +441,20 @@ export class DashboardComponent implements OnInit {
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
     private productService: ProductsService,
-    private orderService: OrdersService
+    private orderService: OrdersService,
+    private branchService: BranchesService,
+
   ) {
     this.version = environment.version
   }
 
   date3: any
+
+
+  getDetail(branch: any) {
+    const data = this.actualPreOrders.find((order: any) => order.branchId == branch.id)
+    return data
+  }
 
   isDateValid(): boolean {
     // // Check if Date.parse can interpret it
@@ -520,8 +532,10 @@ export class DashboardComponent implements OnInit {
     await this.getPreOrders();
     await this.getDatesToAdd();
     await this.getSettings();
+    this.branches = await this.fetchBranches();
+
     // await this.getData()
-    await this.search()
+    // await this.search()
   }
 
 
@@ -565,12 +579,11 @@ export class DashboardComponent implements OnInit {
       const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(this.selectedDatey ? this.selectedDatey.createdAt.toDate() : Timestamp.now().toDate());
 
 
-      const [branches, products, orders] = await Promise.all([
-        this.fetchBranches(),
+      const [products, orders] = await Promise.all([
         this.fetchProducts(),
         this.fetchOrders(startTimestamp, endTimestamp)
       ]);
-      console.log("bb", branches);
+      // console.log("bb", branches);
       console.log("58oo", orders);
 
 
@@ -578,7 +591,7 @@ export class DashboardComponent implements OnInit {
 
 
 
-      this.branches = branches;
+      // this.branches = branches;
       this.data = products;
       this.orders = orders;
       console.log(orders);
@@ -627,15 +640,19 @@ export class DashboardComponent implements OnInit {
   }
 
   private async fetchBranches(): Promise<Branch[]> {
-    const db = getFirestore();
-    const q = query(collection(db, "branches"),
-      where("city", '==', this.selectedOption),
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data()['name']
-    }));
+    // const q = query(collection(this.apiService.db, "branches"),
+    //   where("city", '==', this.selectedOption),
+    // );
+    // const snapshot = await getDocs(q);
+    // return snapshot.docs.map(doc => ({
+    //   id: doc.id,
+    //   name: doc.data()['name']
+    // }));
+
+    const city = this.selectedOption;
+    this.branchUpdates = await this.branchService.getLastupdate(city, this.apiService)
+    return await this.branchService.getBranches(city, this.branchUpdates, this.apiService)
+    // console.log("branches:", this.preOrders);
   }
 
   async exportProductsToFile(): Promise<void> {
@@ -766,6 +783,8 @@ export class DashboardComponent implements OnInit {
   }
 
   orderUpdates: any
+  branchUpdates: any
+
   async getPreOrders(): Promise<void> {
     const city = this.selectedOption;
     const typeId = this.selectedType.id;
@@ -895,6 +914,12 @@ export class DashboardComponent implements OnInit {
     const ordersGroupedToDelete = this.preOrders.slice(4);
 
     try {
+      // ✅ Corrected document path for updating 
+      const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
+
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
       // First process all orders deletions
       for (const element of ordersGroupedToDelete) {
         for (const order of element.orders) {
@@ -983,6 +1008,7 @@ export class DashboardComponent implements OnInit {
   logout(): void {
     const auth = getAuth();
     signOut(auth).then(() => {
+      this.orderService.remove()
       this.router.navigate(['/login']);
     }).catch(console.error);
   }
@@ -2005,9 +2031,10 @@ export class DashboardComponent implements OnInit {
 
     if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
       switch (order.status) {
-        case '0': return 'No Action';
+        case '0': return "No Action";
+        case '1': return order.qntNotRequirement;
         case '2': return 'Not Received';
-        default: return order.qntNotRequirement;
+        default: return 'EEEE';
         // default: return 'Pending';
       }
 
