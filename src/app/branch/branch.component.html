@@ -56,7 +56,8 @@
 
 <!-- <button (click)="exportToPDF()">Export to PDF</button> -->
 
-<div style="background-color: red; color: white; text-align: center;" *ngIf="checkIfHasEmptyOrder() && isToAddMode === false">يوجد منتجات جديده
+<div style="background-color: red; color: white; text-align: center;"
+    *ngIf="checkIfHasEmptyOrder() && isToAddMode === false">يوجد منتجات جديده
     يجب اضافة كميتها
 </div>
 
@@ -179,6 +180,21 @@
     </ng-template>
 </button>
 
-<button *ngIf="isPreSent === true && ordersToUpdate.length > 0" (click)="saveUpdates()" [disabled]="isUpdateEnabled() == false">
+<!-- Action Buttons -->
+
+<ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
+    <button (click)="addOrders(true)" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
+        <span>حفظ كمية المنتجات الجديدة</span>
+    </button>
+</ng-container>
+
+<ng-template #sendOrderBlock>
+    <button (click)="addOrders()" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
+        <span>Send Order</span>
+    </button>
+</ng-template>
+
+<button *ngIf="isPreSent === true && ordersToUpdate.length > 0" (click)="saveUpdates()"
+    [disabled]="isUpdateEnabled() == false">
     Save Updates
 </button>
