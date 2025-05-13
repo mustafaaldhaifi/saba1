@@ -19,6 +19,8 @@ import { OrdersService } from '../orders.service copy';
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+
+
   exportPdf() {
     const pdfService = new PdfService();
     const date = this.selectedDate.toDate();
@@ -191,7 +193,7 @@ export class BranchComponent {
   }
 
   /// Add
-  async addOrders() {
+  async addOrders(newProducts = false) {
     if (this.ordersToAdd.length === 0) return;
 
     this.isLoading = true;
@@ -201,12 +203,7 @@ export class BranchComponent {
 
 
     try {
-      // ✅ Corrected document path for updating 
-      const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
 
-      batch.update(docRef2, {
-        updatedAt: Timestamp.now(),
-      });
 
       // 1. Add all order items
       this.ordersToAdd.forEach((element: any) => {
@@ -226,16 +223,26 @@ export class BranchComponent {
         });
       });
 
-      // 2. Add the summary document
-      const summaryRef = doc(collection(this.apiService.db, collectionNames.orders));
-      batch.set(summaryRef, {
-        status: 0,
-        branchId: this.branch.id,
-        city: this.branch.data.city,
-        typeId: this.selectedType.id,
-        // qntNumber: this.ordersToAdd.length,
-        createdAt: this.selectedDate // Server-side timestamp
-      });
+      if (newProducts === false) {
+        // ✅ Corrected document path for updating 
+        const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
+
+        batch.update(docRef2, {
+          updatedAt: Timestamp.now(),
+        });
+
+        // 2. Add the summary document
+        const summaryRef = doc(collection(this.apiService.db, collectionNames.orders));
+        batch.set(summaryRef, {
+          status: 0,
+          branchId: this.branch.id,
+          city: this.branch.data.city,
+          typeId: this.selectedType.id,
+          // qntNumber: this.ordersToAdd.length,
+          createdAt: this.selectedDate // Server-side timestamp
+        });
+      }
+
 
       // 3. Execute everything as a single batch
       await batch.commit(); // Single network call
@@ -457,7 +464,7 @@ export class BranchComponent {
   }
   /// On Events
   onQntFChange(item: any) {
-    if (this.isToAddMode == true) {
+    if (this.checkIfHasEmptyOrder() == true || this.isToAddMode === true) {
       this.addToOrdersToAdd(item);
     }
     else {
@@ -472,7 +479,7 @@ export class BranchComponent {
         return
       };
     }
-    if (this.isToAddMode == true) {
+    if (this.checkIfHasEmptyOrder() == true || this.isToAddMode === true) {
       this.addToOrdersToAdd(item);
     }
     else {
@@ -655,6 +662,13 @@ export class BranchComponent {
       });
       return a
     }
+    // console.log(this.ordersToAdd);
+    // console.log(this.combinedData);
+    if (this.checkIfHasEmptyOrder() === false && this.isToAddMode == false) {
+      return false;
+    }
+
+
     if (!this.ordersToAdd || !Array.isArray(this.combinedData)) {
       return false;
     }
@@ -663,6 +677,7 @@ export class BranchComponent {
     const a = this.combinedData.every((d: any) => {
       return this.isPositiveNumber(d.qnt) && this.isPositiveNumber(d.qntF);
     });
+    // console.log(a);
     return a
   }
   isNumber(value: any): boolean {
@@ -719,6 +734,16 @@ export class BranchComponent {
     const nanoseconds = firestoreTimestamp.nanoseconds || 0;
     return (seconds * 1000) + (nanoseconds / 1000000); // Convert to milliseconds
   }
+
+  checkIfHasEmptyOrder() {
+
+    return this.combinedData.some(e => e.id === -1);
+
+
+
+  }
+
+
   isUpdateEnabled(): boolean {
     // All items must have status !== "0"
     if (!this.combinedData.every(e => e.status !== "0")) return false;
@@ -754,6 +779,8 @@ export class BranchComponent {
     }
   }
   addToOrdersToUpdate(order: any) {
+    console.log("pppppppp", order);
+
     const existingProductIndex = this.ordersToUpdate.findIndex((p: any) => p.id === order.id);
     if (existingProductIndex !== -1) {
       this.ordersToUpdate[existingProductIndex] = order;

@@ -529,7 +529,7 @@ export class DashboardComponent implements OnInit {
       if (getTypes) {
         await this.getTypes();
       }
-  
+
       // نجلب البيانات الأخرى بالتوازي لتحسين الأداء
       const [preOrders, dates, settings, branches] = await Promise.all([
         this.getPreOrders(),
@@ -537,14 +537,14 @@ export class DashboardComponent implements OnInit {
         this.getSettings(),
         this.fetchBranches()
       ]);
-  
+
       // تخزين النتائج بعد الجلب
       this.branches = branches;
-  
+
       // يمكن تنفيذ أشياء أخرى هنا بعد استكمال كل البيانات المطلوبة
       // await this.getData();
       // await this.search();
-  
+
     } catch (error) {
       console.error('Error fetching shared data:', error);
     }
@@ -706,6 +706,7 @@ export class DashboardComponent implements OnInit {
   }
 
   private async fetchProducts(): Promise<Product[]> {
+    this.isLoading = true
     const city = this.selectedOption;
     const typeId = this.selectedType.id;
 
@@ -714,6 +715,8 @@ export class DashboardComponent implements OnInit {
     this.productUpdates = await this.productService.getLastupdate(city, typeId, this.apiService);
 
     return await this.productService.getProducts(city, typeId, this.productUpdates, this.apiService)
+
+
     // console.log("productUpdates2", this.productUpdates);
     // console.log("productsInfo", productsInfo);
 
@@ -1069,6 +1072,13 @@ export class DashboardComponent implements OnInit {
     const batch = writeBatch(db);
 
     try {
+      // ✅ Corrected document path for updating productUpdates
+      const docRef2 = doc(db, 'productUpdates', this.productUpdates.id);
+
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
       // Delete product
       batch.delete(doc(db, 'products', id));
 
@@ -1082,6 +1092,7 @@ export class DashboardComponent implements OnInit {
 
       await batch.commit();
       this.data = this.data.filter(product => product.id !== id);
+
     } catch (error) {
       console.error('Error deleting product:', error);
     } finally {
@@ -1174,8 +1185,10 @@ export class DashboardComponent implements OnInit {
       // ✅ Loop through products safely
       for (const product of this.productsToAdd) {
         if (product.name) {
+          console.log(product);
+
           const docRef = doc(collection(db, 'products'));
-          const { id, createdAt, ...productWithoutId } = product;
+          const { id, ...productWithoutId } = product;
 
           const newData = {
             ...productWithoutId,
@@ -1183,6 +1196,7 @@ export class DashboardComponent implements OnInit {
             // createdAt: Timestamp.now(),
             // city: this.selectedOption,
           };
+          console.log(newData);
 
           batch.set(docRef, newData);
         }
@@ -1190,10 +1204,19 @@ export class DashboardComponent implements OnInit {
 
       await batch.commit();
       this.productsToAdd = []
-      this.productService.updateProductInLocal(this.data, this.selectedOption, this.selectedType.id)
+      console.log("added success");
+
+      // this.productService.updateProductInLocal(this.data, this.selectedOption, this.selectedType.id)
+      // await this.fetchProducts()
+      this.search()
     } catch (error) {
 
+      console.log(error);
+
     }
+    // finally {
+    //   this.isLoading = true
+    // }
 
 
     // Optionally refresh UI or data after adding
@@ -1225,7 +1248,11 @@ export class DashboardComponent implements OnInit {
 
       await batch.commit();
       this.productsToUpdate = [];
+
+      this.search()
+
     } catch (error) {
+
       console.log(error);
 
     }

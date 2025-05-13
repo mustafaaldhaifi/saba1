@@ -55,9 +55,10 @@
 </div>
 
 <!-- <button (click)="exportToPDF()">Export to PDF</button> -->
-<table>
 
-</table>
+<div style="background-color: red; color: white; text-align: center;" *ngIf="checkIfHasEmptyOrder() && isToAddMode === false">يوجد منتجات جديده
+    يجب اضافة كميتها
+</div>
 
 
 <ng-container *ngIf="selectedDate">
@@ -81,7 +82,7 @@
                         <th *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">حالة
                             الاستلام
                             <span *ngIf="selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">بالكيلو</span>
-                        
+
                         </th>
                     </tr>
                 </thead>
@@ -92,10 +93,10 @@
                         <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
                         <td>
-                            <input (input)="onQntFChange(combinedData[i])" *ngIf="isPreSent === false"
-                                #qntFInput="ngModel" [class.alert-red]="qntFInput.invalid && qntFInput.touched"
-                                class="sticky-input" [(ngModel)]="combinedData[i].qntF" type="number" required>
-                            <div *ngIf="isPreSent === true">{{ item.qntF }}</div>
+                            <input (input)="onQntFChange(combinedData[i])" *ngIf="item.id === -1" #qntFInput="ngModel"
+                                [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
+                                [(ngModel)]="combinedData[i].qntF" type="number" required>
+                            <div *ngIf="item.id !== -1">{{ item.qntF }}</div>
                         </td>
 
                         <td>
@@ -103,10 +104,10 @@
                         </td>
 
                         <td *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
-                            <input (input)="onQntChange(i,combinedData[i])" *ngIf="isPreSent === false"
-                                #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
-                                class="sticky-input" [(ngModel)]="combinedData[i].qnt" type="number" required>
-                            <div *ngIf="isPreSent === true">{{ item.qnt }}</div>
+                            <input (input)="onQntChange(i,combinedData[i])" *ngIf="item.id === -1" #qntInput="ngModel"
+                                [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
+                                [(ngModel)]="combinedData[i].qnt" type="number" required>
+                            <div *ngIf="item.id !== -1">{{ item.qnt }}</div>
                         </td>
 
                         <td *ngIf="selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
@@ -118,7 +119,7 @@
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
                                     <select
-                                        [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1'"
+                                        [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1' || checkIfHasEmptyOrder() === true"
                                         [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
 
@@ -139,7 +140,7 @@
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
                                     <select
-                                        [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1'"
+                                        [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1' || checkIfHasEmptyOrder() === true"
                                         [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
 
@@ -167,10 +168,17 @@
 
 
 <!-- Action Buttons -->
-<button style="width: 100%;" *ngIf="isFullFilled() && isToAddMode" (click)="addOrders()" [disabled]="isLoading">
-    Send Order
+<button style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading"
+    (click)="checkIfHasEmptyOrder() ? addOrders(true) : addOrders()">
+    <ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
+        <span>حفظ كمية المنتجات الجديدة</span>
+    </ng-container>
+
+    <ng-template #sendOrderBlock>
+        <span>Send Order</span>
+    </ng-template>
 </button>
 
-<button *ngIf="ordersToUpdate.length > 0" (click)="saveUpdates()" [disabled]="isUpdateEnabled() == false">
+<button *ngIf="isPreSent === true && ordersToUpdate.length > 0" (click)="saveUpdates()" [disabled]="isUpdateEnabled() == false">
     Save Updates
 </button>
