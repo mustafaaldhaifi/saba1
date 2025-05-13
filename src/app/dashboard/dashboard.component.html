@@ -90,7 +90,7 @@
     </div>
 
     <div class="date-buttons d-flex flex-wrap gap-2">
-      <button *ngFor="let item of datesToAdd" class="btn btn-outline-primary position-relative pe-4">
+      <button (click)="onSelectdDateOpenDate(item.createdAt)" *ngFor="let item of datesToAdd" class="btn btn-outline-primary position-relative pe-4">
         {{item.createdAt.toDate() | date:'mediumDate'}}
 
         <span class="delete-icon position-absolute end-0 top-50 translate-middle-y me-2"
@@ -165,7 +165,9 @@
                     <span style="font-size: 12px;">تم التحديث</span>
                   </div>
 
-                  <!-- <button (click)="reset(branch)">reset</button> -->
+                  <!-- <button (click)="reset(branch)">reset</button>
+                  <button (click)="addOrderDate(branch)">add date</button> -->
+
 
                 </div>
               </div>

@@ -1256,8 +1256,57 @@ export class DashboardComponent implements OnInit {
       console.log(error);
 
     }
-
   }
+
+  selectedDate: any
+  onSelectdDateOpenDate(date: any) {
+
+    this.selectedDate = date
+    
+  }
+  async addOrderDate(branch: any) {
+    this.isLoading = true;
+    // const db = getFirestore();
+    const batch = writeBatch(this.apiService.db); // Initialize batch
+
+    try {
+
+      // ✅ Corrected document path for updating 
+      const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
+
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
+      // 2. Add the summary document
+      const summaryRef = doc(collection(this.apiService.db, collectionNames.orders));
+      batch.set(summaryRef, {
+        status: 0,
+        branchId: branch.id,
+        city: this.selectedOption,
+        typeId: this.selectedType.id,
+        // qntNumber: this.ordersToAdd.length,
+        createdAt: this.selectedDate // Server-side timestamp
+      });
+
+
+
+      // 3. Execute everything as a single batch
+      await batch.commit(); // Single network call
+
+      // this.ordersToAdd = [];
+      // alert('All orders added successfully in one operation!');
+      alert("يعطيك العافية تم الارسال بنجاح")
+      // await this.getBranch()
+      // window.location.reload()
+    } catch (e) {
+      console.error("Batch write failed: ", e);
+      alert('No orders were added. Please try again.');
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
 
   private async addOrders(): Promise<void> {
 

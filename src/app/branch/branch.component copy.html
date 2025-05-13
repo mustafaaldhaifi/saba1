@@ -169,7 +169,7 @@
 
 <!-- Action Buttons -->
 <button style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading"
-    (click)="checkIfHasEmptyOrder() &&  isToAddMode === false ? addOrders(true) : addOrders()">
+    (click)="checkIfHasEmptyOrder() ? addOrders(true) : addOrders()">
     <ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
         <span>حفظ كمية المنتجات الجديدة</span>
     </ng-container>
