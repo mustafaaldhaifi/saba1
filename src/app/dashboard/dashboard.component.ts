@@ -86,6 +86,8 @@ export class DashboardComponent implements OnInit {
 
     // const bra
     const orders = this.preOrders.find((order: any) => order.createdAt === this.selectedDatey.createdAt)?.orders
+    console.log("branchId : ", branch.id);
+
     console.log("orders : ", orders);
     const orderId = orders?.find((order: any) => order.branchId == branch.id)!!.id
     console.log("order id to delete: ",);
@@ -452,7 +454,10 @@ export class DashboardComponent implements OnInit {
 
 
   getDetail(branch: any) {
-    const data = this.actualPreOrders.find((order: any) => order.branchId == branch.id)
+    const orders = this.preOrders.find((order: any) => order.createdAt === this.selectedDatey.createdAt)?.orders
+    // console.log("branchId : ", branch.id);
+
+    const data = orders!!.find((order: any) => order.branchId == branch.id)
     return data
   }
 
