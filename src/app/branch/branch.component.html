@@ -56,13 +56,17 @@
 
 <!-- <button (click)="exportToPDF()">Export to PDF</button> -->
 
-<div style="background-color: red; color: white; text-align: center;"
-    *ngIf="checkIfHasEmptyOrder() && isToAddMode === false">يوجد منتجات جديده
-    يجب اضافة كميتها
-</div>
 
 
-<ng-container *ngIf="selectedDate">
+<ng-container *ngIf="selectedDate && selectedType.id != '5'">
+    <div style="background-color: red; color: white; text-align: center;"
+        *ngIf="checkIfHasEmptyOrder() && isToAddMode === false">يوجد منتجات جديده
+        يجب اضافة كميتها
+    </div>
+
+
+    <!-- <ng-container *ngIf="selectedDate"> -->
+
     <div class="table-container">
         <div class="table fixed-header">
             <!-- Orders Table -->
@@ -161,15 +165,11 @@
             </table>
         </div>
     </div>
-</ng-container>
 
 
 
-
-
-
-<!-- Action Buttons -->
-<!-- <button style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading"
+    <!-- Action Buttons -->
+    <!-- <button style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading"
     (click)="checkIfHasEmptyOrder() &&  isToAddMode === false ? addOrders(true) : addOrders()">
     <ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
         <span>حفظ كمية المنتجات الجديدة</span>
@@ -180,21 +180,106 @@
     </ng-template>
 </button> -->
 
-<!-- Action Buttons -->
+    <!-- Action Buttons -->
 
-<ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
-    <button (click)="addOrders(true)" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
-        <span>حفظ كمية المنتجات الجديدة</span>
+    <ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
+        <button (click)="addOrders(true)" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
+            <span>حفظ كمية المنتجات الجديدة</span>
+        </button>
+    </ng-container>
+
+    <ng-template #sendOrderBlock>
+        <button (click)="addOrders()" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
+            <span>Send Order</span>
+        </button>
+    </ng-template>
+
+    <button *ngIf="isPreSent === true && ordersToUpdate.length > 0" (click)="saveUpdates()"
+        [disabled]="isUpdateEnabled() == false">
+        Save Updates
     </button>
+
 </ng-container>
 
-<ng-template #sendOrderBlock>
-    <button (click)="addOrders()" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
-        <span>Send Order</span>
-    </button>
-</ng-template>
+<ng-container *ngIf="selectedType && selectedType.id == '5' && dateToAddInDaily">
 
-<button *ngIf="isPreSent === true && ordersToUpdate.length > 0" (click)="saveUpdates()"
-    [disabled]="isUpdateEnabled() == false">
-    Save Updates
-</button>
+    <div style="text-align: center;"> {{dateToAddInDaily | date:'mediumDate'}}</div>
+    <!-- <button (click)="getDailyReportsDates()">date</button> -->
+    <div class=" table-container">
+        <div class="table fixed-header">
+            <table *ngIf="branch" class="styled-table">
+                <thead>
+                    <tr vz class="f-h">
+                        <th>الاصناف</th>
+                        <th style="width: 28px;">
+                            الموجودة
+                        </th>
+                        <th>المستلم</th>
+                        <th>الجرد</th>
+                        <th>مبيعات</th>
+                        <th>وجبة موظف</th>
+                        <th>تحويل % </th>
+                        <th>التالف</th>
+                        <th>المتبقي</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of combinedData; let i = index"
+                        [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                        [style.border-bottom]="'1px solid #dee2e6'">
+                        <td style="font-weight: bold; font-size: 13px;">{{ item.productName }}</td>
+
+                        <td>
+                            <input
+                                [disabled]="isPositiveNumber(combinedData[i].openingStockQnt) && combinedData[i].openingStockId != -1"
+                                (input)="onQuantityChange('openingStockQnt', item, i)"
+                                [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
+                        </td>
+                        <td>
+                            <input [disabled]="combinedData[i].openingStockId == -1" [(ngModel)]="item.recieved"
+                                (ngModelChange)="onQuantityChange('recieved', item, i)" type="number" required>
+
+                        </td>
+                        <td>
+                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
+                                type="number" required>
+
+                        </td>
+                        <td>
+                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
+                                type="number" required>
+
+                        </td>
+                        <td>
+                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('staffMeal', item, i)"
+                                [(ngModel)]="combinedData[i].staffMeal" type="number" required>
+
+                        </td>
+                        <td>
+                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('transfer', item, i)"
+                                [(ngModel)]="combinedData[i].transfer" type="number" required>
+
+                        </td>
+                        <td>
+                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
+                                type="number" required>
+
+                        </td>
+                        <td>
+                            <!-- {{calculateClosingStock(combinedData[i])}} -->
+                            {{ combinedData[i].closeStock}}
+                        </td>
+
+
+
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <button *ngIf="dateToAddInDaily && ifThereisEmptyValue() == false" (click)="saveDaily()">Save</button>
+
+
+</ng-container>

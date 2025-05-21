@@ -15,10 +15,13 @@ import { OrdersService } from '../orders.service copy';
   selector: 'app-branch',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './branch.component.html',
-  styleUrls: ['./branch.component.css']
+  templateUrl: './branch.component copy.html',
+  // styleUrls: ['./branch.component.css']
 })
-export class BranchComponent {
+export class BranchComponent1 {
+  getDailyReportsDates() {
+    throw new Error('Method not implemented.');
+  }
 
 
   exportPdf() {
@@ -194,7 +197,7 @@ export class BranchComponent {
 
   /// Add
   async addOrders(newProducts = false) {
-    
+
     if (this.ordersToAdd.length === 0) return;
 
     this.isLoading = true;

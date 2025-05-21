@@ -3,7 +3,7 @@ import { Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from '@angular/
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, serverTimestamp, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
@@ -271,36 +271,41 @@ export class BranchComponent {
         } else {
           const name = user.email?.split('@')[0];
           this.branch = await this.getRelatedBranche(name!);
-          await this.getTypes(),
-            await Promise.all([
+          await this.getTypes()
+          await this.getProducts()
 
+
+          if (this.selectedType.id == '5') {
+            await this.initDaily()
+          } else {
+            await Promise.all([
               this.getDatesToAdd(),
-              this.getProducts(),
               this.getPreOrders(),
               this.getSettings(),
             ]);
 
-          this.preOrders.forEach((pre: any) => {
-            console.log("pre", pre);
-            console.log("pre", pre.createdAt);
-            console.log("pre", pre.createdAt.toDate());
+            this.preOrders.forEach((pre: any) => {
+              // console.log("pre", pre);
+              // console.log("pre", pre.createdAt);
+              // console.log("pre", pre.createdAt.toDate());
 
 
 
-            this.datesToAdd.forEach((date: any, index: number) => {
-              if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
-                this.datesToAdd.splice(index, 1);
-              }
+              this.datesToAdd.forEach((date: any, index: number) => {
+                if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
+                  this.datesToAdd.splice(index, 1);
+                }
+              });
             });
-          });
-          if (this.preOrders.length > 0) {
-            this.selectedPreOrder = this.preOrders[0];
-            this.selectedDate = this.preOrders[0].createdAt;
-            console.log(this.preOrders[0]);
+            if (this.preOrders.length > 0) {
+              this.selectedPreOrder = this.preOrders[0];
+              this.selectedDate = this.preOrders[0].createdAt;
+              // console.log(this.preOrders[0]);
 
-            await this.onSelectDate(this.selectedPreOrder);
+              await this.onSelectDate(this.selectedPreOrder);
+            }
+            this.combineDataWithOrders();
           }
-          this.combineDataWithOrders();
           this.isLoading = false;
         }
       } else {
@@ -317,9 +322,21 @@ export class BranchComponent {
 
     }));
 
-    if (this.types.length > 0) {
-      this.selectedType = this.types[0];
+    if (environment.enabledDaily && environment.production == false) {
+      this.types = [{ id: '5', name: "الجرد اليومي", name_en: 'Daily' }, ...this.types];
+      // this.types.push({ id: '5', name: "الجرد اليومي", name_en: 'Daily' })
+
     }
+
+    // this.types.push({ id:'5', name: "الجرد اليومي", name_en: 'Daily' })
+    this.selectedType = this.types[0]
+
+    console.log(this.selectedType);
+
+
+    // if (this.types.length > 0) {
+    //   this.selectedType = this.types[0];
+    // }
   }
   async getPreOrders() {
 
@@ -328,6 +345,10 @@ export class BranchComponent {
     this.orderUpdates = await this.orderService.getLastupdate(city, typeId, this.apiService)
 
     this.preOrders = await this.orderService.getOrders(city, typeId, this.branch.id, this.orderUpdates, this.apiService)
+
+    if (this.preOrders.length > 0) {
+      this.selectedPreOrder = this.preOrders[0].createdAt
+    }
     console.log("preOrders:", this.preOrders);
 
     // const constraints = [
@@ -543,88 +564,96 @@ export class BranchComponent {
     this.addToOrdersToAdd(order)
   }
   async onSelectTypeChange() {
-    console.log("selllleee", this.selectedType);
-
     this.isLoading = true
-    this.preOrders = []
-    this.combinedData = []
-    this.selectedDate = null
+    if (this.selectedType.id != '5') {
+      console.log("selllleee", this.selectedType);
 
-    await Promise.all([
-      this.getDatesToAdd(),
-      this.getProducts(),
-      this.getPreOrders(),
-      this.getSettings(),
-    ]);
 
-    if (this.selectedPreOrder) {
-      // this.selectedPreOrder = order
-      console.log('selected', this.selectedPreOrder);
+      this.preOrders = []
+      this.combinedData = []
+      this.selectedDate = null
 
-      const selectedTimestamp = this.selectedPreOrder.createdAt
-      this.isLoading = true;
-      try {
-        await Promise.all([
+      await Promise.all([
+        this.getDatesToAdd(),
+        this.getProducts(),
+        this.getPreOrders(),
+        this.getSettings(),
+      ]);
 
-          this.getDatesToAdd(),
-          this.getProducts(),
-          this.getPreOrders(),
-          this.getSettings(),
-        ]);
+      if (this.selectedPreOrder) {
+        // this.selectedPreOrder = order
+        console.log('selected', this.selectedPreOrder);
 
-        this.preOrders.forEach((pre: any) => {
-          this.datesToAdd.forEach((date: any, index: number) => {
-            if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
-              this.datesToAdd.splice(index, 1);
-            }
+        const selectedTimestamp = this.selectedPreOrder.createdAt
+        this.isLoading = true;
+        try {
+          await Promise.all([
+
+            this.getDatesToAdd(),
+            this.getProducts(),
+            this.getPreOrders(),
+            this.getSettings(),
+          ]);
+
+          this.preOrders.forEach((pre: any) => {
+            this.datesToAdd.forEach((date: any, index: number) => {
+              if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
+                this.datesToAdd.splice(index, 1);
+              }
+            });
           });
-        });
-        if (this.preOrders.length > 0) {
-          this.selectedPreOrder = this.preOrders[0];
-          this.selectedDate = this.preOrders[0].createdAt;
-          console.log(this.preOrders[0]);
+          if (this.preOrders.length > 0) {
+            this.selectedPreOrder = this.preOrders[0];
+            this.selectedDate = this.preOrders[0].createdAt;
+            console.log(this.preOrders[0]);
 
-          await this.onSelectDate(this.selectedPreOrder);
+            await this.onSelectDate(this.selectedPreOrder);
+          }
+          this.combineDataWithOrders();
+          this.isLoading = false;
+
+          // // Convert selected Timestamp to start and end of day
+          // const selectedDate = selectedTimestamp.toDate();
+
+          // // Start of day (00:00:00.000 UTC)
+          // const startOfDay = new Date(selectedDate);
+          // startOfDay.setUTCHours(0, 0, 0, 0);
+          // const startTimestamp = Timestamp.fromDate(startOfDay);
+
+          // // End of day (23:59:59.999 UTC)
+          // const endOfDay = new Date(selectedDate);
+          // endOfDay.setUTCHours(23, 59, 59, 999);
+          // const endTimestamp = Timestamp.fromDate(endOfDay);
+
+          // // Get orders for the selected date
+          // this.branchOrders = await this.getBranchOrders(startTimestamp, endTimestamp);
+
+          // // Update combined data with orders from selected date
+
+          // console.log("rtrtr", selectedDate);
+          // console.log("rtrtr2", startOfDay);
+          // console.log("rtrtr3", endOfDay);
+
+          // this.combineDataWithOrders();
+          // this.isPreSent = this.preOrders.some((o: any) => o.id != -1);
+          // // this.selectedDate = selectedTimestamp
+          // this.isToAddMode = false
+          // this.ordersToUpdate = []
+
+          // // this.combinedData = this.combinedData.slice(0, 1);
+
+        } catch (error) {
+          console.error('Error selecting date:', error);
+        } finally {
+          this.isLoading = false;
         }
-        this.combineDataWithOrders();
-        this.isLoading = false;
-
-        // // Convert selected Timestamp to start and end of day
-        // const selectedDate = selectedTimestamp.toDate();
-
-        // // Start of day (00:00:00.000 UTC)
-        // const startOfDay = new Date(selectedDate);
-        // startOfDay.setUTCHours(0, 0, 0, 0);
-        // const startTimestamp = Timestamp.fromDate(startOfDay);
-
-        // // End of day (23:59:59.999 UTC)
-        // const endOfDay = new Date(selectedDate);
-        // endOfDay.setUTCHours(23, 59, 59, 999);
-        // const endTimestamp = Timestamp.fromDate(endOfDay);
-
-        // // Get orders for the selected date
-        // this.branchOrders = await this.getBranchOrders(startTimestamp, endTimestamp);
-
-        // // Update combined data with orders from selected date
-
-        // console.log("rtrtr", selectedDate);
-        // console.log("rtrtr2", startOfDay);
-        // console.log("rtrtr3", endOfDay);
-
-        // this.combineDataWithOrders();
-        // this.isPreSent = this.preOrders.some((o: any) => o.id != -1);
-        // // this.selectedDate = selectedTimestamp
-        // this.isToAddMode = false
-        // this.ordersToUpdate = []
-
-        // // this.combinedData = this.combinedData.slice(0, 1);
-
-      } catch (error) {
-        console.error('Error selecting date:', error);
-      } finally {
-        this.isLoading = false;
       }
+
+    } else {
+      await this.initDaily()
+
     }
+    this.isLoading = false;
 
 
   }
@@ -795,6 +824,18 @@ export class BranchComponent {
       alert("يجب تسجيل حالة الاستلام للطلبية السابقة"); // "Receipt status must be recorded for previous students"
       return;
     }
+    // Check if there is any date in openDates greater than the provided date
+    const hasLaterDate = this.datesToAdd?.some(
+      (d: any) => d.createdAt.toDate() < date.toDate()
+    );
+    if (hasLaterDate) {
+      alert("يرجى الاضافة اولا لقبل هذا التاريخ"); // "Cannot add a new order before completing previous orders"
+      return;
+    }
+    console.log(date);
+
+    console.log(hasLaterDate);
+
     this.selectedDate = date
     this.combinedData = this.data.map((product: any) => {
       const s = {
@@ -819,7 +860,407 @@ export class BranchComponent {
     signOut(auth).then(() => {
       this.orderService.remove()
       this.router.navigate(['/login']);
+      window.location.reload();
     }).catch(console.error);
+  }
+
+  /////////Start Daily reports
+
+  openingStock: any = []
+  async getOpeningStock(): Promise<void> {
+    const q = query(
+      collection(this.apiService.db, collectionNames.openingStock),
+      where("branchId", '==', this.branch.id),
+      where("typeId", "==", this.selectedType.id),
+      orderBy("createdAt", "asc")
+    );
+
+    const snapshot = await getDocs(q);
+
+    this.openingStock = snapshot.docs.map(doc => ({
+      id: doc.id,
+      productId: doc.data()['productId'],
+      branchId: doc.data()['branchId'],
+      openingStockQnt: doc.data()['openingStockQnt'],
+    }));
+
+
+    console.log('openStock', this.openingStock);
+
+  }
+
+  dailyReports: any = []
+  async getDailyReports(): Promise<void> {
+    // Get the first and last day of the current month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // last day of month
+
+    const q = query(
+      collection(this.apiService.db, collectionNames.dailyReports),
+      where("branchId", "==", this.branch.id),
+      where("typeId", "==", this.selectedType.id),
+      where("date", ">=", Timestamp.fromDate(startOfMonth)),
+      where("date", "<=", Timestamp.fromDate(endOfMonth)),
+    );
+
+    const snapshot = await getDocs(q);
+    this.dailyReports = snapshot.docs.map(doc => ({
+      id: doc.id,
+      productId: doc.data()['productId'],
+      branchId: doc.data()['branchId'],
+      openingStock: doc.data()['openingStock'],
+      recieved: doc.data()['recieved'],
+      add: doc.data()['add'],
+      staffMeal: doc.data()['staffMeal'],
+      transfer: doc.data()['transfer'],
+      dameged: doc.data()['dameged'],
+
+    }));
+
+    console.log('dailyReports', this.dailyReports);
+
+  }
+
+  normalizeDate(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+
+  dailyReportsDates: any = []
+  async getDailyReportsDates(): Promise<void> {
+    console.log(serverTimestamp());
+
+    // Get the first and last day of the current month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // last day of month
+
+    const q = query(
+      collection(this.apiService.db, collectionNames.dailyReportsDates),
+      where("branchId", "==", this.branch.id),
+      where("typeId", "==", this.selectedType.id),
+      where("date", ">=", Timestamp.fromDate(startOfMonth)),
+      where("date", "<=", Timestamp.fromDate(endOfMonth)),
+    );
+
+    const snapshot = await getDocs(q);
+    this.dailyReportsDates = snapshot.docs.map(doc => ({
+      id: doc.id,
+      typeId: doc.data()['typeId'],
+      branchId: doc.data()['branchId'],
+      date: doc.data()['date'],
+    }));
+    console.log(this.dailyReportsDates);
+
+
+
+    // // Set the start and end of today (midnight to 23:59:59)
+    // const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    // const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    // // Convert to Firestore Timestamps
+    // const startTimestamp = Timestamp.fromDate(startOfDay);
+    // const endTimestamp = Timestamp.fromDate(endOfDay);
+
+    // // Check if a report for today already exists
+    // const reportExists = this.dailyReportsDates.some((item: any) => {
+    //   const createdAt = item.date.toDate();  // Ensure createdAt is converted to Date if it's a Firebase Timestamp
+    //   return createdAt >= startTimestamp.toDate() && createdAt <= endTimestamp.toDate();
+    // });
+
+    if (this.dailyReportsDates.length > 0) {
+      const normalizedDates = this.dailyReportsDates.map((item: any) =>
+        this.normalizeDate(item.date.toDate())
+      );
+      // Get the oldest date from the list
+      const oldestDate = new Date(Math.min(...normalizedDates.map((d: Date) => d.getTime())));
+
+      // Normalize current date
+      const currentDate = this.normalizeDate(new Date());
+
+      // Set starting point for search
+      let tempDate = new Date(oldestDate);
+      let oldestMissingDate: Date | null = null;
+
+      // Check each date from oldest to today
+      while (tempDate < currentDate) {
+        const exists = normalizedDates.some(
+          (d: Date) => d.getTime() === tempDate.getTime()
+        );
+
+        if (!exists) {
+          oldestMissingDate = new Date(tempDate); // Found the missing date
+          break;
+        }
+
+        // Move to next day
+        tempDate.setDate(tempDate.getDate() + 1);
+      }
+
+      // Step 2: Check if today is missing
+      const todayExists = normalizedDates.some(
+        (d: Date) => d.getTime() === currentDate.getTime()
+      );
+
+      // Step 3: Final result
+      if (oldestMissingDate) {
+        this.dateToAddInDaily = oldestMissingDate;
+        console.log('Oldest missing date:', oldestMissingDate);
+      } else if (!todayExists) {
+        this.dateToAddInDaily = currentDate;
+        console.log('Today is missing. Setting today as dateToAddInDaily.');
+      } else {
+        this.dateToAddInDaily = undefined;
+        console.log('No missing dates — including today.');
+      }
+
+    } else {
+      this.dateToAddInDaily = now;  // Set the current time if no report exists
+      console.log('No report for today.');
+    }
+
+    // // Handle missing dates logic
+    // const sortedReports = this.dailyReportsDates
+    //   .map((item: any) => this.normalizeDate(item.date.toDate())) // Normalize to midnight
+    //   .sort((a: Date, b: Date) => a.getTime() - b.getTime());
+
+    // let missingDate: Date | null = null;
+
+    // if (sortedReports.length > 0) {
+    //   const oldestReportDate = sortedReports[0];
+    //   const currentDate = this.normalizeDate(now);
+
+    //   const tempDate = new Date(oldestReportDate);
+
+    //   while (tempDate < currentDate) {
+    //     tempDate.setDate(tempDate.getDate() + 1);
+
+    //     const normalizedTemp = this.normalizeDate(tempDate);
+
+    //     const exists = sortedReports.some(
+    //       (reportDate: Date) => reportDate.getTime() === normalizedTemp.getTime()
+    //     );
+
+    //     if (!exists) {
+    //       missingDate = normalizedTemp;
+    //       break;
+    //     }
+    //   }
+
+    //   const todayExists = sortedReports.some(
+    //     (reportDate: Date) => reportDate.getTime() === currentDate.getTime()
+    //   );
+
+    //   if (!missingDate && !todayExists) {
+    //     missingDate = null; // Only today is missing — ignore
+    //     console.log('Only today is missing. Ignoring.');
+    //   } else if (!missingDate) {
+    //     console.log('No missing dates.');
+    //   } else {
+    //     console.log('The oldest missing date is:', missingDate);
+    //   }
+    // }
+
+
+    // await this.getDailyReports();
+    await this.getOpeningStock();
+    this.combineDataWithReports()
+
+
+
+  }
+
+  async initDaily() {
+
+    await this.getDailyReportsDates();
+
+  }
+
+
+  dateToAddInDaily: Date | undefined
+
+
+  ifThereisEmptyValue(): boolean {
+    return this.combinedData.some(item =>
+      item.openingStockQnt === null ||
+      item.openingStockQnt === undefined ||
+      item.openingStockQnt === ''
+    );
+  }
+
+  combineDataWithReports() {
+    this.combinedData = this.data.map((product: any) => {
+      const report = this.dailyReports.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
+      const openingStock = this.openingStock.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
+
+
+      console.log(product);
+
+      // const qnt = report?.qnt ?? '';
+      // const status = qnt == '0' ? '4' : (report?.status ?? '0');
+      const closing1 = this.calculateClosingStock(report, openingStock, product.productUnit);
+      return {
+        productId: product.id,
+        productName: product.name,
+        productUnit: product.unit,
+        openingStockId: openingStock?.id ?? -1,
+        openingStockQnt: openingStock?.openingStockQnt ?? '',
+        recieved: report?.recieved ?? '',
+        add: report?.add ?? '',
+        staffMeal: report?.staffMeal ?? '',
+        transfer: report?.transfer ?? '',
+        closeStock: closing1
+        // dameged:  report.dameged,
+
+      };
+    });
+
+    console.log('combinedData', this.combinedData);
+  }
+
+  calculateClosingStock(
+    reportOrData: any,
+    openingStock?: any,
+    unit: number = 1 // default to 1 if not passed
+  ): number | string {
+    let openingStockQnt: number;
+    let recieved: number;
+    let add: number;
+    let sales: number;
+    let staffMeal: number;
+    let transfer: number;
+    let dameged: number;
+
+    if (openingStock) {
+      // Two-argument version
+      openingStockQnt = Number(openingStock?.openingStockQnt ?? 0);
+      recieved = Number(reportOrData?.recieved ?? 0);
+      add = Number(reportOrData?.add ?? 0);
+      sales = Number(reportOrData?.sales ?? 0);
+      staffMeal = Number(reportOrData?.staffMeal ?? 0);
+      transfer = Number(reportOrData?.transfer ?? 0);
+      dameged = Number(reportOrData?.dameged ?? 0);
+    } else {
+      // One-object version
+      openingStockQnt = Number(reportOrData?.openingStockQnt ?? 0);
+      recieved = Number(reportOrData?.recieved ?? 0);
+      add = Number(reportOrData?.add ?? 0);
+      sales = Number(reportOrData?.sales ?? 0);
+      staffMeal = Number(reportOrData?.staffMeal ?? 0);
+      transfer = Number(reportOrData?.transfer ?? 0);
+      dameged = Number(reportOrData?.dameged ?? 0);
+    }
+
+    const total =
+      openingStockQnt +
+      (recieved * unit) +
+      add -
+      sales -
+      staffMeal -
+      transfer -
+      dameged;
+
+    return isNaN(total) ? '-' : total
+  }
+
+
+  onQuantityChange(field: string, item: any, i: number): void {
+    const productUnit = item.productUnit ?? 1;
+
+    // if (field === 'recieved') {
+    //   this.combinedData[i].recieved = item.recieved;
+    // } else {
+    //   // Store other fields as-is or default to '-'
+    //   this.combinedData[i][field] = item[field] ?? '';
+    // }
+
+    this.combinedData[i][field] = item[field] ?? '';
+
+
+    // Recalculate closeStock using productUnit
+    const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+    this.combinedData[i].closeStock = updatedCloseStock;
+    console.log(this.combinedData);
+
+  }
+
+  async saveDaily() {
+    const confirmed = confirm(`هل انت متأكد من ادخال البيانات صحيحة`);
+    if (!confirmed) {
+      return
+    };
+    const confirmed1 = confirm(`هل انت متأكد من ارسال البيانات وحفظها`);
+    if (!confirmed1) {
+      return
+    };
+
+    this.isLoading = true
+    try {
+      let openStockToAdd: any = []
+      let openStockToUpdate: any = []
+
+      this.combinedData.forEach((item: any) => {
+        if (item.openingStockId == -1) {
+          openStockToAdd.push({ branchId: this.branch.id, productId: item.productId, openingStockQnt: item.closeStock, typeId: this.selectedType.id, createdAt: Timestamp.now() })
+        } else {
+          openStockToUpdate.push(item)
+        }
+      })
+
+      const batch = writeBatch(this.apiService.db);
+      openStockToAdd.forEach((item: any) => {
+        const summaryRef = doc(collection(this.apiService.db, collectionNames.openingStock));
+        batch.set(summaryRef, item);
+      })
+
+      openStockToUpdate.forEach((item: any) => {
+        const docRef2 = doc(this.apiService.db, collectionNames.openingStock, item.openingStockId);
+        batch.update(docRef2, {
+          updatedAt: Timestamp.now(),
+          openingStockQnt: item.closeStock
+        });
+      })
+
+      const firestoreTimestamp = this.dateToAddInDaily
+        ? Timestamp.fromDate(this.dateToAddInDaily)
+        : undefined;
+      const summaryRef = doc(collection(this.apiService.db, collectionNames.dailyReportsDates));
+      batch.set(summaryRef, {
+        branchId: this.branch.id,
+        typeId: this.selectedType.id,
+        date: firestoreTimestamp,
+        createdAt: Timestamp.now(),
+      });
+
+      this.combinedData.forEach((item: any) => {
+        const summaryRef = doc(collection(this.apiService.db, collectionNames.dailyReports));
+
+        const { productName, ...itemWithoutProductName } = item;
+
+        // Add createdAt directly to the item
+        const itemWithTimestamp = {
+          ...itemWithoutProductName,
+          branchId: this.branch.id,
+          typeId: this.selectedType.id,
+          date: firestoreTimestamp,
+          createdAt: Timestamp.now(),
+        };
+
+        batch.set(summaryRef, itemWithTimestamp);
+      });
+
+      await batch.commit();
+      console.log("done");
+      alert("يعطيك العافية تم التحديث بنجاح")
+      window.location.reload();
+    } catch (error) {
+      console.log(error);
+
+    } finally {
+      this.isLoading = false
+    }
+
   }
 }
 

@@ -81,6 +81,8 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+
+
   async reset(branch: Branch) {
     this.isLoading = true
 
@@ -454,11 +456,37 @@ export class DashboardComponent implements OnInit {
 
 
   getDetail(branch: any) {
-    const orders = this.preOrders.find((order: any) => order.createdAt === this.selectedDatey.createdAt)?.orders
-    // console.log("branchId : ", branch.id);
+    if (this.selectedDatey && this.selectedDatey.createdAt) {
+      const orders = this.preOrders.find((order: any) => order.createdAt === this.selectedDatey.createdAt)?.orders
+      // console.log("branchId : ", branch.id);
 
-    const data = orders!!.find((order: any) => order.branchId == branch.id)
-    return data
+      const data = orders!!.find((order: any) => order.branchId == branch.id)
+      return data
+    }
+
+    return null
+  }
+
+  printOrderDetail(branch: any) {
+    if (this.selectedDatey && this.selectedDatey.createdAt) {
+      const orders = this.preOrders.find((order: any) => order.createdAt === this.selectedDatey.createdAt)?.orders
+      // console.log("branchId : ", branch.id);
+
+      const data = orders!!.find((order: any) => order.branchId == branch.id)
+
+      console.log("order", data);
+
+      const a = this.orders.filter((order: any) =>
+        order.branchId === branch.id
+      );
+      // console.log("order":this.preOrders.find);
+
+      console.log("branch: ", branch);
+
+      console.log("orderBranch: ", a);
+    }
+
+
   }
 
   isDateValid(): boolean {
@@ -522,6 +550,10 @@ export class DashboardComponent implements OnInit {
   }
   ifEnabledSearech() {
 
+    if (this.selectedType && this.selectedType.id == '5') {
+      return true
+    }
+
     if (this.selectedDatey && this.selectedOption && this.selectedType) {
       return true
     }
@@ -554,6 +586,7 @@ export class DashboardComponent implements OnInit {
       console.error('Error fetching shared data:', error);
     }
   }
+
 
   // async getSharedData(getTypes = true) {
   //   if (getTypes) {
@@ -592,6 +625,14 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  onDateChange(selectedItem: any): void {
+    console.log('Date changed:', selectedItem);
+
+    // this.getFirstData()
+    // You can perform any logic here, for example:
+    // this.loadPreOrdersByDate(selectedItem);
+  }
+
   async search(): Promise<void> {
     this.isLoading = true;
     try {
@@ -608,32 +649,78 @@ export class DashboardComponent implements OnInit {
       // }
       console.log("seleele", this.selectedDatey);
 
-      const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(this.selectedDatey ? this.selectedDatey.createdAt.toDate() : Timestamp.now().toDate());
+      this.data = await this.fetchProducts()
+
+      if (this.selectedDatey) {
+        const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(
+          this.selectedDatey.createdAt.toDate()
+        );
+
+        const [orders] = await Promise.all([
+          this.selectedType.id !== '5'
+            ? this.fetchOrders(startTimestamp, endTimestamp)
+            : Promise.resolve([]) // fallback if type is '5'
+        ]);
+
+        if (this.selectedType.id !== '5') {
+          this.orders = orders;
+          console.log(orders);
+
+          this.orders.forEach(order => {
+            const key = `${order.branchId}_${order.productId}`;
+            this.orderMap.set(key, order);
+          });
+          console.log("maps", this.orderMap);
+          this.addMissingOrders();
+        }
+
+        // Do something with products and orders...
+      } else {
+        console.log('No date selected.');
+        // Optionally handle this case
+      }
+
+      // if (this.selectedDatey) {
+      // const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(this.selectedDatey ? this.selectedDatey.createdAt.toDate() : Timestamp.now().toDate());
+
+      // }
 
 
-      const [products, orders] = await Promise.all([
-        this.fetchProducts(),
-        this.fetchOrders(startTimestamp, endTimestamp)
-      ]);
+      // const [products, orders] = await Promise.all([
+      //   this.fetchProducts(),
+      //   this.selectedType.id !== '5'
+      //     ? this.fetchOrders(startTimestamp, endTimestamp)
+      //     : Promise.resolve([]) // return empty array or any fallback value
+      // ]);
       // console.log("bb", branches);
-      console.log("58oo", orders);
+      // console.log("58oo", orders);
 
 
 
 
 
 
-      // this.branches = branches;
-      this.data = products;
-      this.orders = orders;
-      console.log(orders);
+      // // this.branches = branches;
+      // this.data = products;
 
-      this.orders.forEach(order => {
-        const key = `${order.branchId}_${order.productId}`;
-        this.orderMap.set(key, order);
-      });
-      console.log("maps", this.orderMap);
-      this.addMissingOrders();
+      if (this.selectedType) {
+        if (this.selectedType.id !== '5') {
+          // this.orders = orders;
+          // console.log(orders);
+
+          // this.orders.forEach(order => {
+          //   const key = `${order.branchId}_${order.productId}`;
+          //   this.orderMap.set(key, order);
+          // });
+          // console.log("maps", this.orderMap);
+          // this.addMissingOrders();
+        }
+        else {
+          await this.getDailyReportsDates();
+        }
+      }
+
+
 
       this.isGetData = true
     } catch (error) {
@@ -708,6 +795,38 @@ export class DashboardComponent implements OnInit {
     a.download = "products";
     a.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  async exportBranchesOrdersToFile(): Promise<void> {
+    try {
+      const db = getFirestore();
+      const q = query(collection(db, "branchesOrders"),
+
+      );
+      const snapshot = await getDocs(q);
+
+      const products = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log("length", products.length);
+
+
+      const jsonStr = JSON.stringify(products, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "branchesOrders";
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.log(error);
+
+    }
+
   }
 
   private async fetchProducts(): Promise<Product[]> {
@@ -861,9 +980,16 @@ export class DashboardComponent implements OnInit {
       name_en: doc.data()['name_en'],
 
     }));
-    if (this.types.length > 0) {
-      this.selectedType = this.types[0]
+    // if (this.types.length > 0) {
+    //   this.selectedType = this.types[0]
+    // }
+    if (environment.enabledDaily && environment.production == false) {
+      this.types = [{ id: '5', name: "الجرد اليومي", name_en: 'Daily' }, ...this.types];
     }
+    this.selectedType = this.types[0]
+    // this.types.unshift({ id: 5, name: "الجرد اليومي", name_en: 'Daily' })
+    console.log('types', this.types);
+
   }
   async getSettings(): Promise<void> {
     try {
@@ -1267,7 +1393,7 @@ export class DashboardComponent implements OnInit {
   onSelectdDateOpenDate(date: any) {
 
     this.selectedDate = date
-    
+
   }
   async addOrderDate(branch: any) {
     this.isLoading = true;
@@ -2277,6 +2403,129 @@ export class DashboardComponent implements OnInit {
     // this.isOn = !this.isOn;
     // this.toggleChange.emit(this.isOn);
     // console.log('any', $event);
+
+  }
+
+
+  ///// Daily
+  selectedBranch: any
+  onSelectBranch(branch: Branch) {
+    if (this.selectedType.id == '5') {
+      this.selectedBranch = branch
+    }
+  }
+
+  normalizeDate(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  dailyReportsDates: any = []
+  async getDailyReportsDates(): Promise<void> {
+    // console.log(serverTimestamp());
+
+    // Get the first and last day of the current month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // last day of month
+
+    const q = query(
+      collection(this.apiService.db, collectionNames.dailyReportsDates),
+      where("branchId", "==", this.selectedBranch.id),
+      where("typeId", "==", this.selectedType.id),
+      where("date", ">=", Timestamp.fromDate(startOfMonth)),
+      where("date", "<=", Timestamp.fromDate(endOfMonth)),
+      // orderBy("date", "desc")
+    );
+
+    const snapshot = await getDocs(q);
+    this.dailyReportsDates = snapshot.docs.map(doc => ({
+      id: doc.id,
+      typeId: doc.data()['typeId'],
+      branchId: doc.data()['branchId'],
+      date: doc.data()['date'],
+    }));
+
+    this.dailyReportsDates = this.dailyReportsDates.sort((a: any, b: any) =>
+      b.date.toDate().getTime() - a.date.toDate().getTime()
+    );
+
+    console.log(this.dailyReportsDates);
+
+    this.selectedDailyDate = null
+
+    if (this.dailyReportsDates.length > 0) {
+      this.selectedDailyDate = this.dailyReportsDates[0];
+    }
+
+
+
+    // // Set the start and end of today (midnight to 23:59:59)
+    // const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    // const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    // // Convert to Firestore Timestamps
+    // const startTimestamp = Timestamp.fromDate(startOfDay);
+    // const endTimestamp = Timestamp.fromDate(endOfDay);
+
+    // // Check if a report for today already exists
+    // const reportExists = this.dailyReportsDates.some((item: any) => {
+    //   const createdAt = item.date.toDate();  // Ensure createdAt is converted to Date if it's a Firebase Timestamp
+    //   return createdAt >= startTimestamp.toDate() && createdAt <= endTimestamp.toDate();
+    // });
+
+    // // Handle missing dates logic
+    // const sortedReports = this.dailyReportsDates
+    //   .map((item: any) => this.normalizeDate(item.date.toDate())) // Normalize to midnight
+    //   .sort((a: Date, b: Date) => a.getTime() - b.getTime());
+
+    // let missingDate: Date | null = null;
+
+    // if (sortedReports.length > 0) {
+    //   const oldestReportDate = sortedReports[0];
+    //   const currentDate = this.normalizeDate(now);
+
+    //   const tempDate = new Date(oldestReportDate);
+
+    //   while (tempDate < currentDate) {
+    //     tempDate.setDate(tempDate.getDate() + 1);
+
+    //     const normalizedTemp = this.normalizeDate(tempDate);
+
+    //     const exists = sortedReports.some(
+    //       (reportDate: Date) => reportDate.getTime() === normalizedTemp.getTime()
+    //     );
+
+    //     if (!exists) {
+    //       missingDate = normalizedTemp;
+    //       break;
+    //     }
+    //   }
+
+    //   const todayExists = sortedReports.some(
+    //     (reportDate: Date) => reportDate.getTime() === currentDate.getTime()
+    //   );
+
+    //   if (!missingDate && !todayExists) {
+    //     missingDate = null; // Only today is missing — ignore
+    //     console.log('Only today is missing. Ignoring.');
+    //   } else if (!missingDate) {
+    //     console.log('No missing dates.');
+    //   } else {
+    //     console.log('The oldest missing date is:', missingDate);
+    //   }
+    // }
+
+
+    // await this.getDailyReports();
+    // await this.getOpeningStock();
+    // this.combineDataWithReports()
+  }
+
+  selectedDailyDate: any
+  onDateDailyChange($event: any) {
+    // throw new Error('Method not implemented.');
+    console.log($event);
+    this.selectedDailyDate = $event
 
   }
 }
