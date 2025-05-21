@@ -10,5 +10,5 @@ export const environment = {
         measurementId: "G-EDDDHLJC1L"
     },
     version: "2.7",
-    enabledDaily: false,
+    enabledDaily: true,
 };
