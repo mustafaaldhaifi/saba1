@@ -3,13 +3,14 @@ import { Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from '@angular/
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, serverTimestamp, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
 import { PdfService } from '../pdf.service';
 import { ProductsService } from '../products.service';
 import { OrdersService } from '../orders.service copy';
+import { DailyReportsService } from '../dailyReports.service';
 
 @Component({
   selector: 'app-branch',
@@ -19,6 +20,8 @@ import { OrdersService } from '../orders.service copy';
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+
+  isReadDailyMode: boolean;
 
 
   exportPdf() {
@@ -101,6 +104,7 @@ export class BranchComponent {
   rowIndexes: number[] = [];
   isOn: any
   orderUpdates: any
+  dailyReportUpdates: any
 
   version: any
   constructor(
@@ -108,9 +112,12 @@ export class BranchComponent {
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
     private productsServices: ProductsService,
-    private orderService: OrdersService
+    private orderService: OrdersService,
+    private dailyReportService: DailyReportsService
   ) {
     this.version = environment.version
+
+    this.isReadDailyMode = false
     // initializeApp(environment.firebase);
   }
 
@@ -565,13 +572,15 @@ export class BranchComponent {
   }
   async onSelectTypeChange() {
     this.isLoading = true
+    this.preOrders = []
+    this.combinedData = []
+    this.selectedDate = null
+
     if (this.selectedType.id != '5') {
       console.log("selllleee", this.selectedType);
 
 
-      this.preOrders = []
-      this.combinedData = []
-      this.selectedDate = null
+
 
       await Promise.all([
         this.getDatesToAdd(),
@@ -650,6 +659,8 @@ export class BranchComponent {
       }
 
     } else {
+      this.data = null
+      await this.getProducts()
       await this.initDaily()
 
     }
@@ -890,35 +901,37 @@ export class BranchComponent {
   }
 
   dailyReports: any = []
-  async getDailyReports(): Promise<void> {
+  async getDailyReports(startOfDate: Date, endOfDate: Date): Promise<void> {
     // Get the first and last day of the current month
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // last day of month
 
-    const q = query(
-      collection(this.apiService.db, collectionNames.dailyReports),
-      where("branchId", "==", this.branch.id),
-      where("typeId", "==", this.selectedType.id),
-      where("date", ">=", Timestamp.fromDate(startOfMonth)),
-      where("date", "<=", Timestamp.fromDate(endOfMonth)),
-    );
+    console.log("ddaaa", this.dailyReportUpdates);
+    this.dailyReportUpdates = await this.dailyReportService.getLastupdate(this.branch.id, Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!!)), this.apiService)
+    this.dailyReports = await this.dailyReportService.getData(this.selectedType.id, this.branch.id, startOfDate, endOfDate, this.dailyReportUpdates, this.apiService)
+    // const q = query(
+    //   collection(this.apiService.db, collectionNames.dailyReports),
+    //   where("branchId", "==", this.branch.id),
+    //   where("typeId", "==", this.selectedType.id),
+    //   where("date", ">=", Timestamp.fromDate(startOfDate)),
+    //   where("date", "<=", Timestamp.fromDate(endOfDate)),
+    // );
 
-    const snapshot = await getDocs(q);
-    this.dailyReports = snapshot.docs.map(doc => ({
-      id: doc.id,
-      productId: doc.data()['productId'],
-      branchId: doc.data()['branchId'],
-      openingStock: doc.data()['openingStock'],
-      recieved: doc.data()['recieved'],
-      add: doc.data()['add'],
-      staffMeal: doc.data()['staffMeal'],
-      transfer: doc.data()['transfer'],
-      dameged: doc.data()['dameged'],
+    // const snapshot = await getDocs(q);
+    // this.dailyReports = snapshot.docs.map(doc => ({
+    //   id: doc.id,
+    //   productId: doc.data()['productId'],
+    //   branchId: doc.data()['branchId'],
+    //   openingStockId: doc.data()['openingStockId'],
+    //   openingStockQnt: doc.data()['openingStockQnt'],
+    //   recieved: doc.data()['recieved'],
+    //   add: doc.data()['add'],
+    //   sales: doc.data()['sales'],
+    //   staffMeal: doc.data()['staffMeal'],
+    //   transfer: doc.data()['transfer'],
+    //   dameged: doc.data()['dameged'],
+    //   closeStock: doc.data()['closeStock'],
+    // }));
 
-    }));
-
-    console.log('dailyReports', this.dailyReports);
+    // console.log('dailyReports', this.dailyReports);
 
   }
 
@@ -928,20 +941,21 @@ export class BranchComponent {
 
 
   dailyReportsDates: any = []
+  dailyReportsDates1: any = []
   async getDailyReportsDates(): Promise<void> {
-    console.log(serverTimestamp());
+
 
     // Get the first and last day of the current month
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // last day of month
+    // const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    // const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // last day of month
 
     const q = query(
       collection(this.apiService.db, collectionNames.dailyReportsDates),
       where("branchId", "==", this.branch.id),
       where("typeId", "==", this.selectedType.id),
-      where("date", ">=", Timestamp.fromDate(startOfMonth)),
-      where("date", "<=", Timestamp.fromDate(endOfMonth)),
+      // where("date", ">=", Timestamp.fromDate(startOfMonth)),
+      // where("date", "<=", Timestamp.fromDate(endOfMonth)),
     );
 
     const snapshot = await getDocs(q);
@@ -951,7 +965,25 @@ export class BranchComponent {
       branchId: doc.data()['branchId'],
       date: doc.data()['date'],
     }));
+    this.dailyReportsDates1 = this.dailyReportsDates
+
     console.log(this.dailyReportsDates);
+
+    const serverDatesKeys = this.dailyReportsDates.map((item: any) =>
+      this.dailyReportService.getDateKey(item.date.toDate())
+    );
+
+    const filteredLocalReports = this.dailyReportService.getLocalData().filter((localReport: any) =>
+      serverDatesKeys.includes(localReport.date)
+    );
+
+    this.dailyReportService.saveToLocal(filteredLocalReports)
+
+    // ثم خزّن هذه البيانات المفلترة كبياناتك المحلية الجديدة
+    // this.dailyReportService.saveLocalData(filteredLocalReports);
+
+    console.log("dddaaates", filteredLocalReports);
+
 
 
 
@@ -1063,9 +1095,11 @@ export class BranchComponent {
     // }
 
 
+    this.dailyReportsDates = this.dailyReportsDates.map((data: any) => data.date.toDate())
+
+
     // await this.getDailyReports();
-    await this.getOpeningStock();
-    this.combineDataWithReports()
+
 
 
 
@@ -1074,6 +1108,9 @@ export class BranchComponent {
   async initDaily() {
 
     await this.getDailyReportsDates();
+    await this.getOpeningStock();
+    await this.deleteOldDailyReportsDatesIfSixthOfMonth();
+    this.combineDataWithReports()
 
   }
 
@@ -1094,6 +1131,8 @@ export class BranchComponent {
       const report = this.dailyReports.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
       const openingStock = this.openingStock.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
 
+      console.log(report);
+
 
       console.log(product);
 
@@ -1104,13 +1143,18 @@ export class BranchComponent {
         productId: product.id,
         productName: product.name,
         productUnit: product.unit,
-        openingStockId: openingStock?.id ?? -1,
-        openingStockQnt: openingStock?.openingStockQnt ?? '',
+        openingStockId: this.isReadDailyMode
+          ? (report?.openingStockId ?? 1)
+          : (openingStock?.id ?? -1),
+        openingStockQnt: this.isReadDailyMode ? (report?.openingStockQnt ?? '') : openingStock?.openingStockQnt ?? '',
         recieved: report?.recieved ?? '',
         add: report?.add ?? '',
         staffMeal: report?.staffMeal ?? '',
         transfer: report?.transfer ?? '',
-        closeStock: closing1
+        dameged: report?.dameged ?? '',
+        sales: report?.sales ?? '',
+
+        closeStock: this.isReadDailyMode ? (report?.closeStock ?? '') : closing1
         // dameged:  report.dameged,
 
       };
@@ -1175,6 +1219,8 @@ export class BranchComponent {
     //   this.combinedData[i][field] = item[field] ?? '';
     // }
 
+    console.log(this.combinedData[i]);
+
     this.combinedData[i][field] = item[field] ?? '';
 
 
@@ -1222,6 +1268,8 @@ export class BranchComponent {
         });
       })
 
+
+
       const firestoreTimestamp = this.dateToAddInDaily
         ? Timestamp.fromDate(this.dateToAddInDaily)
         : undefined;
@@ -1233,6 +1281,7 @@ export class BranchComponent {
         createdAt: Timestamp.now(),
       });
 
+      // let dailyReportToSaveLocally: any = []
       this.combinedData.forEach((item: any) => {
         const summaryRef = doc(collection(this.apiService.db, collectionNames.dailyReports));
 
@@ -1246,11 +1295,23 @@ export class BranchComponent {
           date: firestoreTimestamp,
           createdAt: Timestamp.now(),
         };
+        // dailyReportToSaveLocally.push(itemWithTimestamp)
 
         batch.set(summaryRef, itemWithTimestamp);
       });
 
+      ///
+      this.dailyReportUpdates = await this.dailyReportService.getLastupdate(this.branch.id, Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!!)), this.apiService)
+      // ✅ Corrected document path for updating 
+      const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
+
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
+
       await batch.commit();
+      // this.dailyReportService.addDataToLocal(dailyReportToSaveLocally, this.dailyReportService.getDateKey(this.dateToAddInDaily!), this.selectedType.id, this.branch.id)
       console.log("done");
       alert("يعطيك العافية تم التحديث بنجاح")
       window.location.reload();
@@ -1262,5 +1323,215 @@ export class BranchComponent {
     }
 
   }
+
+  async onDailyDateChange($event: any) {
+    this.isReadDailyMode = true
+    this.dailyReports = []
+    this.combinedData = []
+    console.log($event);
+    // console.log($event.date.toDate());
+
+    this.dateToAddInDaily = $event
+
+    // const now = $event
+    // const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    // const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // last day of month
+
+    this.isLoading = true
+    await this.getDailyReports($event, $event);
+
+    this.combineDataWithReports()
+    this.isLoading = false
+
+
+  }
+
+
+  async deleteMultipleCollections(): Promise<void> {
+    const collections = ['openingStock', 'dailyReports', 'dailyReportsDates', collectionNames.dailyReportsUpdates];
+
+    try {
+      for (const colName of collections) {
+        const snapshot = await getDocs(collection(this.apiService.db, colName));
+        const deletePromises = snapshot.docs.map(document => {
+          return deleteDoc(doc(this.apiService.db, colName, document.id));
+        });
+        await Promise.all(deletePromises);
+        console.log(`✅ تم حذف جميع البيانات من مجموعة: ${colName}`);
+      }
+    } catch (error) {
+      console.error('❌ حدث خطأ أثناء الحذف:', error);
+    }
+  }
+
+
+  async deleteOldDailyReportsDatesIfSixthOfMonth() {
+    try {
+      // 1. الحصول على وقت السيرفر
+      const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
+      const serverTimestamp = Timestamp.now();
+      await setDoc(tempRef, { serverTime: serverTimestamp });
+
+      const tempSnap = await getDoc(tempRef);
+      const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
+      console.log("serverTime", serverDate);
+
+      if (!(serverDate instanceof Date)) {
+        console.error('فشل في الحصول على وقت السيرفر');
+        return;
+      }
+
+      // 2. تحقق من أن اليوم هو السادس
+      console.log(serverDate.getDate());
+
+      if (serverDate.getDate() < 28) {
+        console.log('اليوم ليس السادس، لا حاجة للحذف.');
+        return;
+      }
+
+      // 3. حضّر البيانات للحذف
+      const batch = writeBatch(this.apiService.db);
+      let deletedCount = 0;
+
+      this.dailyReportsDates1.forEach((item: any) => {
+        console.log("DATE", item);
+        const reportDate = item.date.toDate()
+
+        console.log("DATE", reportDate);
+
+        const isPreviousMonth = reportDate instanceof Date &&
+          (reportDate.getFullYear() <= serverDate.getFullYear() &&
+            (
+              reportDate.getMonth() < serverDate.getMonth()));
+
+        if (isPreviousMonth && item.id) {
+          const docRef = doc(this.apiService.db, 'dailyReportsDates', item.id);
+          batch.delete(docRef);
+          deletedCount++;
+        }
+      });
+
+      // 4. تنفيذ الحذف إذا كان هناك شيء للحذف
+      if (deletedCount > 0) {
+
+        let start = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
+        let end = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59); // last day of month
+
+        const q = query(
+          collection(this.apiService.db, collectionNames.dailyReports),
+          where("branchId", "==", this.branch.id),
+          where("typeId", "==", this.selectedType.id),
+          where("date", ">=", Timestamp.fromDate(start)),
+          where("date", "<=", Timestamp.fromDate(end)),
+        );
+
+        const snapshot = await getDocs(q);
+        const dailyReportsToDelete = snapshot.docs.map(doc =>
+
+        ({
+          id: doc.id,
+          date: doc.data()['date'].toDate(),
+        }))
+        console.log('dailyReportsToDelete', dailyReportsToDelete);
+
+        dailyReportsToDelete.forEach((item: any) => {
+          const docRef = doc(this.apiService.db, collectionNames.dailyReports, item.id);
+          batch.delete(docRef);
+        })
+
+        let start1 = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
+        let end1 = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59); // last day of month
+
+        const q1 = query(
+          collection(this.apiService.db, collectionNames.dailyReportsUpdates),
+          where("branchId", "==", this.branch.id),
+          where("date", ">=", Timestamp.fromDate(start1)),
+          where("date", "<=", Timestamp.fromDate(end1)),
+        );
+
+        const snapshot1 = await getDocs(q1);
+        const dailyReportsUpdateToDelete1 = snapshot1.docs.map(doc => ({
+          id: doc.id,
+        }))
+        console.log('dailyReportsUpdateToDelete1', dailyReportsUpdateToDelete1);
+
+        dailyReportsUpdateToDelete1.forEach((item: any) => {
+          const docRef = doc(this.apiService.db, collectionNames.dailyReportsUpdates, item.id);
+          batch.delete(docRef);
+        })
+
+        console.log(`تم حذف ${dailyReportsUpdateToDelete1.length} من   التحديثات للجرد اليومي القديمة.`);
+
+        await batch.commit();
+        console.log(`تم حذف ${deletedCount} من التواريخ القديمة.`);
+        window.location.reload()
+      } else {
+        console.log('لا توجد تواريخ قديمة للحذف.');
+      }
+
+    } catch (error) {
+      console.error('حدث خطأ أثناء حذف التواريخ القديمة:', error);
+    }
+  }
+
+  exportPdfDaily() {
+    const pdfService = new PdfService();
+
+    const formattedDate = `${this.dateToAddInDaily!.getFullYear()}-${String(this.dateToAddInDaily!.getMonth() + 1).padStart(2, '0')}-${String(this.dateToAddInDaily!.getDate()).padStart(2, '0')}`;
+    console.log("typeee", this.selectedType);
+    const data = this.getOrdersDaily()
+    console.log("dattttaaa", data);
+
+
+    pdfService.exportDaily(data, formattedDate, this.branch.data.name)
+
+    // pdfService.exportDaily()
+  }
+
+  getOrdersDaily(): any[][] {
+    const data = this.data;
+    console.log(data);
+
+    const result: any[][] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const product = data[i];
+      const daily = this.dailyReports.find((item: any) =>
+        item.productId === product.id
+      );
+
+      console.log("product.id", product.id);
+
+      console.log("daily", daily);
+
+
+      if (daily) {
+        result.push([
+          product.name,
+          daily.openingStockQnt,
+          daily.recieved,
+          daily.add,
+          daily.sales,
+          daily.staffMeal,
+          daily.transfer,
+          daily.dameged,
+          daily.closeStock
+        ]);
+      }
+    }
+    // console.log('data', data);
+
+
+    return result;
+  }
+
+  //   getOrderDaily2( productId: any): any {
+  //   console.log("ordersss", this.branchOrders);
+
+  //   return this.branchOrders.find((order: any) =>
+  //     order.productId === productId
+  //   );
+  // }
+
 }
 

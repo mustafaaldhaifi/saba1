@@ -200,10 +200,38 @@
     </button>
 
 </ng-container>
+<!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'"
+    (click)="deleteMultipleCollections()">
+    Delete all
+</div> -->
+
+<div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
+    <label for="options" class="dropdown-label me-2">Select Date:</label>
+    <select id="options" (ngModelChange)="onDailyDateChange($event)" [(ngModel)]="dateToAddInDaily"
+        class="dropdown form-select">
+        <option *ngFor="let item of dailyReportsDates" [ngValue]="item">
+            Date: {{ item | date:'mediumDate' }}
+        </option>
+    </select>
+</div>
 
 <ng-container *ngIf="selectedType && selectedType.id == '5' && dateToAddInDaily">
 
-    <div style="text-align: center;"> {{dateToAddInDaily | date:'mediumDate'}}</div>
+
+
+    <!-- <div style="text-align: center;"> {{dateToAddInDaily | date:'mediumDate'}}</div> -->
+    <div *ngIf="dateToAddInDaily" style="text-align: center;">
+        <hr>
+        {{dateToAddInDaily | date:'mediumDate'}}
+        <!-- {{selectedDate | date:'mediumDate'}} -->
+        <div *ngIf="branch">
+            {{branch.data.name}}
+        </div>
+    </div>
+
+     <button *ngIf="dailyReports.length > 0"
+        (click)="exportPdfDaily()">Export pdf</button>
+
     <!-- <button (click)="getDailyReportsDates()">date</button> -->
     <div class=" table-container">
         <div class="table fixed-header">
@@ -232,37 +260,42 @@
 
                         <td>
                             <input
-                                [disabled]="isPositiveNumber(combinedData[i].openingStockQnt) && combinedData[i].openingStockId != -1"
+                                [disabled]="isPositiveNumber(combinedData[i].openingStockQnt) && combinedData[i].openingStockId != -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('openingStockQnt', item, i)"
                                 [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1" [(ngModel)]="item.recieved"
+                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true" [(ngModel)]="item.recieved"
                                 (ngModelChange)="onQuantityChange('recieved', item, i)" type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
+                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                                (input)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
+                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                                (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('staffMeal', item, i)"
-                                [(ngModel)]="combinedData[i].staffMeal" type="number" required>
+                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                                (input)="onQuantityChange('staffMeal', item, i)" [(ngModel)]="combinedData[i].staffMeal"
+                                type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('transfer', item, i)"
-                                [(ngModel)]="combinedData[i].transfer" type="number" required>
+                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                                (input)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
+                                type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1" (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
+                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                                (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
                                 type="number" required>
 
                         </td>
@@ -279,7 +312,8 @@
         </div>
     </div>
 
-    <button *ngIf="dateToAddInDaily && ifThereisEmptyValue() == false" (click)="saveDaily()">Save</button>
+    <button *ngIf="dateToAddInDaily && ifThereisEmptyValue() == false && isReadDailyMode === false"
+        (click)="saveDaily()">Save</button>
 
 
 </ng-container>

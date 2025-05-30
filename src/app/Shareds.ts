@@ -8,6 +8,8 @@ export const collectionNames = {
     branchesOrders: 'branchesOrders',
     openingStock: 'openingStock',
     dailyReports: 'dailyReports',
+    dailyReportsUpdates: 'dailyReportsUpdates',
+
     dailyReportsDates: 'dailyReportsDates'
 
 }
