@@ -1384,7 +1384,7 @@ export class BranchComponent {
       // 2. تحقق من أن اليوم هو السادس
       console.log(serverDate.getDate());
 
-      if (serverDate.getDate() < 28) {
+      if (serverDate.getDate() < 6) {
         console.log('اليوم ليس السادس، لا حاجة للحذف.');
         return;
       }
