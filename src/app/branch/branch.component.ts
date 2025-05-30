@@ -1,5 +1,5 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, ElementRef, Inject, PLATFORM_ID, ViewChild } from '@angular/core';
+import { Component, ElementRef, Inject, PLATFORM_ID, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -1532,6 +1532,21 @@ export class BranchComponent {
   //     order.productId === productId
   //   );
   // }
+
+
+  @ViewChildren('input_0_recieved, input_1_recieved, input_2_recieved, input_3_recieved, input_0_add, input_1_add, input_2_add') allInputs!: QueryList<ElementRef>;
+
+  focusNextInput(currentRow: number, fieldName: string, event: any) {
+    event.preventDefault();
+    const nextRow = currentRow + 1;
+    const nextInputName = `input_${nextRow}_${fieldName}`;
+
+    const input = this.allInputs.find(el => el.nativeElement.getAttribute('ng-reflect-name') === nextInputName || el.nativeElement.getAttribute('id') === nextInputName || el.nativeElement.getAttribute('name') === nextInputName || el.nativeElement.getAttribute('ng-reflect-ng-model')?.includes(fieldName));
+
+    if (input) {
+      input.nativeElement.focus();
+    }
+  }
 
 }
 

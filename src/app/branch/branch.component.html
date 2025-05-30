@@ -229,8 +229,7 @@
         </div>
     </div>
 
-     <button *ngIf="dailyReports.length > 0"
-        (click)="exportPdfDaily()">Export pdf</button>
+    <button *ngIf="dailyReports.length > 0" (click)="exportPdfDaily()">Export pdf</button>
 
     <!-- <button (click)="getDailyReportsDates()">date</button> -->
     <div class=" table-container">
@@ -259,42 +258,50 @@
                         <td style="font-weight: bold; font-size: 13px;">{{ item.productName }}</td>
 
                         <td>
-                            <input
+                            <input #input_{{i}}_openingStockQnt
+                                (keydown.enter)="focusNextInput(i, 'openingStockQnt', $event)"
                                 [disabled]="isPositiveNumber(combinedData[i].openingStockQnt) && combinedData[i].openingStockId != -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('openingStockQnt', item, i)"
                                 [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true" [(ngModel)]="item.recieved"
-                                (ngModelChange)="onQuantityChange('recieved', item, i)" type="number" required>
+                            <input #input_{{i}}_recieved (keydown.enter)="focusNextInput(i, 'recieved', $event)"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                                [(ngModel)]="item.recieved" (ngModelChange)="onQuantityChange('recieved', item, i)"
+                                type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input #input_{{i}}_add (keydown.enter)="focusNextInput(i, 'add', $event)"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input #input_{{i}}_sales (keydown.enter)="focusNextInput(i, 'sales', $event)"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input #input_{{i}}_staffMeal (keydown.enter)="focusNextInput(i, 'staffMeal', $event)"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('staffMeal', item, i)" [(ngModel)]="combinedData[i].staffMeal"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input #input_{{i}}_transfer (keydown.enter)="focusNextInput(i, 'transfer', $event)"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input #input_{{i}}_dameged (keydown.enter)="focusNextInput(i, 'dameged', $event)"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
                                 type="number" required>
 
