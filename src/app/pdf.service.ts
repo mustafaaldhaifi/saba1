@@ -455,6 +455,7 @@ export class PdfService {
     doc.save(`${branchName}_Daily_${date}.pdf`);
   }
 
+
   items({
     name,
     align = 'center',
@@ -482,4 +483,120 @@ export class PdfService {
       },
     };
   }
+
+  exportMonthlyReport(dataByDay: { date: string, data: any[][] }[], branchName: string) {
+  const doc = new jsPDF();
+
+  dataByDay.forEach((dailyReport, index) => {
+    const { date, data } = dailyReport;
+
+      const topHeader = [
+      [
+        {
+          content: 'SABA (Authentic Yemini Cuisine)',
+          styles: {
+            halign: 'left' as HAlignType,
+            fontStyle: 'normal' as FontStyle,
+            fontSize: 8,
+            lineWidth: 0.2,
+            lineColor: [0, 0, 0] as Color,
+          },
+          colSpan: 3, // دمج العمودين الأول والثاني في هذا السطر
+        },
+        {
+          content: ` ${date} : التاريخ`,
+          styles: {
+            halign: 'right' as HAlignType,
+            fontStyle: 'normal' as FontStyle,
+            fontSize: 8,
+
+            lineWidth: 0.2,
+            lineColor: [0, 0, 0] as Color,
+          },
+          colSpan: 3, // دمج العمودين الثالث والرابع في هذا السطر
+        },
+        {
+          content: `${branchName} : اسم الفرع`,
+          styles: {
+            halign: 'right' as HAlignType,
+            fontStyle: 'normal' as FontStyle,
+            fontSize: 8,
+            lineWidth: 0.2,
+
+            lineColor: [0, 0, 0] as Color,
+          },
+          colSpan: 3, // دمج العمودين الثالث والرابع في هذا السطر
+        },
+      ],
+    ];
+
+    const headerRow: any[] = [];
+    headerRow.push(this.items({ name: 'العناصر' }));
+    headerRow.push(this.items({ name: 'الموجودة' }));
+    headerRow.push(this.items({ name: 'المستلم' }));
+    headerRow.push(this.items({ name: 'الجرد' }));
+    headerRow.push(this.items({ name: 'مبيعات' }));
+    headerRow.push(this.items({ name: 'وجبة موظف' }));
+    headerRow.push(this.items({ name: 'تحويل' }));
+    headerRow.push(this.items({ name: 'التالف' }));
+    headerRow.push(this.items({ name: 'المتبقي' }));
+    const topHeader2 = [headerRow];
+
+    const rows: any[][] = [];
+    const maxRows = 36;
+    const cellsPerRow = data[0]?.length || 0;
+
+    for (let i = 0; i < maxRows; i++) {
+      rows.push(new Array(cellsPerRow).fill(''));
+    }
+
+    for (let i = 0; i < data.length; i++) {
+      const rowIndex = i % maxRows;
+      const colStart = Math.floor(i / maxRows) * cellsPerRow;
+      for (let j = 0; j < cellsPerRow; j++) {
+        rows[rowIndex][colStart + j] = data[i][j];
+      }
+    }
+
+    autoTable(doc, {
+      head: [...topHeader, ...topHeader2],
+      body: rows,
+      styles: {
+        font: 'ARIAL',
+        fontStyle: 'normal',
+        fontSize: 8,
+        textColor: '#000000',
+        halign: 'center',
+      },
+      headStyles: {
+        halign: 'right',
+        fontStyle: 'normal',
+      },
+      columnStyles: {
+        0: { halign: 'center' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' },
+        4: { halign: 'center' },
+      },
+      margin: { horizontal: 10 },
+      startY: 25,
+      theme: 'striped',
+      didParseCell: function (data) {
+        if (data.section === 'body') {
+          data.cell.styles.lineWidth = { top: 0, bottom: 0.2, left: 0.2, right: 0.2 };
+          data.cell.styles.lineColor = [0, 0, 0];
+        }
+      },
+    });
+
+    // إضافة صفحة جديدة إن لم تكن الصفحة الأخيرة
+    if (index < dataByDay.length - 1) {
+      doc.addPage();
+    }
+  });
+
+  doc.save(`${branchName}_Monthly_Report.pdf`);
+}
+
 }

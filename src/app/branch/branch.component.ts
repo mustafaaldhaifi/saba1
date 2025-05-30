@@ -1488,6 +1488,51 @@ export class BranchComponent {
     // pdfService.exportDaily()
   }
 
+  async exportallPdfDaily() {
+    const pdfService = new PdfService();
+    let finalData: { date: string, data: any, }[] = [];
+
+    for (const element of this.dailyReportsDates) {
+      this.dateToAddInDaily = element;
+
+      this.dailyReportUpdates = await this.dailyReportService.getLastupdate(
+        this.branch.id,
+        Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!)),
+        this.apiService
+      );
+
+      this.dailyReports = await this.dailyReportService.getData(
+        this.selectedType.id,
+        this.branch.id,
+        element,
+        element,
+        this.dailyReportUpdates,
+        this.apiService
+      );
+
+      const date = this.dailyReportService.getDateKey(this.dateToAddInDaily!);
+
+      finalData.push({
+        data: this.getOrdersDaily(),
+        date: date
+      });
+    }
+
+    this.isReadDailyMode = true
+    // اطبع النتيجة للتأكد
+    console.log("Final Data", finalData);
+
+    // إنشاء PDF واحد للشهر كله
+    pdfService.exportMonthlyReport(finalData, this.branch.data.name);
+  }
+
+  isLastDayOfMonth(): boolean {
+    const testDate = new Date();
+    testDate.setDate(testDate.getDate() + 1); // أضف يوم واحد
+    return testDate.getDate() === 1; // إذا اليوم التالي هو أول يوم في الشهر، إذن اليوم هو آخر يوم
+  }
+
+
   getOrdersDaily(): any[][] {
     const data = this.data;
     console.log(data);
@@ -1532,21 +1577,5 @@ export class BranchComponent {
   //     order.productId === productId
   //   );
   // }
-
-
-  @ViewChildren('input_0_recieved, input_1_recieved, input_2_recieved, input_3_recieved, input_0_add, input_1_add, input_2_add') allInputs!: QueryList<ElementRef>;
-
-  focusNextInput(currentRow: number, fieldName: string, event: any) {
-    event.preventDefault();
-    const nextRow = currentRow + 1;
-    const nextInputName = `input_${nextRow}_${fieldName}`;
-
-    const input = this.allInputs.find(el => el.nativeElement.getAttribute('ng-reflect-name') === nextInputName || el.nativeElement.getAttribute('id') === nextInputName || el.nativeElement.getAttribute('name') === nextInputName || el.nativeElement.getAttribute('ng-reflect-ng-model')?.includes(fieldName));
-
-    if (input) {
-      input.nativeElement.focus();
-    }
-  }
-
 }
 
