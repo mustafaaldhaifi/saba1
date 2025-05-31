@@ -235,11 +235,11 @@
 
     <!-- <button (click)="getDailyReportsDates()">date</button> -->
     <div class=" table-container">
-        <div class="table fixed-header">
+        <div class="table ">
             <table *ngIf="branch" class="styled-table">
                 <thead>
                     <tr vz class="f-h">
-                        <th>الاصناف</th>
+                        <th style="position: sticky; left: 0;">الاصناف</th>
                         <th style="width: 28px;">
                             الموجودة
                         </th>
@@ -257,46 +257,53 @@
                     <tr *ngFor="let item of combinedData; let i = index"
                         [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
                         [style.border-bottom]="'1px solid #dee2e6'">
-                        <td style="font-weight: bold; font-size: 13px;">{{ item.productName }}</td>
+                        <td style="font-weight: bold; font-size: 13px; position: sticky;left: 0;"
+                            [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'">{{ item.productName }}</td>
 
                         <td>
-                            <input
+                            <input [attr.tabindex]="1000 + i"
                                 [disabled]="isPositiveNumber(combinedData[i].openingStockQnt) && combinedData[i].openingStockId != -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('openingStockQnt', item, i)"
                                 [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input [attr.tabindex]="2000 + i"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 [(ngModel)]="item.recieved" (ngModelChange)="onQuantityChange('recieved', item, i)"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input [attr.tabindex]="3000 + i"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input [attr.tabindex]="4000 + i"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input [attr.tabindex]="5000 + i"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('staffMeal', item, i)" [(ngModel)]="combinedData[i].staffMeal"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input [attr.tabindex]="6000 + i"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                            <input [attr.tabindex]="7000 + i"
+                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
                                 type="number" required>
 

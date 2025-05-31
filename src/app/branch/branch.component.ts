@@ -964,7 +964,7 @@ export class BranchComponent {
       typeId: doc.data()['typeId'],
       branchId: doc.data()['branchId'],
       date: doc.data()['date'],
-    }));
+    })).sort((a, b) => b.date.seconds - a.date.seconds);
     this.dailyReportsDates1 = this.dailyReportsDates
 
     console.log(this.dailyReportsDates);
@@ -1232,11 +1232,11 @@ export class BranchComponent {
   }
 
   async saveDaily() {
-    const confirmed = confirm(`هل انت متأكد من ادخال البيانات صحيحة`);
+    const confirmed = confirm(`هل انت متأكد من تسجيل جميع الاستلامات`);
     if (!confirmed) {
       return
     };
-    const confirmed1 = confirm(`هل انت متأكد من ارسال البيانات وحفظها`);
+    const confirmed1 = confirm(`هل انت متأكد من جميع الادخالات لايمكن التعديل بعد الحفظ`);
     if (!confirmed1) {
       return
     };
@@ -1479,7 +1479,7 @@ export class BranchComponent {
 
     const formattedDate = `${this.dateToAddInDaily!.getFullYear()}-${String(this.dateToAddInDaily!.getMonth() + 1).padStart(2, '0')}-${String(this.dateToAddInDaily!.getDate()).padStart(2, '0')}`;
     console.log("typeee", this.selectedType);
-    const data = this.getOrdersDaily()
+    const data = this.getOrdersDaily(this.dailyReports)
     console.log("dattttaaa", data);
 
 
@@ -1489,31 +1489,32 @@ export class BranchComponent {
   }
 
   async exportallPdfDaily() {
+    this.isLoading = true
     const pdfService = new PdfService();
     let finalData: { date: string, data: any, }[] = [];
 
     for (const element of this.dailyReportsDates) {
-      this.dateToAddInDaily = element;
+      // this.dateToAddInDaily = element;
 
-      this.dailyReportUpdates = await this.dailyReportService.getLastupdate(
+      const dailyReportUpdates = await this.dailyReportService.getLastupdate(
         this.branch.id,
-        Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!)),
+        Timestamp.fromDate(this.normalizeDate(element)),
         this.apiService
       );
 
-      this.dailyReports = await this.dailyReportService.getData(
+      const dailyReports = await this.dailyReportService.getData(
         this.selectedType.id,
         this.branch.id,
         element,
         element,
-        this.dailyReportUpdates,
+        dailyReportUpdates,
         this.apiService
       );
 
-      const date = this.dailyReportService.getDateKey(this.dateToAddInDaily!);
+      const date = this.dailyReportService.getDateKey(element);
 
       finalData.push({
-        data: this.getOrdersDaily(),
+        data: this.getOrdersDaily(dailyReports),
         date: date
       });
     }
@@ -1524,6 +1525,8 @@ export class BranchComponent {
 
     // إنشاء PDF واحد للشهر كله
     pdfService.exportMonthlyReport(finalData, this.branch.data.name);
+    this.isLoading = false
+
   }
 
   isLastDayOfMonth(): boolean {
@@ -1533,7 +1536,7 @@ export class BranchComponent {
   }
 
 
-  getOrdersDaily(): any[][] {
+  getOrdersDaily(dailyReports: any): any[][] {
     const data = this.data;
     console.log(data);
 
@@ -1541,7 +1544,7 @@ export class BranchComponent {
 
     for (let i = 0; i < data.length; i++) {
       const product = data[i];
-      const daily = this.dailyReports.find((item: any) =>
+      const daily = dailyReports.find((item: any) =>
         item.productId === product.id
       );
 
