@@ -1019,6 +1019,39 @@ export class DashboardComponent implements OnInit {
       // this.errorMessage = "Failed to load settings"; // Example error handling
     }
   }
+
+  ////
+  allowableEdits: any
+  async getAllowableEdits(): Promise<void> {
+    this.isLoading = true
+    try {
+      const db = getFirestore();
+
+      // Reference to the specific document
+      const docRef = doc(db, "settings", 'allowableEdits');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const Data = docSnap.data();
+        this.allowableEdits = Data['typeIds']
+        console.log("allowableEdits data:", Data);
+        // You can assign the data to a component property here
+        // this.settings = settingsData; // Assuming you have a settings property
+      } else {
+        console.log("No allowableEdits document found!");
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      // You can handle the error here, like showing a user message
+      // this.errorMessage = "Failed to load settings"; // Example error handling
+    } finally {
+      this.isLoading = false
+    }
+  }
+
+  isSelectedTypeAllowed(): boolean {
+    return this.allowableEdits.includes(this.selectedType.id);
+  }
+
   datesToAdd: any = []
   async getDatesToAdd(): Promise<void> {
     const db = getFirestore();
@@ -2405,6 +2438,50 @@ export class DashboardComponent implements OnInit {
     // console.log('any', $event);
 
   }
+
+  async toggleAlowEdit() {
+    this.isLoading = true;
+    try {
+      const db = getFirestore();
+      const docRef = doc(db, "settings", "allowableEdits");
+
+      const docSnap = await getDoc(docRef);
+
+      let currentTypeIds: string[] = [];
+
+      if (docSnap.exists()) {
+        currentTypeIds = docSnap.data()['typeIds'] || [];
+      }
+
+      const idAsString = this.selectedType.id;
+
+      const index = currentTypeIds.indexOf(idAsString);
+
+      if (index > -1) {
+        // Remove if already exists
+        currentTypeIds.splice(index, 1);
+        console.log("Type ID removed");
+      } else {
+        // Add if not exists
+        currentTypeIds.push(idAsString);
+        console.log("Type ID added");
+      }
+
+      // Update in Firestore
+      await setDoc(docRef, { typeIds: currentTypeIds }, { merge: true });
+
+      // Update local state
+      this.allowableEdits = currentTypeIds;
+
+    } catch (error) {
+      console.error("Error toggling edit permission:", error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+
+
 
 
   ///// Daily

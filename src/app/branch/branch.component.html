@@ -98,10 +98,11 @@
                         <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
                         <td>
-                            <input (input)="onQntFChange(combinedData[i])" *ngIf="item.id === -1 || selectedType.id === reportMonthlyTypeId" #qntFInput="ngModel"
+                            <input (input)="onQntFChange(combinedData[i])"
+                                *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntFInput="ngModel"
                                 [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
                                 [(ngModel)]="combinedData[i].qntF" type="number" required>
-                            <div *ngIf="item.id !== -1 && selectedType.id !== reportMonthlyTypeId">{{ item.qntF }}</div>
+                            <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qntF }}</div>
                         </td>
 
                         <td>
@@ -109,10 +110,10 @@
                         </td>
 
                         <td *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
-                            <input (input)="onQntChange(i,combinedData[i])" *ngIf="item.id === -1" #qntInput="ngModel"
+                            <input (input)="onQntChange(i,combinedData[i])" *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntInput="ngModel"
                                 [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
                                 [(ngModel)]="combinedData[i].qnt" type="number" required>
-                            <div *ngIf="item.id !== -1">{{ item.qnt }}</div>
+                            <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qnt }}</div>
                         </td>
 
                         <td *ngIf="selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">

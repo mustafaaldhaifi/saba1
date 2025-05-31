@@ -280,6 +280,7 @@ export class BranchComponent {
           this.branch = await this.getRelatedBranche(name!);
           await this.getTypes()
           await this.getProducts()
+          await this.getAllowableEdits()
 
 
           if (this.selectedType.id == '5') {
@@ -289,6 +290,7 @@ export class BranchComponent {
               this.getDatesToAdd(),
               this.getPreOrders(),
               this.getSettings(),
+
             ]);
 
             this.preOrders.forEach((pre: any) => {
@@ -697,7 +699,7 @@ export class BranchComponent {
     }
   }
   isFullFilled(): boolean {
-    if (this.ordersToUpdate.length > 0) {
+    if (this.ordersToUpdate.length > 0 || this.ordersToAdd.length == 0) {
       return false
     }
     // Check if combinedData exists and is an array
@@ -791,7 +793,7 @@ export class BranchComponent {
 
   isUpdateEnabled(): boolean {
     // All items must have status !== "0"
-    if (this.selectedType.id == this.reportMonthlyTypeId && this.ordersToUpdate.length > 0) {
+    if (this.isSelectedTypeAllowed() && this.ordersToUpdate.length > 0) {
       return true
     }
 
@@ -1592,6 +1594,40 @@ export class BranchComponent {
 
   ///////Report Monthly
   reportMonthlyTypeId = "WbAP06wLDRvZFTYUtkjU"
-  ordersToUpdates = []
+
+
+  allowableEdits: any
+  async getAllowableEdits(): Promise<void> {
+    this.isLoading = true
+    try {
+      const db = getFirestore();
+
+      // Reference to the specific document
+      const docRef = doc(db, "settings", 'allowableEdits');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const Data = docSnap.data();
+        this.allowableEdits = Data['typeIds']
+        console.log("allowableEdits data:", Data);
+        // You can assign the data to a component property here
+        // this.settings = settingsData; // Assuming you have a settings property
+      } else {
+        console.log("No allowableEdits document found!");
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      // You can handle the error here, like showing a user message
+      // this.errorMessage = "Failed to load settings"; // Example error handling
+    } finally {
+      // this.isLoading = false
+    }
+  }
+  isSelectedTypeAllowed(): boolean {
+    if (this.allowableEdits) {
+      return this.allowableEdits.includes(this.selectedType.id);
+    }
+    else return false
+
+  }
 }
 
