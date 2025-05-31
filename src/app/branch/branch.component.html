@@ -98,10 +98,10 @@
                         <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
 
                         <td>
-                            <input (input)="onQntFChange(combinedData[i])" *ngIf="item.id === -1" #qntFInput="ngModel"
+                            <input (input)="onQntFChange(combinedData[i])" *ngIf="item.id === -1 || selectedType.id === reportMonthlyTypeId" #qntFInput="ngModel"
                                 [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
                                 [(ngModel)]="combinedData[i].qntF" type="number" required>
-                            <div *ngIf="item.id !== -1">{{ item.qntF }}</div>
+                            <div *ngIf="item.id !== -1 && selectedType.id !== reportMonthlyTypeId">{{ item.qntF }}</div>
                         </td>
 
                         <td>

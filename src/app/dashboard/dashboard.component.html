@@ -16,7 +16,7 @@
   </div>
 
 
-  <!-- <button (click)="addProductsToCity()">add</button> -->
+  <!-- <button (click)="addProductsToCity()">add Products To City</button> -->
   <!-- <button (click)="exportProductsToFile()">buckup product</button> -->
   <!-- <button (click)="exportBranchesOrdersToFile()">buckup  branches orders</button> -->
 
@@ -44,6 +44,7 @@
         class="dropdown form-select">
         <option value="ryad">الرياض</option>
         <option value="other">خارج الرياض</option>
+        <option *ngIf="selectedType && selectedType.id == '5'" value="all">الكل</option>
       </select>
     </div>
 
@@ -118,27 +119,9 @@
   </div>
 
 
-  <div>
 
-    <div class="myHead d-flex align-items-center justify-content-between p-3"
-      *ngIf="selectedType &&selectedType.id != '5'">
-      <div *ngIf="selectedDatey" class="selected-date d-flex align-items-center">
-        <h2 class="m-0">{{selectedDatey.createdAt.toDate() | date:'fullDate'}}</h2>
-      </div>
-      <span *ngIf="orders.length > 0">
-        <button class="btn btn-primary logout-btn" (click)="exportToExcel()">
-          <i class="fas fa-file-export me-2"></i> Export All
-        </button>
-        <button class="btn btn-primary logout-btn" (click)="exportToExcel2()">
-          <i class="fas fa-file-export me-2"></i> Export Notes
-        </button>
-        <button class="btn btn-primary logout-btn" (click)="exportToExcel3()">
-          <i class="fas fa-file-export me-2"></i> Export Request
-        </button>
-      </span>
 
-    </div>
-    <div class="myHead d-flex align-items-center justify-content-between p-3"
+  <!-- <div class="myHead d-flex align-items-center justify-content-between p-3"
       *ngIf="selectedType &&selectedType.id == '5'">
       <div *ngIf="selectedDatey" class="selected-date d-flex align-items-center">
         <h2 class="m-0">{{selectedDailyDate.date.toDate() | date:'fullDate'}}</h2>
@@ -153,9 +136,216 @@
         <button class="btn btn-primary logout-btn" (click)="exportToExcel3()">
           <i class="fas fa-file-export me-2"></i> Export Request
         </button>
-      </span>
+      </span> -->
+
+
+
+
+  <ng-container *ngIf="selectedType && selectedType.id != '5'">
+    <div *ngIf="selectedDatey" style="text-align: center;">
+      <h2 class="m-0">{{selectedDatey.createdAt.toDate() | date:'fullDate'}}</h2>
+    </div>
+    <span *ngIf="orders.length > 0">
+      <button class="btn btn-primary logout-btn" (click)="exportToExcel()">
+        <i class="fas fa-file-export me-2"></i> Export All
+      </button>
+      <button class="btn btn-primary logout-btn" (click)="exportToExcel2()">
+        <i class="fas fa-file-export me-2"></i> Export Notes
+      </button>
+      <button class="btn btn-primary logout-btn" (click)="exportToExcel3()">
+        <i class="fas fa-file-export me-2"></i> Export Request
+      </button>
+    </span>
+    <div class="myHead d-flex align-items-center justify-content-between" *ngIf="selectedType &&selectedType.id != '5'">
+
+
+      <div class="table-container">
+        <table class="styled-table">
+          <thead>
+            <tr class="f-h">
+              <th></th>
+              <th></th>
+              <th></th>
+              <th *ngIf="selectedType.id != '5'"></th>
+              <th *ngFor="let branch of branches" colspan="3" style="
+              background-color: #b50000;
+              color: white;
+              padding: 10px;
+              text-align: center;
+              vertical-align: middle;
+              font-weight: bold;
+              position: relative;
+            ">
+                <div style="display: flex; flex-direction: column; align-items: center;"
+                  (click)="onSelectBranch(branch)">
+                  <span (click)="printOrderDetail(branch)">{{ branch.name }}</span>
+
+                  <div style="margin-top: 5px; display: flex; gap: 10px; align-items: center;">
+                    <!-- <a (click)="changePassword(branch)" class="password-icon" style="color: #f1c40f;" title="تغيير كلمة المرور">
+                  <i class="fas fa-user-lock"></i>
+                </a> -->
+
+                    <a *ngIf="orders.length > 0" (click)="exportPdf(branch)" style=" cursor: pointer;"
+                      title="تصدير PDF">
+                      <i class="fas fa-file-pdf"></i>
+                    </a>
+
+                    <!-- تمت الإضافة -->
+                    <div *ngIf="selectedType.id != '5'" style="display: flex; align-items: center; gap: 5px;">
+                      <i class="fas fa-check-circle" [style.color]="getDetail(branch) ? '#27ae60' : '#ccc'"
+                        title="تمت الإضافة"></i>
+                      <span style="font-size: 12px;">تمت الإضافة</span>
+                    </div>
+
+                    <!-- تم التحديث -->
+                    <div *ngIf="selectedType.id != '5'" style="display: flex; align-items: center; gap: 5px;">
+                      <i class="fas fa-sync-alt"
+                        [style.color]="getDetail(branch) && getDetail(branch)!.status == '1' ? '#27ae60' : '#ccc'"
+                        title="تم التحديث"></i>
+                      <span style="font-size: 12px;">تم التحديث</span>
+                    </div>
+
+                    <!-- <button (click)="reset(branch)">reset</button> -->
+                    <!-- <button (click)="addOrderDate(branch)">add date</button> -->
+
+
+                  </div>
+                </div>
+              </th>
+
+            </tr>
+            <tr class="s-h">
+              <th>#</th>
+              <th class="fixed-column name-column">Product Name</th>
+              <!-- <th >Product Name</th> -->
+
+              <th class="fixed-column unit-column">Requested Unit</th>
+              <th *ngIf="selectedType.id != '5'" class="fixed-column unitF-column">Remain Unit</th>
+              <ng-container *ngFor="let branch of branches">
+
+                <th *ngIf="selectedType.id != '5'" (click)="getId2(branch)">Requested Qnt</th>
+                <th *ngIf="selectedType.id != '5'" (click)="getSameOrders(branch)">Remain Qnt</th>
+                <th *ngIf="selectedType.id != '5'">Status</th>
+                <!-- <th colspan="1"></th> -->
+              </ng-container>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Existing Products -->
+            <tr class="fixed-column id-column" *ngFor="let product of data; let i = index; trackBy: trackByProductId;">
+              <td (click)="deleteProduct(product.id)" class="delete-cell">
+                {{ i + 1 }}
+              </td>
+              <td class="fixed-column name-column">
+                <input type="text" [value]="product.name" [(ngModel)]="product.name"
+                  (ngModelChange)="onProductNameChange(i, product)" class="product-input">
+              </td>
+              <td class="fixed-column unit-column">
+                <input type="text" [value]="product.unit" [(ngModel)]="product.unit"
+                  (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
+              </td>
+              <td class="fixed-column unitF-column" *ngIf="selectedType.id != '5'">
+                <input type="text" [value]="product.unitF" [(ngModel)]="product.unitF"
+                  (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
+              </td>
+
+              <!-- Quantity and Status for each branch -->
+              <ng-container *ngFor="let branch of branches; trackBy: trackByBranchId">
+                <td class="branch-cell">
+                  <!-- Find the matching order once per cell -->
+                  <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                    <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qnt"
+                      (ngModelChange)="onOrderChange(order)" class="quantity-input">
+                  </ng-container>
+                </td>
+
+                <td class="branch-cell">
+                  <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                    <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qntF"
+                      (ngModelChange)="onOrderChange(order)" class="quantity-input">
+                  </ng-container>
+                </td>
+
+                <td class="branch-cell">
+                  <!-- <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                  <select *ngIf="order?.id" [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)"
+                    class="status-select">
+                    <option value="0"></option>
+                    <option value="1">Received</option>
+                    <option value="2">Not Received</option>
+                    <option value="4">Not Requested</option>
+                   else <option >Not Same ({{order.status}})</option>
+  
+                  </select>
+                </ng-container> -->
+                  <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                    <select [style.background-color]="getStatusColor(order.status)" *ngIf="order?.id"
+                      [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)" class="status-select">
+                      <option value="0"></option>
+                      <option value="1">Received <span
+                          *ngIf="selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">({{order.qntNotRequirement}})</span>
+                      </option>
+                      <option value="2">Not Received</option>
+                      <option value="4">Not Requested</option>
+                      <option *ngIf="![0, 1, 2, 4].includes(order.status)" value="{{order.status}}">Not Same
+                        ({{order.qntNotRequirement}})</option>
+                    </select>
+                  </ng-container>
+                </td>
+              </ng-container>
+            </tr>
+
+            <!-- New Products to Add -->
+            <tr *ngFor="let newProduct of productsToAdd; let i = index; ">
+              <td>New</td>
+              <td>
+                <input style="width: 100px;" type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Product name"
+                  class="product-input">
+              </td>
+              <td>
+                <input type="text" [(ngModel)]="productsToAdd[i].unit" placeholder="Unit" class="unit-input">
+              </td>
+              <td>
+                <input type="text" [(ngModel)]="productsToAdd[i].unitF" placeholder="UnitF" class="unit-input">
+              </td>
+              <td *ngFor="let branch of branches" colspan="3" class="empty-cell"></td>
+            </tr>
+
+            <!-- Add New Product Row -->
+            <tr (click)="addToProductsToAdd()" class="add-row">
+              <td colspan="4">
+                <button class="btn date-btn">
+                  + Add New Product
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
     </div>
+
+  </ng-container>
+
+  <ng-container *ngIf="selectedType && selectedType.id == '5'">
+
+    <div style="text-align: center;direction: rtl;">
+      <div class="dropdown-container mb-3 d-flex align-items-center gap-3 justify-content-center">
+        <div>
+          <label for="startDate" class="dropdown-label me-2">من تاريخ:</label>
+          <input id="startDate" type="date" class="form-control" [(ngModel)]="startDate"
+            (change)="onDateRangeChange()" />
+        </div>
+
+        <div>
+          <label for="endDate" class="dropdown-label me-2">إلى تاريخ:</label>
+          <input id="endDate" type="date" class="form-control" [(ngModel)]="endDate" (change)="onDateRangeChange()" />
+        </div>
+      </div>
+    </div>
+
+
+
 
     <div class="table-container">
       <table class="styled-table">
@@ -186,23 +376,6 @@
                     <i class="fas fa-file-pdf"></i>
                   </a>
 
-                  <!-- تمت الإضافة -->
-                  <div style="display: flex; align-items: center; gap: 5px;">
-                    <i class="fas fa-check-circle" [style.color]="getDetail(branch) ? '#27ae60' : '#ccc'"
-                      title="تمت الإضافة"></i>
-                    <span style="font-size: 12px;">تمت الإضافة</span>
-                  </div>
-
-                  <!-- تم التحديث -->
-                  <div style="display: flex; align-items: center; gap: 5px;">
-                    <i class="fas fa-sync-alt"
-                      [style.color]="getDetail(branch) && getDetail(branch)!.status == '1' ? '#27ae60' : '#ccc'"
-                      title="تم التحديث"></i>
-                    <span style="font-size: 12px;">تم التحديث</span>
-                  </div>
-
-                  <!-- <button (click)="reset(branch)">reset</button> -->
-                  <!-- <button (click)="addOrderDate(branch)">add date</button> -->
 
 
                 </div>
@@ -215,12 +388,11 @@
             <th class="fixed-column name-column">Product Name</th>
             <!-- <th >Product Name</th> -->
 
-            <th class="fixed-column unit-column">Requested Unit</th>
+            <th class="fixed-column unit-column">Unit</th>
             <th *ngIf="selectedType.id != '5'" class="fixed-column unitF-column">Remain Unit</th>
             <ng-container *ngFor="let branch of branches">
-              <th (click)="getId2(branch)">Requested Qnt</th>
-              <th (click)="getSameOrders(branch)">Remain Qnt</th>
-              <th>Status</th>
+
+              <th colspan="3" style="background-color: #b50000;"></th>
             </ng-container>
           </tr>
         </thead>
@@ -238,14 +410,14 @@
               <input type="text" [value]="product.unit" [(ngModel)]="product.unit"
                 (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
             </td>
-            <td class="fixed-column unitF-column" *ngIf="selectedType.id != '5'">
+            <!-- <td class="fixed-column unitF-column" *ngIf="selectedType.id != '5'">
               <input type="text" [value]="product.unitF" [(ngModel)]="product.unitF"
                 (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
-            </td>
+            </td> -->
 
             <!-- Quantity and Status for each branch -->
             <ng-container *ngFor="let branch of branches; trackBy: trackByBranchId">
-              <td class="branch-cell">
+              <td class="branch-cell" colspan="3">
                 <!-- Find the matching order once per cell -->
                 <ng-container *ngIf="getOrder(branch.id, product.id) as order">
                   <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qnt"
@@ -253,39 +425,8 @@
                 </ng-container>
               </td>
 
-              <td class="branch-cell">
-                <ng-container *ngIf="getOrder(branch.id, product.id) as order">
-                  <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qntF"
-                    (ngModelChange)="onOrderChange(order)" class="quantity-input">
-                </ng-container>
-              </td>
 
-              <td class="branch-cell">
-                <!-- <ng-container *ngIf="getOrder(branch.id, product.id) as order">
-                  <select *ngIf="order?.id" [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)"
-                    class="status-select">
-                    <option value="0"></option>
-                    <option value="1">Received</option>
-                    <option value="2">Not Received</option>
-                    <option value="4">Not Requested</option>
-                   else <option >Not Same ({{order.status}})</option>
-  
-                  </select>
-                </ng-container> -->
-                <ng-container *ngIf="getOrder(branch.id, product.id) as order">
-                  <select [style.background-color]="getStatusColor(order.status)" *ngIf="order?.id"
-                    [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)" class="status-select">
-                    <option value="0"></option>
-                    <option value="1">Received <span
-                        *ngIf="selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">({{order.qntNotRequirement}})</span>
-                    </option>
-                    <option value="2">Not Received</option>
-                    <option value="4">Not Requested</option>
-                    <option *ngIf="![0, 1, 2, 4].includes(order.status)" value="{{order.status}}">Not Same
-                      ({{order.qntNotRequirement}})</option>
-                  </select>
-                </ng-container>
-              </td>
+
             </ng-container>
           </tr>
 
@@ -299,15 +440,13 @@
             <td>
               <input type="text" [(ngModel)]="productsToAdd[i].unit" placeholder="Unit" class="unit-input">
             </td>
-            <td>
-              <input type="text" [(ngModel)]="productsToAdd[i].unitF" placeholder="UnitF" class="unit-input">
-            </td>
+
             <td *ngFor="let branch of branches" colspan="3" class="empty-cell"></td>
           </tr>
 
           <!-- Add New Product Row -->
           <tr (click)="addToProductsToAdd()" class="add-row">
-            <td colspan="4">
+            <td colspan="3">
               <button class="btn date-btn">
                 + Add New Product
               </button>
@@ -316,11 +455,15 @@
         </tbody>
       </table>
     </div>
-  </div>
+
+  </ng-container>
+</div>
 
 
 
-  <!-- <div class="myHead">
+
+
+<!-- <div class="myHead">
 
     <div class="container">
       <div class="dropdown-container">
@@ -342,7 +485,7 @@
     </button>
   </div> -->
 
-  <!-- <div class="form-group">
+<!-- <div class="form-group">
     <label for="dateSelect">Select Date</label>
     <div class="input-group">
       <input type="date" class="form-control" id="dateSelect" 
@@ -353,18 +496,16 @@
     </div>
   </div> -->
 
-  <!-- <button class="btn logout-btn" (click)="moveDate()">
+<!-- <button class="btn logout-btn" (click)="moveDate()">
     Move
   </button> -->
 
-  <!-- <button class="btn logout-btn" style="margin: 10px;" (click)="exportToExcel()">
+<!-- <button class="btn logout-btn" style="margin: 10px;" (click)="exportToExcel()">
 
   </button> -->
-  <!-- <select [(ngModel)]="movableDate" (ngModelChange)="onMoveChange($event)" class="status-select">
+<!-- <select [(ngModel)]="movableDate" (ngModelChange)="onMoveChange($event)" class="status-select">
     <option *ngFor="let date of preOrders" [value]="date">
       {{date.createdAt.toDate() | date:'mediumDate'}}
     </option>
   </select> -->
-  <!-- Products Table -->
-
-</div>
+<!-- Products Table -->

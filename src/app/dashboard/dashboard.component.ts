@@ -704,7 +704,7 @@ export class DashboardComponent implements OnInit {
       // this.data = products;
 
       if (this.selectedType) {
-        if (this.selectedType.id !== '5') {
+        if (this.selectedType.id == '5') {
           // this.orders = orders;
           // console.log(orders);
 
@@ -2528,4 +2528,28 @@ export class DashboardComponent implements OnInit {
     this.selectedDailyDate = $event
 
   }
+
+  startDate: string = '';
+  endDate: string = '';
+  filteredReports: any[] = [];
+
+  onDateRangeChange() {
+    if (this.startDate && this.endDate) {
+      const from = new Date(this.startDate);
+      const to = new Date(this.endDate);
+
+      if (from > to) {
+        alert('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+        return;
+      }
+
+      this.filteredReports = this.dailyReportsDates.filter((item: any) => {
+        const itemDate = item.date.toDate(); // تأكد أنه Date
+        return itemDate >= from && itemDate <= to;
+      });
+
+      console.log('البيانات المفلترة:', this.filteredReports);
+    }
+  }
+
 }

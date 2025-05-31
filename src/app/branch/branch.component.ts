@@ -496,6 +496,8 @@ export class BranchComponent {
       this.addToOrdersToAdd(item);
     }
     else {
+      console.log("itemm", item);
+
       this.addToOrdersToUpdate(item)
     }
   }
@@ -695,6 +697,9 @@ export class BranchComponent {
     }
   }
   isFullFilled(): boolean {
+    if (this.ordersToUpdate.length > 0) {
+      return false
+    }
     // Check if combinedData exists and is an array
     if (this.selectedType && this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU') {
       const a = this.combinedData.every((d: any) => {
@@ -786,6 +791,10 @@ export class BranchComponent {
 
   isUpdateEnabled(): boolean {
     // All items must have status !== "0"
+    if (this.selectedType.id == this.reportMonthlyTypeId && this.ordersToUpdate.length > 0) {
+      return true
+    }
+
     if (!this.combinedData.every(e => e.status !== "0")) return false;
 
     if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
@@ -831,7 +840,7 @@ export class BranchComponent {
 
   }
   addNewOrder(date: any) {
-    if (this.isChangeStatus() == true) {
+    if (this.isChangeStatus() == true && this.selectedType.id != this.reportMonthlyTypeId) {
       alert("يجب تسجيل حالة الاستلام للطلبية السابقة"); // "Receipt status must be recorded for previous students"
       return;
     }
@@ -1580,5 +1589,9 @@ export class BranchComponent {
   //     order.productId === productId
   //   );
   // }
+
+  ///////Report Monthly
+  reportMonthlyTypeId = "WbAP06wLDRvZFTYUtkjU"
+  ordersToUpdates = []
 }
 
