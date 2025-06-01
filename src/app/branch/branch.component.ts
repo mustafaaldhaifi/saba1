@@ -1313,6 +1313,29 @@ export class BranchComponent {
     // Recalculate closeStock using productUnit
     const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
     this.combinedData[i].closeStock = updatedCloseStock;
+
+
+
+    // إذا كان المنتج هو اللحم وتم تعديل المبيعات
+    if (field === 'sales' && this.combinedData[i].productId === "m1srRxKTFohPt84R9LIA") {
+      const meatSalesRaw = this.combinedData[i].sales;
+      const cupIndex = this.combinedData.findIndex(p => p.productId === "UTnRc0oWxnF8ndBPrcCW");
+
+      if (cupIndex !== -1) {
+        if (meatSalesRaw === null || meatSalesRaw === undefined || meatSalesRaw === '') {
+          // إذا كانت المبيعات فارغة، اجعل staffMeal فارغة
+          this.combinedData[cupIndex].staffMeal = '';
+        } else {
+          const meatSales = Number(meatSalesRaw) || 0;
+          this.combinedData[cupIndex].staffMeal = meatSales * 2;
+        }
+
+        // تحديث المخزون الختامي لمنتج الكاسات
+        const cupProductUnit = this.combinedData[cupIndex].productUnit ?? 1;
+        this.combinedData[cupIndex].closeStock = this.calculateClosingStock(this.combinedData[cupIndex], undefined, cupProductUnit);
+      }
+    }
+
     console.log(this.combinedData);
 
   }
