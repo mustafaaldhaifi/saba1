@@ -1154,6 +1154,8 @@ export class BranchComponent {
         productId: product.id,
         productName: product.name,
         productUnit: product.unit,
+        parentProduct: product.parentProduct,
+
         openingStockId: this.isReadDailyMode
           ? (report?.openingStockId ?? 1)
           : (openingStock?.id ?? -1),
@@ -1171,7 +1173,64 @@ export class BranchComponent {
       };
     });
 
+    let productsHaveSubProducts: any[] = [];
+    let idsToDelete: any[] = [];
+
+    this.combinedData.forEach((item: any, index1: number) => {
+      if (item.parentProduct) {
+        const parentProduct1 = this.combinedData.find((element: any) => element.productId == item.parentProduct);
+
+        if (parentProduct1) {
+          const index = productsHaveSubProducts.findIndex((d: any) => d.productId == item.parentProduct);
+
+          // استبعاد بعض الحقول من المنتج الفرعي
+          const {
+            openingStockId, openingStockQnt, recieved, transfer, closeStock, productName1, productUnit,
+            ...filteredItem
+          } = item;
+
+          // استبعاد الحقول من المنتج الرئيسي
+          const {
+            add, dameged, parentProduct, sales, staffMeal, ...filteredParent
+          } = parentProduct1;
+
+          if (index != -1) {
+            productsHaveSubProducts[index].products.push(filteredItem);
+          } else {
+            filteredParent.products = [filteredItem];
+            productsHaveSubProducts.push(filteredParent);
+          }
+
+          idsToDelete.push(item.productId);
+        }
+      }
+    });
+
+
+
+    // إزالة العناصر الفرعية من القائمة الأصلية
+    this.combinedData = this.combinedData
+      .filter((item: any) => !idsToDelete.includes(item.productId))
+      .concat(productsHaveSubProducts); // إضافة المجموعات الجديدة
+
+    const groupedByProductId = new Map();
+
+    this.combinedData.forEach(item => {
+      const existing = groupedByProductId.get(item.productId);
+
+      // إذا كان المنتج الحالي يحتوي على منتجات فرعية أو لم تتم إضافته بعد
+      if (!existing || (item.products?.length && (!existing.products || existing.products.length === 0))) {
+        groupedByProductId.set(item.productId, item);
+      }
+    });
+
+    // إعادة تعيين combinedData فقط إلى المنتجات المرغوبة
+    this.combinedData = Array.from(groupedByProductId.values());
+
+
+
     console.log('combinedData', this.combinedData);
+    console.log('productsHaveSubProducts', productsHaveSubProducts);
   }
 
   calculateClosingStock(
@@ -1191,20 +1250,36 @@ export class BranchComponent {
       // Two-argument version
       openingStockQnt = Number(openingStock?.openingStockQnt ?? 0);
       recieved = Number(reportOrData?.recieved ?? 0);
-      add = Number(reportOrData?.add ?? 0);
-      sales = Number(reportOrData?.sales ?? 0);
-      staffMeal = Number(reportOrData?.staffMeal ?? 0);
+      add = reportOrData?.products
+        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.add || 0), 0)
+        : Number(reportOrData?.add ?? 0);
+      sales = reportOrData?.products
+        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.sales || 0), 0)
+        : Number(reportOrData?.sales ?? 0);
+      staffMeal = reportOrData?.products
+        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
+        : Number(reportOrData?.staffMeal ?? 0);
       transfer = Number(reportOrData?.transfer ?? 0);
-      dameged = Number(reportOrData?.dameged ?? 0);
+      dameged = reportOrData?.products
+        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
+        : Number(reportOrData?.dameged ?? 0);
     } else {
       // One-object version
       openingStockQnt = Number(reportOrData?.openingStockQnt ?? 0);
       recieved = Number(reportOrData?.recieved ?? 0);
-      add = Number(reportOrData?.add ?? 0);
-      sales = Number(reportOrData?.sales ?? 0);
-      staffMeal = Number(reportOrData?.staffMeal ?? 0);
+      add = reportOrData?.products
+        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.add || 0), 0)
+        : Number(reportOrData?.add ?? 0);
+      sales = reportOrData?.products
+        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.sales || 0), 0)
+        : Number(reportOrData?.sales ?? 0);
+      staffMeal = reportOrData?.products
+        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
+        : Number(reportOrData?.staffMeal ?? 0);
       transfer = Number(reportOrData?.transfer ?? 0);
-      dameged = Number(reportOrData?.dameged ?? 0);
+      dameged = reportOrData?.products
+        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
+        : Number(reportOrData?.dameged ?? 0);
     }
 
     const total =
@@ -1243,6 +1318,30 @@ export class BranchComponent {
   }
 
   async saveDaily() {
+
+    let newCombinedData: any[] = [];
+
+    this.combinedData.forEach(group => {
+      if (group.products && group.products.length > 0) {
+        newCombinedData.push(...group.products); // أضف المنتجات الفرعية
+        delete group.products; // احذف الحقل من المنتج الرئيسي
+      }
+      newCombinedData.push(group); // أضف المنتج الرئيسي بعد الحذف
+    });
+
+    // حذف الحقول التي قيمتها undefined أو null من كل عنصر
+    newCombinedData = newCombinedData.map(item => {
+      Object.keys(item).forEach(key => {
+        if (item[key] === undefined || item[key] === null) {
+          delete item[key];
+        }
+      });
+      return item;
+    });
+    // this.combinedData = newCombinedData;
+    console.log("nnnnn", newCombinedData);
+
+
     const confirmed = confirm(`هل انت متأكد من تسجيل جميع الاستلامات`);
     if (!confirmed) {
       return
@@ -1257,7 +1356,7 @@ export class BranchComponent {
       let openStockToAdd: any = []
       let openStockToUpdate: any = []
 
-      this.combinedData.forEach((item: any) => {
+      newCombinedData.forEach((item: any) => {
         if (item.openingStockId == -1) {
           openStockToAdd.push({ branchId: this.branch.id, productId: item.productId, openingStockQnt: item.closeStock, typeId: this.selectedType.id, createdAt: Timestamp.now() })
         } else {
@@ -1266,21 +1365,21 @@ export class BranchComponent {
       })
 
       const batch = writeBatch(this.apiService.db);
-      openStockToAdd.forEach((item: any) => {
-        const summaryRef = doc(collection(this.apiService.db, collectionNames.openingStock));
-        batch.set(summaryRef, item);
-      })
+
 
       openStockToUpdate.forEach((item: any) => {
-        const docRef2 = doc(this.apiService.db, collectionNames.openingStock, item.openingStockId);
-        batch.update(docRef2, {
-          updatedAt: Timestamp.now(),
-          openingStockQnt: item.closeStock
-        });
+        if (item.openingStockId) {
+          const docRef2 = doc(this.apiService.db, collectionNames.openingStock, item.openingStockId);
+          batch.update(docRef2, {
+            updatedAt: Timestamp.now(),
+            openingStockQnt: item.closeStock
+          });
+        }
+
       })
 
 
-
+      // if (openStockToAdd.length == 0) {
       const firestoreTimestamp = this.dateToAddInDaily
         ? Timestamp.fromDate(this.dateToAddInDaily)
         : undefined;
@@ -1293,7 +1392,7 @@ export class BranchComponent {
       });
 
       // let dailyReportToSaveLocally: any = []
-      this.combinedData.forEach((item: any) => {
+      newCombinedData.forEach((item: any) => {
         const summaryRef = doc(collection(this.apiService.db, collectionNames.dailyReports));
 
         const { productName, ...itemWithoutProductName } = item;
@@ -1319,6 +1418,14 @@ export class BranchComponent {
       batch.update(docRef2, {
         updatedAt: Timestamp.now(),
       });
+
+      // } else {
+      openStockToAdd.forEach((item: any) => {
+        const summaryRef = doc(collection(this.apiService.db, collectionNames.openingStock));
+        batch.set(summaryRef, item);
+      })
+      // }
+
 
 
       await batch.commit();
@@ -1359,6 +1466,7 @@ export class BranchComponent {
 
 
   async deleteMultipleCollections(): Promise<void> {
+    this.isLoading = true
     const collections = ['openingStock', 'dailyReports', 'dailyReportsDates', collectionNames.dailyReportsUpdates];
 
     try {
@@ -1372,6 +1480,10 @@ export class BranchComponent {
       }
     } catch (error) {
       console.error('❌ حدث خطأ أثناء الحذف:', error);
+    }
+    finally {
+      this.isLoading = false
+
     }
   }
 

@@ -110,7 +110,8 @@
                         </td>
 
                         <td *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
-                            <input (input)="onQntChange(i,combinedData[i])" *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntInput="ngModel"
+                            <input (input)="onQntChange(i,combinedData[i])"
+                                *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntInput="ngModel"
                                 [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
                                 [(ngModel)]="combinedData[i].qnt" type="number" required>
                             <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qnt }}</div>
@@ -201,10 +202,10 @@
     </button>
 
 </ng-container>
-<!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'"
+<div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'"
     (click)="deleteMultipleCollections()">
     Delete all
-</div> -->
+</div>
 
 <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
     <label for="options" class="dropdown-label me-2">Select Date:</label>
@@ -258,55 +259,154 @@
                     <tr *ngFor="let item of combinedData; let i = index"
                         [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
                         [style.border-bottom]="'1px solid #dee2e6'">
-                        <td style="font-weight: bold; font-size: 13px; position: sticky;left: 0;"
-                            [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'">{{ item.productName }}</td>
+                        <td [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                            style="position: sticky; left: 0; padding: 0;">
+                            <!-- إذا لديه منتجات فرعية -->
+                            <ng-container *ngIf="item.products?.length; else normalProduct">
+                                <div style="display: flex; align-items: stretch; border: 1px solid #ccc;">
+                                    <!-- المنتج الرئيسي بشكل عمودي -->
+                                    <div style="
+          writing-mode: vertical-rl;
+          transform: rotate(180deg);
+          font-weight: bold;
+          font-size: 13px;
+          padding: 8px;
+          text-align: center;
+          border-right: 1px solid #ccc;
+          background-color: #f1f1f1;
+          min-width: 30px;
+        ">
+                                        {{ item.productName }}
+                                    </div>
+
+                                    <!-- المنتجات الفرعية -->
+                                    <div style="
+          display: flex;
+          flex-direction: column;
+          flex-grow: 1;
+          font-size: 12px;
+        ">
+                                        <div *ngFor="let subProduct of item.products" style="
+            padding: 6px 8px;
+            border-bottom: 1px solid #ccc;
+          ">
+                                            {{ subProduct.productName }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-container>
+
+                            <!-- إذا لا يوجد له منتجات فرعية -->
+                            <ng-template #normalProduct>
+                                <div style="
+        font-weight: bold;
+        font-size: 13px;
+        padding: 8px;
+        border: 1px solid #ccc;
+      ">
+                                    {{ item.productName }}
+                                </div>
+                            </ng-template>
+                        </td>
+
 
                         <td>
-                            <input [attr.tabindex]="1000 + i"
+                            <input [attr.tabindex]=" 1000 + i"
                                 [disabled]="isPositiveNumber(combinedData[i].openingStockQnt) && combinedData[i].openingStockId != -1 || isReadDailyMode === true"
                                 (input)="onQuantityChange('openingStockQnt', item, i)"
                                 [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
                         </td>
                         <td>
                             <input [attr.tabindex]="2000 + i"
-                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                                [disabled]="isReadDailyMode === true"
                                 [(ngModel)]="item.recieved" (ngModelChange)="onQuantityChange('recieved', item, i)"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [attr.tabindex]="3000 + i"
-                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
-                                (input)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
-                                type="number" required>
+                            <ng-container *ngIf="item.products?.length; else normalProduct1">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
+                                            [disabled]="isReadDailyMode" (input)="onQuantityChange('add', item, i)"
+                                            [(ngModel)]="combinedData[i].products[s].add" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct1>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
+                                    [disabled]="isReadDailyMode"
+                                    (input)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
+                                    type="number" required />
+                            </ng-template>
+                        </td>
+
+
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct2">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
+                                            [disabled]="isReadDailyMode" (input)="onQuantityChange('sales', item, i)"
+                                            [(ngModel)]="combinedData[i].products[s].sales" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct2>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
+                                    [disabled]=" isReadDailyMode"
+                                    (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
+                                    type="number" required />
+                            </ng-template>
 
                         </td>
                         <td>
-                            <input [attr.tabindex]="4000 + i"
-                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
-                                (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
-                                type="number" required>
+                            <ng-container *ngIf="item.products?.length; else normalProduct3">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
+                                            [disabled]="isReadDailyMode"
+                                            (input)="onQuantityChange('staffMeal', item, i)"
+                                            [(ngModel)]="combinedData[i].products[s].staffMeal" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct3>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
+                                    [disabled]="isReadDailyMode"
+                                    (input)="onQuantityChange('staffMeal', item, i)" [(ngModel)]="combinedData[i].staffMeal"
+                                    type="number" required />
+                            </ng-template>
 
                         </td>
                         <td>
                             <input [attr.tabindex]="5000 + i"
-                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
-                                (input)="onQuantityChange('staffMeal', item, i)" [(ngModel)]="combinedData[i].staffMeal"
-                                type="number" required>
-
-                        </td>
-                        <td>
-                            <input [attr.tabindex]="6000 + i"
-                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
+                                [disabled]="isReadDailyMode === true"
                                 (input)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
                                 type="number" required>
 
                         </td>
                         <td>
-                            <input [attr.tabindex]="7000 + i"
-                                [disabled]="combinedData[i].openingStockId == -1 || isReadDailyMode === true"
-                                (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
-                                type="number" required>
+                          <ng-container *ngIf="item.products?.length; else normalProduct4">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="6000 + i"
+                                            [disabled]="isReadDailyMode"
+                                            (input)="onQuantityChange('dameged', item, i)"
+                                            [(ngModel)]="combinedData[i].products[s].dameged" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct4>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="6000 + i"
+                                    [disabled]="isReadDailyMode"
+                                    (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
+                                    type="number" required />
+                            </ng-template>
 
                         </td>
                         <td>
