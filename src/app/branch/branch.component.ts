@@ -1058,8 +1058,14 @@ export class BranchComponent {
         console.log('No missing dates — including today.');
       }
 
+
+
     } else {
-      this.dateToAddInDaily = now;  // Set the current time if no report exists
+      // console.log("mmmm",now.getMonth());
+      // console.log("mmmm",now);
+
+      
+      this.dateToAddInDaily = new Date(now.getFullYear(), now.getMonth(), 1);  // Set the current time if no report exists
       console.log('No report for today.');
     }
 
@@ -1625,11 +1631,13 @@ export class BranchComponent {
 
     const formattedDate = `${this.dateToAddInDaily!.getFullYear()}-${String(this.dateToAddInDaily!.getMonth() + 1).padStart(2, '0')}-${String(this.dateToAddInDaily!.getDate()).padStart(2, '0')}`;
     console.log("typeee", this.selectedType);
-    const data = this.getOrdersDaily(this.dailyReports)
+    const data = this.getOrdersDaily(this.combinedData)
     console.log("dattttaaa", data);
 
 
-    pdfService.exportDaily(data, formattedDate, this.branch.data.name)
+    pdfService.exportPDF5(this.combinedData, formattedDate, this.branch.data.name)
+    // pdfService.exportPDF5(this.combinedData)
+
 
     // pdfService.exportDaily()
   }
@@ -1688,36 +1696,76 @@ export class BranchComponent {
 
     const result: any[][] = [];
 
-    for (let i = 0; i < data.length; i++) {
-      const product = data[i];
-      const daily = dailyReports.find((item: any) =>
-        item.productId === product.id
-      );
+    // for (let i = 0; i < data.length; i++) {
+    //   const product = data[i];
+    //   const daily = dailyReports.find((item: any) =>
+    //     item.productId === product.id
+    //   );
 
-      console.log("product.id", product.id);
+    //   console.log("product.id", product.id);
 
-      console.log("daily", daily);
+    //   console.log("daily", daily);
 
 
-      if (daily) {
+    //   if (daily) {
+    //     result.push([
+    //       product.name,
+    //       daily.openingStockQnt,
+    //       daily.recieved,
+    //       daily.add,
+    //       daily.sales,
+    //       daily.staffMeal,
+    //       daily.transfer,
+    //       daily.dameged,
+    //       daily.closeStock
+    //     ]);
+    //   }
+    // }
+
+    dailyReports.forEach((item: any) => {
+      if (item.products) {
+        let products: any = []
+        item.products.forEach((element: any) => {
+          products.push([
+            element.productName,
+            element.add,
+            element.sales,
+            element.staffMeal,
+            element.dameged,
+          ])
+        });
         result.push([
-          product.name,
-          daily.openingStockQnt,
-          daily.recieved,
-          daily.add,
-          daily.sales,
-          daily.staffMeal,
-          daily.transfer,
-          daily.dameged,
-          daily.closeStock
+          item.productName,
+          item.openingStockQnt,
+          item.recieved,
+          products,
+          item.transfer,
+          item.closeStock
+        ]);
+      } else {
+        result.push([
+          item.productName,
+          item.openingStockQnt,
+          item.recieved,
+          item.add,
+          item.sales,
+          item.staffMeal,
+          item.transfer,
+          item.dameged,
+          item.closeStock
         ]);
       }
-    }
-    // console.log('data', data);
 
-
+    })
     return result;
+
   }
+
+
+  // console.log('data', data);
+
+
+
 
   //   getOrderDaily2( productId: any): any {
   //   console.log("ordersss", this.branchOrders);
