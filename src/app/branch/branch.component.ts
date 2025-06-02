@@ -1546,6 +1546,43 @@ export class BranchComponent {
     }
   }
 
+  async resetAllDailyReportForThisBranchAndSelectedDate(): Promise<void> {
+    this.isLoading = true;
+    const collections = [
+      // 'openingStock',
+      'dailyReports',
+      'dailyReportsDates',
+      collectionNames.dailyReportsUpdates
+    ];
+
+    try {
+      for (const colName of collections) {
+        const colRef = collection(this.apiService.db, colName);
+        const q = query(colRef,
+          where("branchId", "==", this.branch.id),
+          where("date", ">=", Timestamp.fromDate(this.dateToAddInDaily!)),
+          where("date", "<=", Timestamp.fromDate(this.dateToAddInDaily!)),
+
+        ); // فلترة حسب branchId
+        const snapshot = await getDocs(q);
+
+        // console.log("sssssnnnn",snapshot.docs);
+        
+        const deletePromises = snapshot.docs.map(document => {
+          //  console.log("ddddaaa",document)
+          return deleteDoc(doc(this.apiService.db, colName, document.id));
+        });
+
+        await Promise.all(deletePromises);
+        console.log(`✅ تم حذف جميع البيانات الخاصة بالفرع (${this.branch.id}) من مجموعة: ${colName}`);
+      }
+    } catch (error) {
+      console.error("❌ حدث خطأ أثناء الحذف:", error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
   async deleteOldDailyReportsDatesIfSixthOfMonth() {
     try {
       // 1. الحصول على وقت السيرفر
@@ -1665,7 +1702,7 @@ export class BranchComponent {
 
 
 
-    
+
     pdfService.exportPDF5(this.combinedData, formattedDate, this.branch.data.name)
     // pdfService.exportPDF5(this.combinedData)
 

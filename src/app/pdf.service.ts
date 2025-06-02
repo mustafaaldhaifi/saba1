@@ -503,23 +503,25 @@ export class PdfService {
           if (i === 0) {
             row.push({
               content: item.openingStockQnt,
-              // rowSpan: productCount,
-              // styles: { halign: 'center', valign: 'middle' ,ineWidth: 0, },
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' ,ineWidth: 0, },
             });
-          } else {
-            row.push({ content: '' }); // خلايا فارغة لبقية الصفوف
-          }
+          } 
+          // else {
+          //   row.push({ content: '' }); // خلايا فارغة لبقية الصفوف
+          // }
 
           // 3. recieved (نفس الطريقة)
           if (i === 0) {
             row.push({
               content: item.recieved,
-              // rowSpan: productCount,
-              // styles: { halign: 'center', valign: 'middle' },
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
             });
-          } else {
-            row.push({ content: '' });
           }
+          //  else {
+          //   row.push({ content: '' });
+          // }
 
           // 4. add
           console.log("addd", sub.add);
@@ -537,12 +539,13 @@ export class PdfService {
           if (i === 0) {
             row.push({
               content: item.transfer ?? '',
-              // rowSpan: productCount,
-              // styles: { halign: 'center', valign: 'middle' },
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
             });
-          } else {
-            row.push({ content: '' });
-          }
+          } 
+          // else {
+          //   row.push({ content: '' });
+          // }
 
           // 8. dameged
           row.push({ content: sub.dameged ?? '' });
@@ -551,12 +554,13 @@ export class PdfService {
           if (i === 0) {
             row.push({
               content: item.closeStock ?? '',
-              // rowSpan: productCount,
-              // styles: { halign: 'center', valign: 'middle' },
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
             });
-          } else {
-            row.push({ content: '' });
-          }
+          } 
+          // else {
+          //   row.push({ content: '' });
+          // }
 
           console.log("rppppw", row);
 
