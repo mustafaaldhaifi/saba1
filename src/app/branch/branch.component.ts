@@ -1064,7 +1064,7 @@ export class BranchComponent {
       // console.log("mmmm",now.getMonth());
       // console.log("mmmm",now);
 
-      
+
       this.dateToAddInDaily = new Date(now.getFullYear(), now.getMonth(), 1);  // Set the current time if no report exists
       console.log('No report for today.');
     }
@@ -1517,6 +1517,35 @@ export class BranchComponent {
   }
 
 
+  async resetAllDailyReportForThisBranch(): Promise<void> {
+    this.isLoading = true;
+    const collections = [
+      'openingStock',
+      'dailyReports',
+      'dailyReportsDates',
+      collectionNames.dailyReportsUpdates
+    ];
+
+    try {
+      for (const colName of collections) {
+        const colRef = collection(this.apiService.db, colName);
+        const q = query(colRef, where("branchId", "==", this.branch.id)); // فلترة حسب branchId
+        const snapshot = await getDocs(q);
+
+        const deletePromises = snapshot.docs.map(document => {
+          return deleteDoc(doc(this.apiService.db, colName, document.id));
+        });
+
+        await Promise.all(deletePromises);
+        console.log(`✅ تم حذف جميع البيانات الخاصة بالفرع (${this.branch.id}) من مجموعة: ${colName}`);
+      }
+    } catch (error) {
+      console.error("❌ حدث خطأ أثناء الحذف:", error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
   async deleteOldDailyReportsDatesIfSixthOfMonth() {
     try {
       // 1. الحصول على وقت السيرفر
@@ -1635,6 +1664,8 @@ export class BranchComponent {
     console.log("dattttaaa", data);
 
 
+
+    
     pdfService.exportPDF5(this.combinedData, formattedDate, this.branch.data.name)
     // pdfService.exportPDF5(this.combinedData)
 

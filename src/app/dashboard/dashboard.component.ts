@@ -625,6 +625,28 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  async updateCreatedAtValue(item: any) {
+    this.isLoading = true
+    const ref = doc(this.apiService.db, 'products', item.id);
+
+    const newTimestamp = new Timestamp(
+      item.createdAt.seconds,
+      item.createdAt.nanoseconds
+    );
+
+    try {
+      await updateDoc(ref, {
+        createdAt: newTimestamp
+      });
+      console.log(`✅ Updated createdAt for ${item.id}`);
+    } catch (error) {
+      console.error(`❌ Error updating document ${item.id}:`, error);
+    } finally {
+      this.isLoading = false
+
+    }
+  }
+
   onDateChange(selectedItem: any): void {
     console.log('Date changed:', selectedItem);
 
@@ -650,6 +672,12 @@ export class DashboardComponent implements OnInit {
       console.log("seleele", this.selectedDatey);
 
       this.data = await this.fetchProducts()
+
+      // for (const item of this.data) {
+      //   await this.updateCreatedAtValue(item);
+      // }
+      console.log(this.data);
+
 
       if (this.selectedDatey) {
         const { startTimestamp, endTimestamp } = this.getDateRangeTimestamps(

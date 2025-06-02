@@ -489,60 +489,103 @@ export class PdfService {
 
     for (const item of data) {
       if (Array.isArray(item.products) && item.products.length > 0) {
-        for (let i = 0; i < item.products.length; i++) {
+        const productCount = item.products.length;
+
+        for (let i = 0; i < productCount; i++) {
           const sub = item.products[i];
-          rows.push([
-            {
-              content: sub.productName,
-            },
-            i === 0
-              ? {
-                content: item.openingStockQnt || '',
-                rowSpan: item.products.length,
-                styles: { halign: 'center', valign: 'middle', },
-              }
-              : '',
-            i === 0
-              ? {
-                content: item.recieved || '',
-                rowSpan: item.products.length,
-                styles: { halign: 'center', valign: 'middle', },
-              }
-              : '',
-            sub.add || '',
-            sub.sales || '',
-            sub.staffMeal || '',
-            i === 0
-              ? {
-                content: item.transfer || '',
-                rowSpan: item.products.length,
-                styles: { halign: 'center', valign: 'middle', },
-              }
-              : '',
-            sub.dameged || '',
-            i === 0
-              ? {
-                content: item.closeStock || '',
-                rowSpan: item.products.length,
-                styles: { halign: 'center', valign: 'middle', },
-              }
-              : '',
-          ]);
+
+          const row = [];
+
+          // 1. اسم المنتج الفرعي (دائمًا)
+          row.push({ content: sub.productName });
+
+          // 2. openingStockQnt (خلية مدمجة rowspan فقط لأول صف)
+          if (i === 0) {
+            row.push({
+              content: item.openingStockQnt,
+              // rowSpan: productCount,
+              // styles: { halign: 'center', valign: 'middle' ,ineWidth: 0, },
+            });
+          } else {
+            row.push({ content: '' }); // خلايا فارغة لبقية الصفوف
+          }
+
+          // 3. recieved (نفس الطريقة)
+          if (i === 0) {
+            row.push({
+              content: item.recieved,
+              // rowSpan: productCount,
+              // styles: { halign: 'center', valign: 'middle' },
+            });
+          } else {
+            row.push({ content: '' });
+          }
+
+          // 4. add
+          console.log("addd", sub.add);
+
+          row.push({ content: sub.add ?? '' });
+
+          // 5. sales
+          // لو sub.sales قيمته صفر أو أي قيمة أخرى، نعرضها مباشرة
+          row.push({ content: sub.sales != null ? sub.sales : '--' });
+
+          // 6. staffMeal
+          row.push({ content: sub.staffMeal ?? '' });
+
+          // 7. transfer (خلية مدمجة مثل السابق)
+          if (i === 0) {
+            row.push({
+              content: item.transfer ?? '',
+              // rowSpan: productCount,
+              // styles: { halign: 'center', valign: 'middle' },
+            });
+          } else {
+            row.push({ content: '' });
+          }
+
+          // 8. dameged
+          row.push({ content: sub.dameged ?? '' });
+
+          // 9. closeStock (خلية مدمجة)
+          if (i === 0) {
+            row.push({
+              content: item.closeStock ?? '',
+              // rowSpan: productCount,
+              // styles: { halign: 'center', valign: 'middle' },
+            });
+          } else {
+            row.push({ content: '' });
+          }
+
+          console.log("rppppw", row);
+
+
+
+
+          // أخيراً، أضف الصف
+          rows.push(row);
+          console.log("rppppws", rows);
         }
       } else {
+        // منتجات بدون منتجات فرعية
         rows.push([
-          item.productName || '',
-          item.openingStockQnt || '',
-          item.recieved || '',
-          item.add || '',
-          item.sales || '',
-          item.staffMeal || '',
-          item.transfer || '',
-          item.dameged || '',
-          item.closeStock || '',
+          { content: item.productName },
+          { content: item.openingStockQnt },
+          { content: item.recieved },
+          { content: item.add },
+          { content: item.sales },
+          { content: item.staffMeal },
+          { content: item.transfer },
+          { content: item.dameged },
+          { content: item.closeStock },
         ]);
       }
     }
+
+    console.log("finalRows", rows);
+
+
 
     const topHeader = [
       [
@@ -598,7 +641,7 @@ export class PdfService {
     const topHeader2 = [headerRow];
 
     autoTable(doc, {
-     head: [...topHeader, ...topHeader2], 
+      head: [...topHeader, ...topHeader2],
       body: rows,
       styles: {
         font: 'ARIAL',
@@ -622,7 +665,7 @@ export class PdfService {
       theme: 'grid',
     });
 
-      doc.save(`${branchName}_Daily_${date}.pdf`);
+    doc.save(`${branchName}_Daily_${date}.pdf`);
   }
 
 

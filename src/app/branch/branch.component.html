@@ -206,6 +206,10 @@
     (click)="deleteMultipleCollections()">
     Delete all
 </div> -->
+<!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'"
+    (click)="resetAllDailyReportForThisBranch()">
+    Delete all this branch 2
+</div> -->
 
 <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
     <label for="options" class="dropdown-label me-2">Select Date:</label>
@@ -317,8 +321,7 @@
                                 [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
                         </td>
                         <td>
-                            <input [attr.tabindex]="2000 + i"
-                                [disabled]="isReadDailyMode === true"
+                            <input [attr.tabindex]="2000 + i" [disabled]="isReadDailyMode === true"
                                 [(ngModel)]="item.recieved" (ngModelChange)="onQuantityChange('recieved', item, i)"
                                 type="number" required>
 
@@ -336,9 +339,8 @@
 
                             <ng-template #normalProduct1>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
-                                    [disabled]="isReadDailyMode"
-                                    (input)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
-                                    type="number" required />
+                                    [disabled]="isReadDailyMode" (input)="onQuantityChange('add', item, i)"
+                                    [(ngModel)]="combinedData[i].add" type="number" required />
                             </ng-template>
                         </td>
 
@@ -356,9 +358,8 @@
 
                             <ng-template #normalProduct2>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
-                                    [disabled]=" isReadDailyMode"
-                                    (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
-                                    type="number" required />
+                                    [disabled]=" isReadDailyMode" (input)="onQuantityChange('sales', item, i)"
+                                    [(ngModel)]="combinedData[i].sales" type="number" required />
                             </ng-template>
 
                         </td>
@@ -369,33 +370,31 @@
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
                                             [disabled]="isReadDailyMode"
                                             (input)="onQuantityChange('staffMeal', item, i)"
-                                            [(ngModel)]="combinedData[i].products[s].staffMeal" type="number" required />
+                                            [(ngModel)]="combinedData[i].products[s].staffMeal" type="number"
+                                            required />
                                     </ng-container>
                                 </div>
                             </ng-container>
 
                             <ng-template #normalProduct3>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
-                                    [disabled]="isReadDailyMode"
-                                    (input)="onQuantityChange('staffMeal', item, i)" [(ngModel)]="combinedData[i].staffMeal"
-                                    type="number" required />
+                                    [disabled]="isReadDailyMode" (input)="onQuantityChange('staffMeal', item, i)"
+                                    [(ngModel)]="combinedData[i].staffMeal" type="number" required />
                             </ng-template>
 
                         </td>
                         <td>
-                            <input [attr.tabindex]="5000 + i"
-                                [disabled]="isReadDailyMode === true"
+                            <input [attr.tabindex]="5000 + i" [disabled]="isReadDailyMode === true"
                                 (input)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
                                 type="number" required>
 
                         </td>
                         <td>
-                          <ng-container *ngIf="item.products?.length; else normalProduct4">
+                            <ng-container *ngIf="item.products?.length; else normalProduct4">
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="6000 + i"
-                                            [disabled]="isReadDailyMode"
-                                            (input)="onQuantityChange('dameged', item, i)"
+                                            [disabled]="isReadDailyMode" (input)="onQuantityChange('dameged', item, i)"
                                             [(ngModel)]="combinedData[i].products[s].dameged" type="number" required />
                                     </ng-container>
                                 </div>
@@ -403,9 +402,8 @@
 
                             <ng-template #normalProduct4>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="6000 + i"
-                                    [disabled]="isReadDailyMode"
-                                    (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
-                                    type="number" required />
+                                    [disabled]="isReadDailyMode" (input)="onQuantityChange('dameged', item, i)"
+                                    [(ngModel)]="combinedData[i].dameged" type="number" required />
                             </ng-template>
 
                         </td>
