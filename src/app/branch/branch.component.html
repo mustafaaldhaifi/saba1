@@ -350,8 +350,9 @@
                         </td>
 
 
-                        <td>
-                            <ng-container *ngIf="item.products?.length; else normalProduct2">
+
+                        <ng-container *ngIf="item.products?.length; else normalProduct2">
+                            <td>
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
@@ -359,17 +360,23 @@
                                             [(ngModel)]="combinedData[i].products[s].sales" type="number" required />
                                     </ng-container>
                                 </div>
-                            </ng-container>
+                            </td>
 
-                            <ng-template #normalProduct2>
+                        </ng-container>
+
+                        <ng-template #normalProduct2>
+                            <td (click)="onQuantitySalesClicked('sales', item, i)">
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
                                     [disabled]=" isReadDailyMode" (input)="onQuantityChange('sales', item, i)"
                                     [(ngModel)]="combinedData[i].sales" type="number" required />
-                            </ng-template>
+                            </td>
 
-                        </td>
-                        <td>
-                            <ng-container *ngIf="item.products?.length; else normalProduct3">
+                        </ng-template>
+
+
+
+                        <ng-container *ngIf="item.products?.length; else normalProduct3">
+                            <td>
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
@@ -379,15 +386,22 @@
                                             required />
                                     </ng-container>
                                 </div>
-                            </ng-container>
+                            </td>
 
-                            <ng-template #normalProduct3>
+                        </ng-container>
+
+                        <ng-template #normalProduct3>
+                            <td (click)="onQuantityStaffMealClicked('staffMeal', item, i)">
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
                                     [disabled]="isReadDailyMode" (input)="onQuantityChange('staffMeal', item, i)"
                                     [(ngModel)]="combinedData[i].staffMeal" type="number" required />
-                            </ng-template>
 
-                        </td>
+                            </td>
+
+
+                        </ng-template>
+
+
                         <td>
                             <input [attr.tabindex]="5000 + i" [disabled]="isReadDailyMode === true"
                                 (input)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"

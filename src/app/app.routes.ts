@@ -9,6 +9,5 @@ export const routes: Routes = [
 
     { path: 'dashboard', component: DashboardComponent },
     { path: 'branch', component: BranchComponent },
-
     { path: 'login', component: LoginComponent },
 ];

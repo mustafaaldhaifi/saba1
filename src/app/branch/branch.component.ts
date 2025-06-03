@@ -23,6 +23,7 @@ export class BranchComponent {
 
   isReadDailyMode: boolean;
 
+  isAdmin = false
 
   exportPdf() {
     const pdfService = new PdfService();
@@ -274,49 +275,71 @@ export class BranchComponent {
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         if (user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2") {
-          this.router.navigate(['/dashboard']);
+          const branchStr = localStorage.getItem("selectedBranch");
+
+          if (branchStr) {
+            try {
+              const parsed = JSON.parse(branchStr);
+              this.branch = {
+                id: parsed.id,
+                data: {
+                  name: parsed.name,
+                  city: parsed.city
+                }
+              };
+              this.isAdmin = true
+            } catch (e) {
+              console.error('Invalid JSON in localStorage:', e);
+              this.router.navigate(['/dashboard']);
+            }
+          } else {
+            this.router.navigate(['/dashboard']);
+          }
         } else {
           const name = user.email?.split('@')[0];
           this.branch = await this.getRelatedBranche(name!);
-          await this.getTypes()
-          await this.getProducts()
-          await this.getAllowableEdits()
-
-
-          if (this.selectedType.id == '5') {
-            await this.initDaily()
-          } else {
-            await Promise.all([
-              this.getDatesToAdd(),
-              this.getPreOrders(),
-              this.getSettings(),
-
-            ]);
-
-            this.preOrders.forEach((pre: any) => {
-              // console.log("pre", pre);
-              // console.log("pre", pre.createdAt);
-              // console.log("pre", pre.createdAt.toDate());
-
-
-
-              this.datesToAdd.forEach((date: any, index: number) => {
-                if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
-                  this.datesToAdd.splice(index, 1);
-                }
-              });
-            });
-            if (this.preOrders.length > 0) {
-              this.selectedPreOrder = this.preOrders[0];
-              this.selectedDate = this.preOrders[0].createdAt;
-              // console.log(this.preOrders[0]);
-
-              await this.onSelectDate(this.selectedPreOrder);
-            }
-            this.combineDataWithOrders();
-          }
-          this.isLoading = false;
         }
+        console.log("branch", this.branch);
+
+        await this.getTypes()
+        await this.getProducts()
+        await this.getAllowableEdits()
+
+
+        if (this.selectedType.id == '5') {
+          await this.initDaily()
+        } else {
+          await Promise.all([
+            this.getDatesToAdd(),
+            this.getPreOrders(),
+            this.getSettings(),
+
+          ]);
+
+          this.preOrders.forEach((pre: any) => {
+            // console.log("pre", pre);
+            // console.log("pre", pre.createdAt);
+            // console.log("pre", pre.createdAt.toDate());
+
+
+
+            this.datesToAdd.forEach((date: any, index: number) => {
+              if (date.createdAt.toDate().toISOString().split('T')[0] == pre.createdAt.toDate().toISOString().split('T')[0]) {
+                this.datesToAdd.splice(index, 1);
+              }
+            });
+          });
+          if (this.preOrders.length > 0) {
+            this.selectedPreOrder = this.preOrders[0];
+            this.selectedDate = this.preOrders[0].createdAt;
+            // console.log(this.preOrders[0]);
+
+            await this.onSelectDate(this.selectedPreOrder);
+          }
+          this.combineDataWithOrders();
+        }
+        this.isLoading = false;
+
       } else {
         this.router.navigate(['/login']);
       }
@@ -1301,6 +1324,9 @@ export class BranchComponent {
   }
 
   async onQuantityClicked(field: string, item: any, i: number) {
+    if (this.isAdmin == false) {
+      return
+    }
     const report = this.dailyReports.find(
       (o: any) => o.productId === item.productId && o.branchId === this.branch.id
     );
@@ -1412,12 +1438,29 @@ export class BranchComponent {
         console.log(item);
       })
 
+
       if (closeStock) {
-        const docRef3 = doc(this.apiService.db, collectionNames.openingStock, item.openingStockId);
-        batch.update(docRef3, {
-          openingStockQnt: closeStock,
-          updatedAt: Timestamp.now(),
-        });
+        if (item.openingStockId && item.openingStockId != -1) {
+          const docRef3 = doc(this.apiService.db, collectionNames.openingStock, item.openingStockId);
+          batch.update(docRef3, {
+            openingStockQnt: closeStock,
+            updatedAt: Timestamp.now(),
+          });
+        }
+        else {
+          await this.getOpeningStock()
+
+          const openStock = this.openingStock.find(
+            (o: any) => o.productId === item.productId
+          );
+
+          const docRef3 = doc(this.apiService.db, collectionNames.openingStock, openStock.id);
+          batch.update(docRef3, {
+            openingStockQnt: closeStock,
+            updatedAt: Timestamp.now(),
+          });
+
+        }
       }
 
       await batch.commit()
@@ -1432,6 +1475,310 @@ export class BranchComponent {
 
   }
 
+
+  async onQuantityStaffMealClicked(field: string, item: any, i: number) {
+    if (this.isAdmin == false) {
+      return
+    }
+    const report = this.dailyReports.find(
+      (o: any) => o.productId === item.productId && o.branchId === this.branch.id
+    );
+
+    if (!report) {
+      console.error('لم يتم العثور على التقرير المطلوب');
+      return;
+    }
+
+    const input = window.prompt('أدخل القيمة الجديدة:', report.recieved);
+
+    if (input === null) {
+      // تم الإلغاء من قبل المستخدم
+      return;
+    }
+
+    const newValue = parseFloat(input);
+    if (isNaN(newValue)) {
+      alert('الرجاء إدخال رقم صالح.');
+      return;
+    }
+
+    const productUnit = item.productUnit ?? 1;
+
+
+    console.log(item);
+
+
+    this.isLoading = true
+    const batch = writeBatch(this.apiService.db);
+    try {
+
+
+
+
+      const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
+
+
+      const q1 = query(
+        collection(this.apiService.db, collectionNames.dailyReports),
+        where("branchId", "==", this.branch.id),
+        where("productId", "==", item.productId),
+
+        where("date", ">=", Timestamp.fromDate(this.dateToAddInDaily!)),
+      );
+
+      const snapshot1 = await getDocs(q1);
+      const dailyReportsToUpdate = snapshot1.docs.map(doc => ({
+        id: doc.id,
+        date: doc.data()["date"],
+        openingStockQnt: doc.data()['openingStockQnt'],
+        recieved: doc.data()['recieved'],
+        add: doc.data()['add'],
+        sales: doc.data()['sales'],
+        staffMeal: doc.data()['staffMeal'],
+        transfer: doc.data()['transfer'],
+        dameged: doc.data()['dameged'],
+        closeStock: doc.data()['closeStock'],
+      }));
+
+      // var closeStock = newValue * productUnit;
+
+      var closeStock: any
+      dailyReportsToUpdate.forEach((item: any, index: number) => {
+        const docRef1 = doc(this.apiService.db, collectionNames.dailyReports, item.id);
+
+        if (index === 0) {
+          closeStock =
+            item.openingStockQnt +
+            item.recieved +
+            item.add -
+            item.sales -
+            newValue -
+            item.transfer -
+            item.dameged;
+
+          console.log("total1", closeStock);
+
+          batch.update(docRef1, {
+            updatedAt: Timestamp.now(),
+            [field]: newValue,
+            closeStock: closeStock
+          });
+        }
+        else {
+
+          const total =
+            closeStock +
+            (item.recieved) +
+            item.add -
+            item.sales -
+            item.staffMeal -
+            item.transfer -
+            item.dameged;
+
+          batch.update(docRef1, {
+            updatedAt: Timestamp.now(),
+            [field]: newValue,
+            openingStockQnt: closeStock,
+            closeStock: total
+          });
+          console.log("total", total);
+        }
+        console.log(item.date.toDate());
+        console.log(item);
+      })
+
+
+      if (closeStock) {
+        if (item.openingStockId && item.openingStockId != -1) {
+          const docRef3 = doc(this.apiService.db, collectionNames.openingStock, item.openingStockId);
+          batch.update(docRef3, {
+            openingStockQnt: closeStock,
+            updatedAt: Timestamp.now(),
+          });
+        }
+        else {
+          await this.getOpeningStock()
+
+          const openStock = this.openingStock.find(
+            (o: any) => o.productId === item.productId
+          );
+
+          const docRef3 = doc(this.apiService.db, collectionNames.openingStock, openStock.id);
+          batch.update(docRef3, {
+            openingStockQnt: closeStock,
+            updatedAt: Timestamp.now(),
+          });
+
+        }
+      }
+
+      await batch.commit()
+      console.log('تم التحديث بنجاح');
+    } catch (error) {
+
+      console.error('فشل في التحديث:', error);
+
+    } finally {
+      this.isLoading = false;
+    }
+
+  }
+
+  async onQuantitySalesClicked(field: string, item: any, i: number) {
+    if (this.isAdmin == false) {
+      return
+    }
+    const report = this.dailyReports.find(
+      (o: any) => o.productId === item.productId && o.branchId === this.branch.id
+    );
+
+    if (!report) {
+      console.error('لم يتم العثور على التقرير المطلوب');
+      return;
+    }
+
+    const input = window.prompt('أدخل القيمة الجديدة:', report.recieved);
+
+    if (input === null) {
+      // تم الإلغاء من قبل المستخدم
+      return;
+    }
+
+    const newValue = parseFloat(input);
+    if (isNaN(newValue)) {
+      alert('الرجاء إدخال رقم صالح.');
+      return;
+    }
+
+    const productUnit = item.productUnit ?? 1;
+
+
+    console.log(item);
+
+
+    this.isLoading = true
+    const batch = writeBatch(this.apiService.db);
+    try {
+
+
+
+
+      const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
+
+
+      const q1 = query(
+        collection(this.apiService.db, collectionNames.dailyReports),
+        where("branchId", "==", this.branch.id),
+        where("productId", "==", item.productId),
+
+        where("date", ">=", Timestamp.fromDate(this.dateToAddInDaily!)),
+      );
+
+      const snapshot1 = await getDocs(q1);
+      const dailyReportsToUpdate = snapshot1.docs.map(doc => ({
+        id: doc.id,
+        date: doc.data()["date"],
+        openingStockQnt: doc.data()['openingStockQnt'],
+        recieved: doc.data()['recieved'],
+        add: doc.data()['add'],
+        sales: doc.data()['sales'],
+        staffMeal: doc.data()['staffMeal'],
+        transfer: doc.data()['transfer'],
+        dameged: doc.data()['dameged'],
+        closeStock: doc.data()['closeStock'],
+      }));
+
+      // var closeStock = newValue * productUnit;
+
+      var closeStock: any
+      dailyReportsToUpdate.forEach((item: any, index: number) => {
+        const docRef1 = doc(this.apiService.db, collectionNames.dailyReports, item.id);
+
+        if (index === 0) {
+          closeStock =
+            item.openingStockQnt +
+            item.recieved +
+            item.add -
+            newValue -
+            item.staffMeal -
+            item.transfer -
+            item.dameged;
+
+          console.log("total1", closeStock);
+
+          batch.update(docRef1, {
+            updatedAt: Timestamp.now(),
+            [field]: newValue,
+            closeStock: closeStock
+          });
+        }
+        else {
+
+          const total =
+            closeStock +
+            (item.recieved) +
+            item.add -
+            item.sales -
+            item.staffMeal -
+            item.transfer -
+            item.dameged;
+
+          batch.update(docRef1, {
+            updatedAt: Timestamp.now(),
+            [field]: newValue,
+            openingStockQnt: closeStock,
+            closeStock: total
+          });
+          console.log("total", total);
+        }
+        console.log(item.date.toDate());
+        console.log(item);
+      })
+
+
+      if (closeStock) {
+        if (item.openingStockId && item.openingStockId != -1) {
+          const docRef3 = doc(this.apiService.db, collectionNames.openingStock, item.openingStockId);
+          batch.update(docRef3, {
+            openingStockQnt: closeStock,
+            updatedAt: Timestamp.now(),
+          });
+        }
+        else {
+          await this.getOpeningStock()
+
+          const openStock = this.openingStock.find(
+            (o: any) => o.productId === item.productId
+          );
+
+          const docRef3 = doc(this.apiService.db, collectionNames.openingStock, openStock.id);
+          batch.update(docRef3, {
+            openingStockQnt: closeStock,
+            updatedAt: Timestamp.now(),
+          });
+
+        }
+      }
+
+      await batch.commit()
+      console.log('تم التحديث بنجاح');
+    } catch (error) {
+
+      console.error('فشل في التحديث:', error);
+
+    } finally {
+      this.isLoading = false;
+    }
+
+  }
 
   onQuantityChange(field: string, item: any, i: number): void {
     const productUnit = item.productUnit ?? 1;

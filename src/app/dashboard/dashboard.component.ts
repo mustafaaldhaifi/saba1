@@ -81,6 +81,12 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  goToBranch(branch: Branch) {
+    console.log(branch);
+
+    localStorage.setItem("selectedBranch", JSON.stringify(branch));
+    this.router.navigate(['/branch']);
+  }
 
 
   async reset(branch: Branch) {

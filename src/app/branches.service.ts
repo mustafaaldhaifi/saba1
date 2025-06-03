@@ -129,7 +129,8 @@ export class BranchesService {
 
       const branches = snapshot.docs.map(doc => ({
         id: doc.id,
-        name: doc.data()['name']
+        name: doc.data()['name'],
+        city: doc.data()['city'],
       }));
 
       this.updateBranchesInLocal(branches, city);
