@@ -325,7 +325,7 @@
                                 (input)="onQuantityChange('openingStockQnt', item, i)"
                                 [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
                         </td>
-                        <td>
+                        <td (click)="onQuantityClicked('recieved', item, i)">
                             <input [attr.tabindex]="2000 + i" [disabled]="isReadDailyMode === true"
                                 [(ngModel)]="item.recieved" (ngModelChange)="onQuantityChange('recieved', item, i)"
                                 type="number" required>

@@ -1300,6 +1300,138 @@ export class BranchComponent {
     return isNaN(total) ? '-' : total
   }
 
+  async onQuantityClicked(field: string, item: any, i: number) {
+    const report = this.dailyReports.find(
+      (o: any) => o.productId === item.productId && o.branchId === this.branch.id
+    );
+
+    if (!report) {
+      console.error('لم يتم العثور على التقرير المطلوب');
+      return;
+    }
+
+    const input = window.prompt('أدخل القيمة الجديدة:', report.recieved);
+
+    if (input === null) {
+      // تم الإلغاء من قبل المستخدم
+      return;
+    }
+
+    const newValue = parseFloat(input);
+    if (isNaN(newValue)) {
+      alert('الرجاء إدخال رقم صالح.');
+      return;
+    }
+
+    const productUnit = item.productUnit ?? 1;
+
+
+    console.log(item);
+
+
+    this.isLoading = true
+    const batch = writeBatch(this.apiService.db);
+    try {
+
+
+
+
+      const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
+      batch.update(docRef2, {
+        updatedAt: Timestamp.now(),
+      });
+
+
+
+      const q1 = query(
+        collection(this.apiService.db, collectionNames.dailyReports),
+        where("branchId", "==", this.branch.id),
+        where("productId", "==", item.productId),
+
+        where("date", ">=", Timestamp.fromDate(this.dateToAddInDaily!)),
+      );
+
+      const snapshot1 = await getDocs(q1);
+      const dailyReportsToUpdate = snapshot1.docs.map(doc => ({
+        id: doc.id,
+        date: doc.data()["date"],
+        openingStockQnt: doc.data()['openingStockQnt'],
+        recieved: doc.data()['recieved'],
+        add: doc.data()['add'],
+        sales: doc.data()['sales'],
+        staffMeal: doc.data()['staffMeal'],
+        transfer: doc.data()['transfer'],
+        dameged: doc.data()['dameged'],
+        closeStock: doc.data()['closeStock'],
+      }));
+
+      // var closeStock = newValue * productUnit;
+
+      var closeStock: any
+      dailyReportsToUpdate.forEach((item: any, index: number) => {
+        const docRef1 = doc(this.apiService.db, collectionNames.dailyReports, item.id);
+
+        if (index === 0) {
+          closeStock =
+            item.openingStockQnt +
+            (newValue * productUnit) +
+            item.add -
+            item.sales -
+            item.staffMeal -
+            item.transfer -
+            item.dameged;
+
+          console.log("total1", closeStock);
+
+          batch.update(docRef1, {
+            updatedAt: Timestamp.now(),
+            [field]: newValue,
+            closeStock: closeStock
+          });
+        }
+        else {
+
+          const total =
+            closeStock +
+            (item.recieved * productUnit) +
+            item.add -
+            item.sales -
+            item.staffMeal -
+            item.transfer -
+            item.dameged;
+
+          batch.update(docRef1, {
+            updatedAt: Timestamp.now(),
+            [field]: newValue,
+            openingStockQnt: closeStock,
+            closeStock: total
+          });
+          console.log("total", total);
+        }
+        console.log(item.date.toDate());
+        console.log(item);
+      })
+
+      if (closeStock) {
+        const docRef3 = doc(this.apiService.db, collectionNames.openingStock, item.openingStockId);
+        batch.update(docRef3, {
+          openingStockQnt: closeStock,
+          updatedAt: Timestamp.now(),
+        });
+      }
+
+      await batch.commit()
+      console.log('تم التحديث بنجاح');
+    } catch (error) {
+
+      console.error('فشل في التحديث:', error);
+
+    } finally {
+      this.isLoading = false;
+    }
+
+  }
+
 
   onQuantityChange(field: string, item: any, i: number): void {
     const productUnit = item.productUnit ?? 1;
@@ -1326,6 +1458,25 @@ export class BranchComponent {
     if (field === 'sales' && this.combinedData[i].productId === "m1srRxKTFohPt84R9LIA") {
       const meatSalesRaw = this.combinedData[i].sales;
       const cupIndex = this.combinedData.findIndex(p => p.productId === "UTnRc0oWxnF8ndBPrcCW");
+
+      if (cupIndex !== -1) {
+        if (meatSalesRaw === null || meatSalesRaw === undefined || meatSalesRaw === '') {
+          // إذا كانت المبيعات فارغة، اجعل staffMeal فارغة
+          this.combinedData[cupIndex].staffMeal = '';
+        } else {
+          const meatSales = Number(meatSalesRaw) || 0;
+          this.combinedData[cupIndex].staffMeal = meatSales * 2;
+        }
+
+        // تحديث المخزون الختامي لمنتج الكاسات
+        const cupProductUnit = this.combinedData[cupIndex].productUnit ?? 1;
+        this.combinedData[cupIndex].closeStock = this.calculateClosingStock(this.combinedData[cupIndex], undefined, cupProductUnit);
+      }
+    }
+
+    if (field === 'sales' && this.combinedData[i].productId === "WMIfaxRKFwUZwI3o3CHk") {
+      const meatSalesRaw = this.combinedData[i].sales;
+      const cupIndex = this.combinedData.findIndex(p => p.productId === "H4g2FAvT5J32lBJFIGf4");
 
       if (cupIndex !== -1) {
         if (meatSalesRaw === null || meatSalesRaw === undefined || meatSalesRaw === '') {
@@ -1567,7 +1718,7 @@ export class BranchComponent {
         const snapshot = await getDocs(q);
 
         // console.log("sssssnnnn",snapshot.docs);
-        
+
         const deletePromises = snapshot.docs.map(document => {
           //  console.log("ddddaaa",document)
           return deleteDoc(doc(this.apiService.db, colName, document.id));
