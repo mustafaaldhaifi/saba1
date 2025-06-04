@@ -2421,8 +2421,16 @@ export class BranchComponent {
           }
         }
 
+        if (element.parentProduct === undefined) {
+          delete element.parentProduct;
+        }
+
         // تحديث المنتج الرئيسي
         const { productUnit, dailyReportId, productName, products, ...filtedParentProduct } = element;
+
+        console.log("element", element);
+        console.log("filtedParentProduct", filtedParentProduct);
+
 
         const updatedParentProduct = {
           ...filtedParentProduct,

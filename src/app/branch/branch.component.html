@@ -211,10 +211,10 @@
     Delete all this branch 2
 </div> -->
 
-<!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5' && dateToAddInDaily"
+<div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5' && dateToAddInDaily"
     (click)="resetAllDailyReportForThisBranchAndSelectedDate()">
     Delete all this branch and selected Date
-</div> -->
+</div>
 
 <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
     <label for="options" class="dropdown-label me-2">Select Date:</label>
@@ -327,7 +327,7 @@
                                 (input)="onQuantityChange('openingStockQnt', item, i)"
                                 [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
                         </td>
-                        <td (click)="onQuantityClicked('recieved', item, i)">
+                        <td>
                             <input [attr.tabindex]="2000 + i" [disabled]="isReadDailyMode === true && isAdmin==false"
                                 [(ngModel)]="item.recieved" (ngModelChange)="onQuantityChange('recieved', item, i)"
                                 type="number" required>
@@ -370,7 +370,7 @@
                         </ng-container>
 
                         <ng-template #normalProduct2>
-                            <td (click)="onQuantitySalesClicked('sales', item, i)">
+                            <td >
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
                                     [disabled]=" isReadDailyMode && isAdmin==false" (input)="onQuantityChange('sales', item, i)"
                                     [(ngModel)]="combinedData[i].sales" type="number" required />
