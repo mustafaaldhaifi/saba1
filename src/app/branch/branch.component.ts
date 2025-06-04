@@ -2532,6 +2532,8 @@ export class BranchComponent {
       await batch.commit();
       console.log('تم التحديث بنجاح');
       alert("يعطيك العافية تم التحديث بنجاح")
+
+      this.orderDailyToUpdate = []
     } catch (error) {
       console.error('فشل في التحديث:', error);
     } finally {
