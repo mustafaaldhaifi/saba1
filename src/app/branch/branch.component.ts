@@ -965,7 +965,7 @@ export class BranchComponent {
     //   closeStock: doc.data()['closeStock'],
     // }));
 
-    // console.log('dailyReports', this.dailyReports);
+    console.log('dailyReports', this.dailyReports);
 
   }
 
@@ -1180,6 +1180,7 @@ export class BranchComponent {
       // const status = qnt == '0' ? '4' : (report?.status ?? '0');
       const closing1 = this.calculateClosingStock(report, openingStock, product.productUnit);
       return {
+        dailyReportId: report ? report.id : undefined,
         productId: product.id,
         productName: product.name,
         productUnit: product.unit,
@@ -1327,6 +1328,11 @@ export class BranchComponent {
     if (this.isAdmin == false) {
       return
     }
+    if (item.products) {
+      console.log("yes", item);
+
+      return
+    }
     const report = this.dailyReports.find(
       (o: any) => o.productId === item.productId && o.branchId === this.branch.id
     );
@@ -1358,9 +1364,6 @@ export class BranchComponent {
     this.isLoading = true
     const batch = writeBatch(this.apiService.db);
     try {
-
-
-
 
       const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
       batch.update(docRef2, {
@@ -1840,9 +1843,27 @@ export class BranchComponent {
       }
     }
 
-    console.log(this.combinedData);
+    if (this.isReadDailyMode && this.isAdmin == true) {
+      const index = this.orderDailyToUpdate.findIndex((data: any) => item.productId == data.productId)
+      if (index == -1) {
+        this.orderDailyToUpdate.push(item)
+      }
+      else {
+        this.orderDailyToUpdate[index] = item
+      }
+      /////
 
+
+      console.log(this.combinedData);
+      console.log("item before update", item);
+      console.log("item after update", this.combinedData.find((data: any) => item.productId == data.productId));
+      console.log("this.orderDailyToUpdate", this.orderDailyToUpdate);
+
+    }
   }
+  orderDailyToUpdate: any = []
+
+
 
   async saveDaily() {
 
@@ -1986,6 +2007,7 @@ export class BranchComponent {
     await this.getDailyReports($event, $event);
 
     this.combineDataWithReports()
+    this.orderDailyToUpdate = []
     this.isLoading = false
 
 
@@ -2195,12 +2217,6 @@ export class BranchComponent {
 
     const formattedDate = `${this.dateToAddInDaily!.getFullYear()}-${String(this.dateToAddInDaily!.getMonth() + 1).padStart(2, '0')}-${String(this.dateToAddInDaily!.getDate()).padStart(2, '0')}`;
     console.log("typeee", this.selectedType);
-    const data = this.getOrdersDaily(this.combinedData)
-    console.log("dattttaaa", data);
-
-
-
-
     pdfService.exportPDF5(this.combinedData, formattedDate, this.branch.data.name)
     // pdfService.exportPDF5(this.combinedData)
 
@@ -2378,5 +2394,289 @@ export class BranchComponent {
     else return false
 
   }
+
+  async saveChangesDaily() {
+    if (this.orderDailyToUpdate.length === 0) return;
+
+    this.isLoading = true;
+    const batch = writeBatch(this.apiService.db);
+
+    try {
+      const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
+      batch.update(docRef2, { updatedAt: Timestamp.now() });
+
+      for (const element of this.orderDailyToUpdate) {
+        // تحديث المنتجات الفرعية
+        if (element.products) {
+          for (const subProduct of element.products) {
+            const { dailyReportId, productName, ...filtedSubProduct } = subProduct;
+
+            const updatedSubProduct = {
+              ...filtedSubProduct,
+              updatedAt: Timestamp.now(),
+            };
+
+            const docRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
+            batch.update(docRef, updatedSubProduct);
+          }
+        }
+
+        // تحديث المنتج الرئيسي
+        const { productUnit, dailyReportId, productName, products, ...filtedParentProduct } = element;
+
+        const updatedParentProduct = {
+          ...filtedParentProduct,
+          updatedAt: Timestamp.now(),
+        };
+
+        const parentDocRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
+        batch.update(parentDocRef, updatedParentProduct);
+
+
+
+        // تحديث التقارير بناءً على الاستعلام
+        const q1 = query(
+          collection(this.apiService.db, collectionNames.dailyReports),
+          where("branchId", "==", this.branch.id),
+          where("productId", "==", element.productId),
+          where("date", ">=", Timestamp.fromDate(this.dateToAddInDaily!))
+        );
+
+        const snapshot1 = await getDocs(q1);
+        const dailyReportsToUpdate = snapshot1.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            date: data["date"],
+            productId: data["productId"],
+            openingStockQnt: data["openingStockQnt"],
+            recieved: data["recieved"],
+            add: element.products ? data["add"] : undefined,
+            sales: element.products ? data["sales"] : undefined,
+            staffMeal: element.products ? data["staffMeal"] : undefined,
+            transfer: data["transfer"],
+            dameged: element.products ? data["dameged"] : undefined,
+            closeStock: data["closeStock"]
+          };
+        });
+
+
+        var fcloseStock = 0
+        for (const item of dailyReportsToUpdate) {
+          const docRef1 = doc(this.apiService.db, collectionNames.dailyReports, item.id);
+
+          const add = element.products
+            ? element.products.reduce((total: number, p: any) => total + Number(p.add || 0), 0)
+            : Number(item.add || 0);
+
+          const sales = element.products
+            ? element.products.reduce((total: number, p: any) => total + Number(p.sales || 0), 0)
+            : Number(item.sales || 0);
+
+          const staffMeal = element.products
+            ? element.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
+            : Number(item.staffMeal || 0);
+
+          const dameged = element.products
+            ? element.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
+            : Number(item.dameged || 0);
+
+          const closeStock =
+            Number(item.openingStockQnt || 0) +
+            Number(item.recieved || 0) +
+            add -
+            sales -
+            staffMeal -
+            Number(item.transfer || 0) -
+            dameged;
+
+          const updateData: any = {
+            updatedAt: Timestamp.now(),
+            closeStock,
+            openingStockQnt: item.openingStockQnt,
+          };
+
+          if (!element.parentProduct) {
+            updateData.sales = sales;
+            updateData.staffMeal = staffMeal;
+            updateData.dameged = dameged;
+            updateData.add = add;
+          }
+
+          batch.update(docRef1, updateData);
+          fcloseStock = closeStock
+        }
+
+        if (element.openingStockId && element.openingStockId != -1) {
+          const docRef3 = doc(this.apiService.db, collectionNames.openingStock, element.openingStockId);
+          batch.update(docRef3, {
+            openingStockQnt: fcloseStock,
+            updatedAt: Timestamp.now(),
+          });
+        }
+        else {
+          await this.getOpeningStock()
+          const openStock = this.openingStock.find(
+            (o: any) => o.productId === element.productId
+          );
+          const docRef3 = doc(this.apiService.db, collectionNames.openingStock, openStock.id);
+          batch.update(docRef3, {
+            openingStockQnt: fcloseStock,
+            updatedAt: Timestamp.now(),
+          });
+
+        }
+
+      }
+
+      await batch.commit();
+      console.log('تم التحديث بنجاح');
+      alert("يعطيك العافية تم التحديث بنجاح")
+    } catch (error) {
+      console.error('فشل في التحديث:', error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+
+
+  // async saveChangesDaily() {
+  //   if (this.orderDailyToUpdate.length == 0) {
+  //     return
+  //   }
+  //   /////
+  //   this.isLoading = true
+  //   const batch = writeBatch(this.apiService.db);
+  //   try {
+
+  //     const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
+  //     batch.update(docRef2, {
+  //       updatedAt: Timestamp.now(),
+  //     });
+
+  //     this.orderDailyToUpdate.forEach(async (element: any) => {
+  //       if (element.products) {
+  //         element.products.forEach(async (subProduct: any) => {
+  //           console.log("subProducts", subProduct);
+
+  //           const { dailyReportId, productName, ...filtedSubProduct } = subProduct
+
+  //           console.log("filtedSubProduct", filtedSubProduct);
+
+  //           const updatedSubProduct = {
+  //             ...filtedSubProduct,
+  //             updatedAt: Timestamp.now(),
+  //           };
+
+  //           const docRef = doc(this.apiService.db, collectionNames.dailyReports, subProduct.dailyReportId);
+  //           batch.update(docRef, updatedSubProduct);
+  //         });
+  //       }
+
+  //       const { productUnit, dailyReportId, productName, products, ...filtedParentProduct } = element
+
+  //       console.log("ParentProduct", element);
+
+  //       console.log("filtedParentProduct", filtedParentProduct);
+
+  //       const updatedParentProduct = {
+  //         ...filtedParentProduct,
+  //         updatedAt: Timestamp.now(),
+  //       };
+  //       const docRef = doc(this.apiService.db, collectionNames.dailyReports, element.dailyReportId);
+  //       batch.update(docRef, updatedParentProduct);
+
+  //       const q1 = query(
+  //         collection(this.apiService.db, collectionNames.dailyReports),
+  //         where("branchId", "==", this.branch.id),
+  //         where("productId", "==", element.productId),
+  //         where("date", ">=", Timestamp.fromDate(this.dateToAddInDaily!)),
+  //       );
+
+
+  //       const snapshot1 = await getDocs(q1);
+  //       const dailyReportsToUpdate = snapshot1.docs.map(doc => {
+  //         const data = doc.data();
+
+  //         return {
+  //           id: doc.id,
+  //           date: data["date"],
+  //           productId: data["productId"],
+  //           openingStockQnt: data["openingStockQnt"],
+  //           recieved: data["recieved"],
+  //           add: element.products ? data["add"] : undefined,
+  //           sales: element.products ? data["sales"] : undefined,
+  //           staffMeal: element.products ? data["staffMeal"] : undefined,
+  //           transfer: data["transfer"],
+  //           dameged: element.products ? data["dameged"] : undefined,
+  //           closeStock: data["closeStock"]
+  //         };
+  //       });
+
+  //       dailyReportsToUpdate.forEach((item: any, index: number) => {
+  //         const docRef1 = doc(this.apiService.db, collectionNames.dailyReports, item.id);
+
+  //         const add = item.products
+  //           ? item.products.reduce((total: number, p: any) => total + Number(p.add || 0), 0)
+  //           : Number(item.add || 0);
+
+  //         const sales = item.products
+  //           ? item.products.reduce((total: number, p: any) => total + Number(p.sales || 0), 0)
+  //           : Number(item.sales || 0);
+
+  //         const staffMeal = item.products
+  //           ? item.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
+  //           : Number(item.staffMeal || 0);
+
+  //         const dameged = item.products
+  //           ? item.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
+  //           : Number(item.dameged || 0);
+
+  //         const closeStock =
+  //           Number(item.openingStockQnt || 0) +
+  //           Number(item.recieved || 0) +
+  //           add -
+  //           sales -
+  //           staffMeal -
+  //           Number(item.transfer || 0) -
+  //           dameged;
+
+
+  //         console.log("total1", closeStock);
+
+  //         // Build the update object with the fields you always want to update.
+  //         const updateData: any = {
+  //           updatedAt: Timestamp.now(),
+  //           closeStock,
+  //           openingStockQnt: item.openingStockQnt,
+  //         };
+
+  //         // Conditionally add the 'sales' field if item.parentProduct is falsy.
+  //         // That is, if there's no parent product, then include sales.
+  //         if (!item.parentProduct) {
+  //           updateData.sales = sales;
+  //           updateData.staffMeal = staffMeal;
+  //           updateData.dameged = dameged;
+  //           updateData.add = add;
+  //         }
+
+  //         // Use the constructed object in your batch update.
+  //         batch.update(docRef1, updateData);
+
+  //       });
+  //     })
+  //     await batch.commit()
+  //     console.log('تم التحديث بنجاح');
+  //   } catch (error) {
+
+  //     console.error('فشل في التحديث:', error);
+
+  //   } finally {
+  //     this.isLoading = false;
+  //   }
+
+
+  // }
 }
 
