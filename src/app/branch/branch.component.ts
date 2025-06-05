@@ -2506,7 +2506,7 @@ export class BranchComponent {
     try {
       const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
       batch.update(docRef2, { updatedAt: Timestamp.now() });
-
+      ////
       for (const element of this.orderDailyToUpdate) {
         // تحديث المنتجات الفرعية
         if (element.products) {
@@ -2563,9 +2563,14 @@ export class BranchComponent {
           console.log("❌ 2المستند غير موجود");
         }
 
-        await batch1.commit();
 
-        // تحديث التقارير بناءً على الاستعلام
+
+      }
+      await batch1.commit();
+
+
+      for (const element of this.orderDailyToUpdate) {
+     
         const q1 = query(
           collection(this.apiService.db, collectionNames.dailyReports),
           where("branchId", "==", this.branch.id),
