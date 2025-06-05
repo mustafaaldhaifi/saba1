@@ -2076,6 +2076,103 @@ export class BranchComponent {
     ];
 
     try {
+      // const colRef1 = collection(this.apiService.db, 'dailyReports');
+      // const q1 = query(colRef1,
+      //   where("branchId", "==", this.branch.id),
+
+      // ); // فلترة حسب branchId
+      // const snapshot1 = await getDocs(q1);
+      // var reports = snapshot1.docs.map(doc => ({
+      //   id: doc.id,
+      //   ...doc.data() as any
+      // }));
+
+      // // تجميع حسب date
+      // const groupedByDate: { [date: string]: any[] } = {};
+
+
+      // let productsHaveSubProducts: any[] = [];
+      // let idsToDelete: any[] = [];
+
+      // reports.forEach((item: any, index1: number) => {
+      //   if (item.parentProduct) {
+      //     const parentProduct1 = reports.find((element: any) => element.productId == item.parentProduct);
+
+      //     if (parentProduct1) {
+      //       const index = productsHaveSubProducts.findIndex((d: any) => d.productId == item.parentProduct);
+
+      //       // استبعاد بعض الحقول من المنتج الفرعي
+      //       const {
+      //         openingStockId, openingStockQnt, recieved, transfer, closeStock, productName1, productUnit,
+      //         ...filteredItem
+      //       } = item;
+
+      //       // استبعاد الحقول من المنتج الرئيسي
+      //       const {
+      //         add, dameged, parentProduct, sales, staffMeal, ...filteredParent
+      //       } = parentProduct1;
+
+      //       if (index != -1) {
+      //         productsHaveSubProducts[index].products.push(filteredItem);
+      //       } else {
+      //         filteredParent.products = [filteredItem];
+      //         productsHaveSubProducts.push(filteredParent);
+      //       }
+
+      //       idsToDelete.push(item.productId);
+      //     }
+      //   }
+      // });
+
+
+
+      // // إزالة العناصر الفرعية من القائمة الأصلية
+      // reports = reports
+      //   .filter((item: any) => !idsToDelete.includes(item.productId))
+      //   .concat(productsHaveSubProducts); // إضافة المجموعات الجديدة
+
+      // const groupedByProductId = new Map();
+
+      // reports.forEach(item => {
+      //   const existing = groupedByProductId.get(item.productId);
+
+      //   // إذا كان المنتج الحالي يحتوي على منتجات فرعية أو لم تتم إضافته بعد
+      //   if (!existing || (item.products?.length && (!existing.products || existing.products.length === 0))) {
+      //     groupedByProductId.set(item.productId, item);
+      //   }
+      // });
+
+      // // إعادة تعيين combinedData فقط إلى المنتجات المرغوبة
+      // reports = Array.from(groupedByProductId.values());
+
+      // for (const report of reports) {
+      //   const date = report.date.toDate();
+      //   const dateKey = date.getFullYear() + '-' +
+      //     String(date.getMonth() + 1).padStart(2, '0') + '-' +
+      //     String(date.getDate()).padStart(2, '0'); // YYYY-MM-DD
+
+
+      //   if (!groupedByDate[dateKey]) {
+      //     groupedByDate[dateKey] = [];
+      //   }
+
+      //   groupedByDate[dateKey].push(report);
+      // }
+
+
+      // for (const dateKey in groupedByDate) {
+      //   const items = groupedByDate[dateKey];
+      //   console.log("تاريخ:", dateKey);
+      //   console.log("العناصر:", items);
+
+      //   for (const item of items) {
+
+      //   }
+      // }
+
+
+      // console.log('groupedByDate', groupedByDate);
+
       for (const colName of collections) {
         const colRef = collection(this.apiService.db, colName);
         const q = query(colRef,
@@ -2086,7 +2183,10 @@ export class BranchComponent {
         ); // فلترة حسب branchId
         const snapshot = await getDocs(q);
 
-        // console.log("sssssnnnn",snapshot.docs);
+
+
+
+        console.log("sssssnnnn", snapshot.docs);
 
         const deletePromises = snapshot.docs.map(document => {
           //  console.log("ddddaaa",document)
@@ -2399,6 +2499,8 @@ export class BranchComponent {
     if (this.orderDailyToUpdate.length === 0) return;
 
     this.isLoading = true;
+    const batch1 = writeBatch(this.apiService.db);
+
     const batch = writeBatch(this.apiService.db);
 
     try {
@@ -2417,7 +2519,7 @@ export class BranchComponent {
             };
 
             const docRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
-            batch.update(docRef, updatedSubProduct);
+            batch1.update(docRef, updatedSubProduct);
           }
         }
 
@@ -2437,10 +2539,31 @@ export class BranchComponent {
           updatedAt: Timestamp.now(),
         };
 
+        console.log("updatedParentProduct", updatedParentProduct);
+
+
         const parentDocRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
-        batch.update(parentDocRef, updatedParentProduct);
+
+        const parentDocSnap = await getDoc(parentDocRef);
+
+        if (parentDocSnap.exists()) {
+          console.log("📄 بيانات المستند:", parentDocSnap.data());
+        } else {
+          console.log("❌ المستند غير موجود");
+        }
+
+        batch1.update(parentDocRef, updatedParentProduct);
 
 
+        const parentDocSnap1 = await getDoc(parentDocRef);
+
+        if (parentDocSnap.exists()) {
+          console.log("📄 2بيانات المستند:", parentDocSnap1.data());
+        } else {
+          console.log("❌ 2المستند غير موجود");
+        }
+
+        await batch1.commit();
 
         // تحديث التقارير بناءً على الاستعلام
         const q1 = query(
@@ -2459,11 +2582,11 @@ export class BranchComponent {
             productId: data["productId"],
             openingStockQnt: data["openingStockQnt"],
             recieved: data["recieved"],
-            add: element.products ? data["add"] : undefined,
-            sales: element.products ? data["sales"] : undefined,
-            staffMeal: element.products ? data["staffMeal"] : undefined,
+            add: data["add"],
+            sales: data["sales"],
+            staffMeal: data["staffMeal"],
             transfer: data["transfer"],
-            dameged: element.products ? data["dameged"] : undefined,
+            dameged: data["dameged"],
             closeStock: data["closeStock"]
           };
         });
@@ -2471,6 +2594,9 @@ export class BranchComponent {
 
         var fcloseStock = 0
         for (const item of dailyReportsToUpdate) {
+
+
+
           const docRef1 = doc(this.apiService.db, collectionNames.dailyReports, item.id);
 
           const add = element.products
@@ -2511,6 +2637,8 @@ export class BranchComponent {
             updateData.add = add;
           }
 
+          console.log("item to update", item);
+          console.log("closeStock", closeStock);
           batch.update(docRef1, updateData);
           fcloseStock = closeStock
         }
