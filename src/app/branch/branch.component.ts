@@ -2570,7 +2570,7 @@ export class BranchComponent {
 
 
       for (const element of this.orderDailyToUpdate) {
-     
+
         const q1 = query(
           collection(this.apiService.db, collectionNames.dailyReports),
           where("branchId", "==", this.branch.id),
@@ -2622,7 +2622,7 @@ export class BranchComponent {
 
           const closeStock =
             Number(item.openingStockQnt || 0) +
-            Number(item.recieved || 0) +
+            Number((item.recieved * element.productUnit) || 0) +
             add -
             sales -
             staffMeal -
