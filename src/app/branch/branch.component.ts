@@ -24,6 +24,7 @@ export class BranchComponent {
   isReadDailyMode: boolean;
 
   isAdmin = false
+  dialyNote: string = '';
 
   exportPdf() {
     const pdfService = new PdfService();
@@ -998,6 +999,8 @@ export class BranchComponent {
       typeId: doc.data()['typeId'],
       branchId: doc.data()['branchId'],
       date: doc.data()['date'],
+      note: doc.data()['note'],
+
     })).sort((a, b) => b.date.seconds - a.date.seconds);
     this.dailyReportsDates1 = this.dailyReportsDates
 
@@ -1091,6 +1094,15 @@ export class BranchComponent {
       this.dateToAddInDaily = new Date(now.getFullYear(), now.getMonth(), 1);  // Set the current time if no report exists
       console.log('No report for today.');
     }
+
+    // this.selectedDateToAddObject = this.dailyReportsDates1.find((report: any) => {
+    //   const reportDate = report.date.toDate(); // تحويل من Firestore Timestamp إلى JavaScript Date
+    //   reportDate.setHours(0, 0, 0, 0); // تجاهل الوقت
+    //   return reportDate.getTime() === this.dateToAddInDaily!.getTime();
+    // });
+
+    // console.log("selectedDateToAddObject",this.selectedDateToAddObject);
+
 
     // // Handle missing dates logic
     // const sortedReports = this.dailyReportsDates
@@ -1935,6 +1947,7 @@ export class BranchComponent {
       batch.set(summaryRef, {
         branchId: this.branch.id,
         typeId: this.selectedType.id,
+        note: this.dialyNote,
         date: firestoreTimestamp,
         createdAt: Timestamp.now(),
       });
@@ -1990,7 +2003,10 @@ export class BranchComponent {
 
   }
 
+  selectedDateToAddObject: any
+
   async onDailyDateChange($event: any) {
+    this.dialyNote = ''
     this.isReadDailyMode = true
     this.dailyReports = []
     this.combinedData = []
@@ -1998,6 +2014,23 @@ export class BranchComponent {
     // console.log($event.date.toDate());
 
     this.dateToAddInDaily = $event
+
+    console.log(this.dailyReportsDates1);
+
+    this.selectedDateToAddObject = this.dailyReportsDates1.find((report: any) => {
+      const reportDate = report.date.toDate(); // تحويل من Firestore Timestamp إلى JavaScript Date
+      reportDate.setHours(0, 0, 0, 0); // تجاهل الوقت
+      return reportDate.getTime() === this.dateToAddInDaily!.getTime();
+    });
+    if (this.selectedDateToAddObject) {
+
+      if (this.selectedDateToAddObject.note) {
+        this.dialyNote = this.selectedDateToAddObject.note
+      }
+    }
+
+    console.log("📅 Selected Date:", $event);
+    console.log("✅ Matched Report:", this.selectedDateToAddObject);
 
     // const now = $event
     // const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
@@ -2317,7 +2350,7 @@ export class BranchComponent {
 
     const formattedDate = `${this.dateToAddInDaily!.getFullYear()}-${String(this.dateToAddInDaily!.getMonth() + 1).padStart(2, '0')}-${String(this.dateToAddInDaily!.getDate()).padStart(2, '0')}`;
     console.log("typeee", this.selectedType);
-    pdfService.exportPDF5(this.combinedData, formattedDate, this.branch.data.name)
+    pdfService.exportPDF5(this.combinedData, formattedDate, this.branch.data.name, this.dialyNote)
     // pdfService.exportPDF5(this.combinedData)
 
 
@@ -2600,8 +2633,6 @@ export class BranchComponent {
         var fcloseStock = 0
         for (const item of dailyReportsToUpdate) {
 
-
-
           const docRef1 = doc(this.apiService.db, collectionNames.dailyReports, item.id);
 
           const add = element.products
@@ -2821,5 +2852,101 @@ export class BranchComponent {
 
 
   // }
+
+
+  async saveDailyNote() {
+    if (!this.selectedDateToAddObject) {
+      return
+    }
+
+    try {
+      this.isLoading = true;
+      const batch = writeBatch(this.apiService.db);
+      const docRef = doc(this.apiService.db, collectionNames.dailyReportsDates, this.selectedDateToAddObject.id);
+      batch.update(docRef, {
+        note: this.dialyNote,
+        updatedAt: Timestamp.now()
+      });
+
+      await batch.commit();
+      this.selectedDateToAddObject.note = this.dialyNote
+      console.log("Doneee");
+
+    } catch (error) {
+      console.log(error);
+
+    }
+    this.isLoading = false
+  }
+  ifEnabledNoteFiled() {
+
+    // if (!Array.isArray(this.combinedData)) return false;
+
+    return this.combinedData.some((item: any) => {
+      if (item.products) {
+        return item.products.some((subitem: any) => {
+          const isAddNegative = Number(subitem?.add ?? 0) < 0;
+          const isTransferNonZero = Number(subitem?.transfer ?? 0) !== 0;
+          const isDamagedPositive = Number(subitem?.dameged ?? 0) > 0;
+
+          return isAddNegative || isTransferNonZero || isDamagedPositive;
+        });
+      } else {
+        const isAddNegative = Number(item.add) < 0;
+        const isTransferNonZero = Number(item.transfer) !== 0;
+        const isDamagedPositive = Number(item.dameged) > 0;
+
+        console.log('isAddNegative', isAddNegative);
+        console.log('isTransferNonZero', isTransferNonZero);
+        console.log('isDamagedPositive', isDamagedPositive);
+
+
+        return isAddNegative || isTransferNonZero || isDamagedPositive;
+      }
+
+    });
+  }
+
+  ifHaveNegativeValue() {
+
+    return this.combinedData.some((item: any) => {
+      if (Array.isArray(item.products) && item.products.length > 0) {
+        return item.products.some((subitem: any) => {
+          const isAddNegative = Number(item?.recieved ?? 0) < 0;
+          const isTransferNegative = Number(subitem?.staffMeal ?? 0) < 0;
+          const isDamagedNegative = Number(subitem?.dameged ?? 0) < 0;
+
+          return isAddNegative || isTransferNegative || isDamagedNegative;
+        });
+
+      } else {
+        const isAddNegative = Number(item?.recieved ?? 0) < 0;
+        const isTransferNegative = Number(item?.staffMeal ?? 0) < 0;
+        const isDamagedNegative = Number(item?.dameged ?? 0) < 0;
+
+        return isAddNegative || isTransferNegative || isDamagedNegative;
+      }
+    });
+
+  }
+  ifSalesCompleted(): boolean {
+    return this.combinedData.every((item: any) => {
+      if (item.products && item.products.length > 0) {
+        // تحقق من أن كل منتج فرعي لديه قيمة رقمية في حقل sales
+        return item.products.every((subitem: any) => {
+          return subitem?.sales !== null &&
+            subitem?.sales !== undefined &&
+            subitem?.sales !== '' &&
+            !isNaN(Number(subitem.sales));
+        });
+      } else {
+        // تحقق من المنتج الرئيسي إذا لم يكن لديه منتجات فرعية
+        return item?.sales !== null &&
+          item?.sales !== undefined &&
+          item?.sales !== '' &&
+          !isNaN(Number(item.sales));
+      }
+    });
+  }
 }
 

@@ -482,7 +482,7 @@ export class PdfService {
     doc.save(`${branchName}_Daily_${date}.pdf`);
   }
 
-  exportPDF5(data: any[], date: string, branchName: string) {
+  exportPDF5(data: any[], date: string, branchName: string, note: any) {
     const doc = new jsPDF();
     doc.setFont('ARIAL', 'normal');
     const rows: any[] = [];
@@ -504,9 +504,9 @@ export class PdfService {
             row.push({
               content: item.openingStockQnt,
               rowSpan: productCount,
-              styles: { halign: 'center', valign: 'middle' ,ineWidth: 0, },
+              styles: { halign: 'center', valign: 'middle', ineWidth: 0, },
             });
-          } 
+          }
           // else {
           //   row.push({ content: '' }); // خلايا فارغة لبقية الصفوف
           // }
@@ -542,7 +542,7 @@ export class PdfService {
               rowSpan: productCount,
               styles: { halign: 'center', valign: 'middle' },
             });
-          } 
+          }
           // else {
           //   row.push({ content: '' });
           // }
@@ -557,7 +557,7 @@ export class PdfService {
               rowSpan: productCount,
               styles: { halign: 'center', valign: 'middle' },
             });
-          } 
+          }
           // else {
           //   row.push({ content: '' });
           // }
@@ -665,6 +665,22 @@ export class PdfService {
       //   cellPadding: 3,
       //   halign: 'center',
       // },
+
+      /** 🔽 Capture where the table ends */
+      didDrawPage: (data) => {
+
+        if (note && note.trim().length > 0) {
+          const finalY = data.cursor!.y + 10; // 10 units padding below table
+
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const noteText = `ملاحظة: ${note}`;
+          const textWidth = doc.getTextWidth(noteText);
+          // const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+          doc.setFontSize(10);
+          doc.text(noteText, pageWidth - textWidth - 10, finalY);
+        }
+      },
       startY: 20,
       theme: 'grid',
     });

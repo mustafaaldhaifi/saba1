@@ -210,7 +210,7 @@
     (click)="resetAllDailyReportForThisBranch()">
     Delete all this branch 2
 </div> -->
- 
+
 <!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5' && dateToAddInDaily"
     (click)="resetAllDailyReportForThisBranchAndSelectedDate()">
     Delete all this branch and selected Date
@@ -330,7 +330,7 @@
                         <td>
                             <input [attr.tabindex]="2000 + i" [disabled]="isReadDailyMode === true && isAdmin==false"
                                 [(ngModel)]="item.recieved" (ngModelChange)="onQuantityChange('recieved', item, i)"
-                                type="number" required>
+                                min="0" step="any" type="number" required>
 
                         </td>
                         <td>
@@ -370,10 +370,11 @@
                         </ng-container>
 
                         <ng-template #normalProduct2>
-                            <td >
+                            <td>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
-                                    [disabled]=" isReadDailyMode && isAdmin==false" (input)="onQuantityChange('sales', item, i)"
-                                    [(ngModel)]="combinedData[i].sales" type="number" required />
+                                    [disabled]=" isReadDailyMode && isAdmin==false"
+                                    (input)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
+                                    type="number" required />
                             </td>
 
                         </ng-template>
@@ -387,8 +388,8 @@
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
                                             [disabled]="isReadDailyMode && isAdmin==false"
                                             (input)="onQuantityChange('staffMeal', item, i)"
-                                            [(ngModel)]="combinedData[i].products[s].staffMeal" type="number"
-                                            required />
+                                            [(ngModel)]="combinedData[i].products[s].staffMeal" type="number" min="0"
+                                            step="any" required />
                                     </ng-container>
                                 </div>
                             </td>
@@ -396,9 +397,10 @@
                         </ng-container>
 
                         <ng-template #normalProduct3>
-                            <td >
+                            <td>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
-                                    [disabled]="isReadDailyMode && isAdmin==false" (input)="onQuantityChange('staffMeal', item, i)"
+                                    [disabled]="isReadDailyMode && isAdmin==false"
+                                    (input)="onQuantityChange('staffMeal', item, i)" min="0" step="any"
                                     [(ngModel)]="combinedData[i].staffMeal" type="number" required />
 
                             </td>
@@ -418,7 +420,8 @@
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="6000 + i"
-                                            [disabled]="isReadDailyMode && isAdmin==false" (input)="onQuantityChange('dameged', item, i)"
+                                            [disabled]="isReadDailyMode && isAdmin==false" min="0" step="any"
+                                            (input)="onQuantityChange('dameged', item, i)"
                                             [(ngModel)]="combinedData[i].products[s].dameged" type="number" required />
                                     </ng-container>
                                 </div>
@@ -426,8 +429,9 @@
 
                             <ng-template #normalProduct4>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="6000 + i"
-                                    [disabled]="isReadDailyMode && isAdmin==false" (input)="onQuantityChange('dameged', item, i)"
-                                    [(ngModel)]="combinedData[i].dameged" type="number" required />
+                                    [disabled]="isReadDailyMode && isAdmin==false" min="0" step="any"
+                                    (input)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
+                                    type="number" required />
                             </ng-template>
 
                         </td>
@@ -441,10 +445,18 @@
                     </tr>
                 </tbody>
             </table>
+
+
         </div>
+
+
     </div>
 
-    <button *ngIf="dateToAddInDaily && ifThereisEmptyValue() == false && isReadDailyMode === false"
+    <input *ngIf="ifEnabledNoteFiled()" type="text" placeholder="الملاحظة" [(ngModel)]="dialyNote">
+    <button (click)="saveDailyNote()"
+        *ngIf="selectedDateToAddObject && selectedDateToAddObject.note != dialyNote && isAdmin">حفظ الملاحظة</button>
+    <button [disabled]="ifHaveNegativeValue() == true || ifSalesCompleted() == false"
+        *ngIf="dateToAddInDaily && ifThereisEmptyValue() == false && isReadDailyMode === false"
         (click)="saveDaily()">Save</button>
 
 
