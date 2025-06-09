@@ -667,20 +667,44 @@ export class PdfService {
       // },
 
       /** 🔽 Capture where the table ends */
-      didDrawPage: (data) => {
+      didDrawPage: (data1) => {
+        const notes: string[] = [];
+        let counter = 1;
 
-        if (note && note.trim().length > 0) {
-          const finalY = data.cursor!.y + 10; // 10 units padding below table
+        // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
+        data.forEach((element: any) => {
+          if (Array.isArray(element.products)) {
+            element.products.forEach((sub: any) => {
+              if (sub.note) {
+                notes.push(`${sub.productName} ${sub.note}`);
+              }
+            });
+          } else if (element.note) {
+            notes.push(`${element.productName} ${element.note}`);
+          }
+        });
 
+        // عرض الملاحظات في أسفل الصفحة (بدون تكرار كلمة "ملاحظة")
+        if (notes.length > 0) {
+          const startY = data1.cursor!.y + 10;
           const pageWidth = doc.internal.pageSize.getWidth();
-          const noteText = `ملاحظة: ${note}`;
-          const textWidth = doc.getTextWidth(noteText);
-          // const finalY = (doc as any).lastAutoTable.finalY + 10;
+          const rightMargin = 10;
+          const lineHeight = 6;
 
           doc.setFontSize(10);
-          doc.text(noteText, pageWidth - textWidth - 10, finalY);
+          doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, startY);
+
+          notes.forEach((note, index) => {
+            doc.text(
+              note,
+              pageWidth - doc.getTextWidth(note) - rightMargin,
+              startY + (index + 1) * lineHeight,
+              // { align: 'right' }
+            );
+          });
         }
-      },
+      }
+      ,
       startY: 20,
       theme: 'grid',
     });

@@ -195,6 +195,8 @@ export class DailyReportsService {
         staffMeal: doc.data()['staffMeal'],
         transfer: doc.data()['transfer'],
         dameged: doc.data()['dameged'],
+        note: doc.data()['note'],
+
         closeStock: doc.data()['closeStock'],
       }));
 

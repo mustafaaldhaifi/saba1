@@ -24,7 +24,7 @@ export class BranchComponent {
   isReadDailyMode: boolean;
 
   isAdmin = false
-  dialyNote: string = '';
+  dialyNote: any[] = [];
 
   exportPdf() {
     const pdfService = new PdfService();
@@ -1191,13 +1191,12 @@ export class BranchComponent {
       // const qnt = report?.qnt ?? '';
       // const status = qnt == '0' ? '4' : (report?.status ?? '0');
       const closing1 = this.calculateClosingStock(report, openingStock, product.productUnit);
-      return {
+      var s: any = {
         dailyReportId: report ? report.id : undefined,
         productId: product.id,
         productName: product.name,
         productUnit: product.unit,
         parentProduct: product.parentProduct,
-
         openingStockId: this.isReadDailyMode
           ? (report?.openingStockId ?? 1)
           : (openingStock?.id ?? -1),
@@ -1213,6 +1212,12 @@ export class BranchComponent {
         // dameged:  report.dameged,
 
       };
+
+      if (report && report.note) {
+        s.note = report.note
+      }
+
+      return s
     });
 
     let productsHaveSubProducts: any[] = [];
@@ -1795,7 +1800,7 @@ export class BranchComponent {
 
   }
 
-  onQuantityChange(field: string, item: any, i: number): void {
+  onQuantityChange(field: string, item: any, i: number, subProduct: any = null): void {
     const productUnit = item.productUnit ?? 1;
 
     // if (field === 'recieved') {
@@ -1814,6 +1819,49 @@ export class BranchComponent {
     const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
     this.combinedData[i].closeStock = updatedCloseStock;
 
+
+    if (field === 'add' || field === 'transfer' || field === 'damaged') {
+      if (this.ifEnabledNoteFiled()) {
+        const input = window.prompt(' السبب:');
+
+        if (input === null || input.length == 0) {
+          // this.combinedData[i][field] = ""
+          // تم الإلغاء من قبل المستخدم
+          console.log("cenceled", this.combinedData[i]);
+
+          return;
+        }
+
+        if (subProduct) {
+          this.combinedData[i].products[subProduct.i].note = input
+        } else {
+          this.combinedData[i].note = input
+        }
+
+        if (field === 'add' || field === 'damaged') {
+
+        }
+
+        // const a = this.dialyNote.findIndex((data: any) => data.item.dailyReportId == item.dailyReportId)
+        // if (a == -1) {
+
+        //   item.note = input
+        //   this.dialyNote.push({
+        //     item: item,
+        //     field: field
+        //   })
+        // } else {
+        //   this.dialyNote[a] = {
+        //     item: item,
+        //     field: field
+        //   }
+        // }
+      }
+
+
+    }
+
+    console.log("proccesed", this.combinedData[i]);
 
 
     // إذا كان المنتج هو اللحم وتم تعديل المبيعات
@@ -1947,7 +1995,7 @@ export class BranchComponent {
       batch.set(summaryRef, {
         branchId: this.branch.id,
         typeId: this.selectedType.id,
-        note: this.dialyNote,
+        // note: this.dialyNote,
         date: firestoreTimestamp,
         createdAt: Timestamp.now(),
       });
@@ -2006,7 +2054,7 @@ export class BranchComponent {
   selectedDateToAddObject: any
 
   async onDailyDateChange($event: any) {
-    this.dialyNote = ''
+    // this.dialyNote = []
     this.isReadDailyMode = true
     this.dailyReports = []
     this.combinedData = []
@@ -2022,12 +2070,12 @@ export class BranchComponent {
       reportDate.setHours(0, 0, 0, 0); // تجاهل الوقت
       return reportDate.getTime() === this.dateToAddInDaily!.getTime();
     });
-    if (this.selectedDateToAddObject) {
+    // if (this.selectedDateToAddObject) {
 
-      if (this.selectedDateToAddObject.note) {
-        this.dialyNote = this.selectedDateToAddObject.note
-      }
-    }
+    //   if (this.selectedDateToAddObject.note) {
+    //     this.dialyNote = this.selectedDateToAddObject.note
+    //   }
+    // }
 
     console.log("📅 Selected Date:", $event);
     console.log("✅ Matched Report:", this.selectedDateToAddObject);
@@ -2041,6 +2089,16 @@ export class BranchComponent {
 
     this.combineDataWithReports()
     this.orderDailyToUpdate = []
+
+    this.combinedData.forEach((data: any) => {
+
+      if (data.note) {
+        this.dialyNote.push(data)
+      }
+    })
+
+    console.log("dialyNotess", this.dialyNote);
+
     this.isLoading = false
 
 
