@@ -1,5 +1,5 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, ElementRef, Inject, PLATFORM_ID, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Component, ElementRef, inject, Inject, PLATFORM_ID, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -11,15 +11,21 @@ import { PdfService } from '../pdf.service';
 import { ProductsService } from '../products.service';
 import { OrdersService } from '../orders.service copy';
 import { DailyReportsService } from '../dailyReports.service';
+import { retry } from 'rxjs';
+import { ReasonDialogComponent } from "../reason-dialog/reason-dialog.component";
+import { ModalService } from '../CustomModalService';
+import { AlertDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-branch',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReasonDialogComponent],
   templateUrl: './branch.component.html',
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+
+
 
   isReadDailyMode: boolean;
 
@@ -110,6 +116,7 @@ export class BranchComponent {
 
   version: any
   constructor(
+    private modalService: ModalService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
@@ -1800,26 +1807,7 @@ export class BranchComponent {
 
   }
 
-  onQuantityChange(field: string, item: any, i: number, subProduct: any = null): void {
-    const productUnit = item.productUnit ?? 1;
-
-    // if (field === 'recieved') {
-    //   this.combinedData[i].recieved = item.recieved;
-    // } else {
-    //   // Store other fields as-is or default to '-'
-    //   this.combinedData[i][field] = item[field] ?? '';
-    // }
-
-    console.log(this.combinedData[i]);
-
-    this.combinedData[i][field] = item[field] ?? '';
-
-
-    // Recalculate closeStock using productUnit
-    const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
-    this.combinedData[i].closeStock = updatedCloseStock;
-
-
+  onQuantityComplete(field: string, item: any, i: number, subProduct: any = null) {
     if (field === 'add' || field === 'transfer' || field === 'damaged') {
       if (this.ifEnabledNoteFiled()) {
         const input = window.prompt(' السبب:');
@@ -1856,10 +1844,257 @@ export class BranchComponent {
         //     field: field
         //   }
         // }
+      } else {
+        if (subProduct) {
+          this.combinedData[i].products[subProduct.i].note = undefined
+        } else {
+          this.combinedData[i].note = undefined
+        }
       }
 
 
     }
+  }
+
+
+  isModalOpen = false;
+
+  openModal(field: string, item: any, i: number, subProduct: any = null) {
+    const productUnit = item.productUnit ?? 1;
+    if (this.isModalOpen == false) {
+      const modalRef = this.modalService.open(ReasonDialogComponent);
+      modalRef.result.then((result) => {
+        if (result === null || result.length == 0) {
+          if (subProduct) {
+            this.combinedData[i].products[subProduct.i].note = undefined
+            this.combinedData[i].products[subProduct.i][field] = ""
+
+          } else {
+            this.combinedData[i][field] = ""
+            this.combinedData[i].note = undefined
+          }
+          // this.combinedData[i][field] = ""
+          // تم الإلغاء من قبل المستخدم
+          // console.log("cenceled", this.combinedData[this.handleDilogReson.i]);
+          const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+          this.combinedData[i].closeStock = updatedCloseStock;
+        this.isModalOpen = false
+
+          return;
+        }
+
+        if (subProduct) {
+          this.combinedData[i].products[subProduct.i].note = result
+          this.combinedData[i].products[subProduct.i][field] = ""
+
+        } else {
+          this.combinedData[i][field] = ""
+          this.combinedData[i].note = result
+        }
+        const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+        this.combinedData[i].closeStock = updatedCloseStock;
+        console.log('تم:', result);
+        this.isModalOpen = false
+
+      }).catch(() => {
+
+        if (subProduct) {
+          this.combinedData[i].products[subProduct.i].note = undefined
+          this.combinedData[i].products[subProduct.i][field] = ""
+
+        } else {
+          this.combinedData[i][field] = ""
+          this.combinedData[i].note = undefined
+        }
+        const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+        this.combinedData[i].closeStock = updatedCloseStock;
+        console.log('تم الإلغاء');
+        this.isModalOpen = false
+
+      });
+      this.isModalOpen = true
+    }
+  }
+
+  onQuantityChange(field: string, item: any, i: number, subProduct: any = null): void {
+    if (this.isModalOpen == true) {
+      return
+    }
+    const productUnit = item.productUnit ?? 1;
+
+    // if (field === 'recieved') {
+    //   this.combinedData[i].recieved = item.recieved;
+    // } else {
+    //   // Store other fields as-is or default to '-'
+    //   this.combinedData[i][field] = item[field] ?? '';
+    // }
+
+    console.log(this.combinedData[i]);
+
+    this.combinedData[i][field] = item[field] ?? '';
+
+    if (this.ifHaveNegativeValue()) {
+      if (subProduct) {
+        this.combinedData[i].products[subProduct.i][field] = ""
+      }
+      else {
+
+        this.combinedData[i][field] = ""
+      }
+      console.log("negative");
+
+      console.log(this.combinedData[i]);
+
+      return
+    }
+
+
+
+    // Recalculate closeStock using productUnit
+    const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+    this.combinedData[i].closeStock = updatedCloseStock;
+    if (this.combinedData[i].closeStock < 0) {
+      const modalRef = this.modalService.open(AlertDialogComponent, {
+        text: "يتم عمل جرد ميداني للصنف للتأكد من الكمية"
+      });
+      this.isModalOpen = true
+      modalRef.result.then((result) => {
+        if (subProduct) {
+          this.combinedData[i].products[subProduct.i][field] = ""
+        }
+        else {
+
+          this.combinedData[i][field] = ""
+        }
+        // this.combinedData[i][field] = ""
+        const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+        this.combinedData[i].closeStock = updatedCloseStock;
+        this.isModalOpen = false
+
+      })
+
+      return
+    }
+
+
+
+    if (field === 'add' || field === 'transfer' || field === 'dameged') {
+      // console.log("this.handleDilogReson", this.handleDilogReson);
+
+
+      if (this.ifEnabledNoteFiled()) {
+        // this.handleDilogReson = { field, item, i, subProduct }
+
+        if (field === 'add') {
+          if (subProduct) {
+            if (Number(item.products[subProduct.i][field] ?? 0) < 0) {
+              // this.showReasonDialog = true
+              this.openModal(field, item, i, subProduct)
+            }
+          } else {
+            if (Number(item[field] ?? 0) < 0) {
+              // this.showReasonDialog = true
+              this.openModal(field, item, i, subProduct)
+
+
+            }
+          }
+        }
+
+        if (field === 'transfer') {
+          if (subProduct) {
+            if (Number(item.products[subProduct.i][field] ?? 0) !== 0) {
+              // this.showReasonDialog = true
+              this.openModal(field, item, i, subProduct)
+
+
+            }
+          } else {
+            if (Number(item[field] ?? 0) !== 0) {
+              // this.showReasonDialog = true
+              this.openModal(field, item, i, subProduct)
+
+            }
+          }
+        }
+
+        if (field === 'dameged') {
+          if (subProduct) {
+            if (Number(item.products[subProduct.i][field] ?? 0) > 0) {
+              // this.showReasonDialog = true
+              this.openModal(field, item, i, subProduct)
+
+
+            }
+          } else {
+            if (Number(item[field] ?? 0) > 0) {
+              // this.showReasonDialog = true
+              this.openModal(field, item, i, subProduct)
+
+
+            }
+          }
+        }
+
+
+
+
+
+
+        // this.showReasonDialog = true
+
+
+
+        // setTimeout(() => {
+        //   const input = window.prompt(' السبب:');
+
+        // if (input === null || input.length == 0) {
+        //   // this.combinedData[i][field] = ""
+        //   // تم الإلغاء من قبل المستخدم
+        //   console.log("cenceled", this.combinedData[i]);
+
+        //   return;
+        // }
+
+        // if (subProduct) {
+        //   this.combinedData[i].products[subProduct.i].note = input
+        // } else {
+        //   this.combinedData[i].note = input
+        // }
+        // }, 0); // تأخير بسيط حتى لا يتعارض مع دورة حياة Angular
+
+
+
+        // if (field === 'add' || field === 'damaged') {
+
+        // }
+
+        // const a = this.dialyNote.findIndex((data: any) => data.item.dailyReportId == item.dailyReportId)
+        // if (a == -1) {
+
+        //   item.note = input
+        //   this.dialyNote.push({
+        //     item: item,
+        //     field: field
+        //   })
+        // } else {
+        //   this.dialyNote[a] = {
+        //     item: item,
+        //     field: field
+        //   }
+        // }
+
+      }
+      else {
+        if (subProduct) {
+          this.combinedData[i].products[subProduct.i].note = undefined
+        } else {
+          this.combinedData[i].note = undefined
+        }
+        this.handleDilogReson = null
+      }
+    }
+
 
     console.log("proccesed", this.combinedData[i]);
 
@@ -3006,5 +3241,40 @@ export class BranchComponent {
       }
     });
   }
+
+
+  handleDilogReson: any = null
+  showReasonDialog = false;
+  pendingItem: any;
+
+
+  handleReasonConfirm(reason: string) {
+    if (reason === null || reason.length == 0) {
+      // this.combinedData[i][field] = ""
+      // تم الإلغاء من قبل المستخدم
+      console.log("cenceled", this.combinedData[this.handleDilogReson.i]);
+
+      return;
+    }
+
+    if (this.handleDilogReson.subProduct) {
+      this.combinedData[this.handleDilogReson.i].products[this.handleDilogReson.subProduct.i].note = reason
+    } else {
+      this.combinedData[this.handleDilogReson.i].note = reason
+    }
+
+    this.handleDilogReson = null;
+
+    this.showReasonDialog = false;
+  }
+
+  handleReasonCancel() {
+    this.combinedData[this.handleDilogReson.i][this.handleDilogReson.field] = ""
+    this.combinedData[this.handleDilogReson.i].note = ""
+
+    this.handleDilogReson = null
+    this.showReasonDialog = false;
+  }
+
 }
 

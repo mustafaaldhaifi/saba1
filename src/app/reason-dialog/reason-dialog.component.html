@@ -1,0 +1,9 @@
+<div class="dialog-backdrop" (click)="cancel()"></div>
+<div class="dialog">
+    <h3 style="text-align: center ;">أدخل السبب</h3>
+    <textarea style="direction: rtl;" [(ngModel)]="reason" rows="3" class="form-control" maxlength="10"></textarea>
+    <div class="actions">
+        <button class="btn btn-primary" (click)="confirm()">موافق</button>
+        <button class="btn btn-secondary" (click)="cancel()">إلغاء</button>
+    </div>
+</div>

@@ -676,11 +676,46 @@ export class PdfService {
           if (Array.isArray(element.products)) {
             element.products.forEach((sub: any) => {
               if (sub.note) {
-                notes.push(`${sub.productName} ${sub.note}`);
+                var filed = ""
+                var colmn = ""
+                if (Number(sub?.add ?? 0) < 0) {
+                  colmn = "الجرد"
+                  filed = "add"
+                } else if (Number(sub?.dameged ?? 0) > 0) {
+                  colmn = "التالف"
+                  filed = "dameged"
+
+                }
+                else if (Number(sub?.transfer ?? 0) !== 0) {
+                  colmn = " التحويل"
+                  filed = "transfer"
+
+                }
+                if (colmn.length > 0) {
+                  notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
+                }
+
               }
             });
           } else if (element.note) {
-            notes.push(`${element.productName} ${element.note}`);
+            var filed = ""
+            var colmn = ""
+            if (Number(element?.add ?? 0) < 0) {
+              colmn = "الجرد"
+              filed = "add"
+            } else if (Number(element?.dameged ?? 0) > 0) {
+              colmn = "التالف"
+              filed = "dameged"
+
+            }
+            else if (Number(element?.transfer ?? 0) !== 0) {
+              colmn = " التحويل"
+              filed = "transfer"
+
+            }
+            if (colmn.length > 0) {
+              notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note} `);
+            }
           }
         });
 
