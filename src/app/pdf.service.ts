@@ -673,6 +673,7 @@ export class PdfService {
 
         // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
         data.forEach((element: any) => {
+
           if (Array.isArray(element.products)) {
             element.products.forEach((sub: any) => {
               if (sub.note) {
@@ -697,7 +698,8 @@ export class PdfService {
 
               }
             });
-          } else if (element.note) {
+          }
+          if (element.note) {
             var filed = ""
             var colmn = ""
             if (Number(element?.add ?? 0) < 0) {

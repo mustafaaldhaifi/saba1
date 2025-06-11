@@ -1865,14 +1865,21 @@ export class BranchComponent {
       const modalRef = this.modalService.open(ReasonDialogComponent);
       modalRef.result.then((result) => {
         if (result === null || result.length == 0) {
-          if (subProduct) {
-            this.combinedData[i].products[subProduct.i].note = undefined
-            this.combinedData[i].products[subProduct.i][field] = ""
-
-          } else {
+          if (field == 'transfer') {
             this.combinedData[i][field] = ""
             this.combinedData[i].note = undefined
+          } else {
+            if (subProduct) {
+              this.combinedData[i].products[subProduct.i].note = undefined
+              this.combinedData[i].products[subProduct.i][field] = ""
+
+            } else {
+              this.combinedData[i][field] = ""
+              this.combinedData[i].note = undefined
+            }
           }
+
+
           // this.combinedData[i][field] = ""
           // تم الإلغاء من قبل المستخدم
           // console.log("cenceled", this.combinedData[this.handleDilogReson.i]);
@@ -1883,14 +1890,20 @@ export class BranchComponent {
           return;
         }
 
-        if (subProduct) {
-          this.combinedData[i].products[subProduct.i].note = result
-          // this.combinedData[i].products[subProduct.i][field] = ""
-
-        } else {
-          // this.combinedData[i][field] = ""
+        if (field == 'transfer') {
           this.combinedData[i].note = result
+        } else {
+          if (subProduct) {
+            this.combinedData[i].products[subProduct.i].note = result
+            // this.combinedData[i].products[subProduct.i][field] = ""
+
+          } else {
+            // this.combinedData[i][field] = ""
+            this.combinedData[i].note = result
+          }
+
         }
+
         // const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
         // this.combinedData[i].closeStock = updatedCloseStock;
         console.log('تم:', result);
@@ -1898,14 +1911,20 @@ export class BranchComponent {
 
       }).catch(() => {
 
-        if (subProduct) {
-          this.combinedData[i].products[subProduct.i].note = undefined
-          this.combinedData[i].products[subProduct.i][field] = ""
-
-        } else {
+        if (field == 'transfer') {
           this.combinedData[i][field] = ""
           this.combinedData[i].note = undefined
+        } else {
+          if (subProduct) {
+            this.combinedData[i].products[subProduct.i].note = undefined
+            this.combinedData[i].products[subProduct.i][field] = ""
+
+          } else {
+            this.combinedData[i][field] = ""
+            this.combinedData[i].note = undefined
+          }
         }
+
         const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
         this.combinedData[i].closeStock = updatedCloseStock;
         console.log('تم الإلغاء');
