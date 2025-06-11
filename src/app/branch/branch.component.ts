@@ -1878,21 +1878,21 @@ export class BranchComponent {
           // console.log("cenceled", this.combinedData[this.handleDilogReson.i]);
           const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
           this.combinedData[i].closeStock = updatedCloseStock;
-        this.isModalOpen = false
+          this.isModalOpen = false
 
           return;
         }
 
         if (subProduct) {
           this.combinedData[i].products[subProduct.i].note = result
-          this.combinedData[i].products[subProduct.i][field] = ""
+          // this.combinedData[i].products[subProduct.i][field] = ""
 
         } else {
-          this.combinedData[i][field] = ""
+          // this.combinedData[i][field] = ""
           this.combinedData[i].note = result
         }
-        const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
-        this.combinedData[i].closeStock = updatedCloseStock;
+        // const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+        // this.combinedData[i].closeStock = updatedCloseStock;
         console.log('تم:', result);
         this.isModalOpen = false
 

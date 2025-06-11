@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -10,11 +10,18 @@ import { FormsModule } from '@angular/forms';
 export class AlertDialogComponent {
   @Input() text: string = '';
 
- 
+
 
   @Output() onConfirm = new EventEmitter<string>();
   @Output() onCancel = new EventEmitter<void>();
+  @ViewChild('focusText') focusText!: ElementRef;
 
+  ngAfterViewInit(): void {
+    // تأخير بسيط لضمان جاهزية العنصر
+    setTimeout(() => {
+      this.focusText.nativeElement.focus();
+    });
+  }
   confirm() {
     this.onConfirm.emit();
   }
