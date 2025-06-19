@@ -1186,46 +1186,36 @@ export class BranchComponent {
   }
 
   combineDataWithReports() {
+    // 1. توليد البيانات الأساسية فقط (بدون حساب closeStock)
     this.combinedData = this.data.map((product: any) => {
-      const report = this.dailyReports.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
-      const openingStock = this.openingStock.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
+      const report = this.dailyReports.find((o: any) => o.productId === product.id && o.branchId === this.branch.id);
+      const openingStock = this.openingStock.find((o: any) => o.productId === product.id && o.branchId === this.branch.id);
 
-      console.log(report);
-
-
-      console.log(product);
-
-      // const qnt = report?.qnt ?? '';
-      // const status = qnt == '0' ? '4' : (report?.status ?? '0');
-      const closing1 = this.calculateClosingStock(report, openingStock, product.productUnit);
       var s: any = {
-        dailyReportId: report ? report.id : undefined,
+        dailyReportId: report?.id,
         productId: product.id,
         productName: product.name,
         productUnit: product.unit,
         parentProduct: product.parentProduct,
-        openingStockId: this.isReadDailyMode
-          ? (report?.openingStockId ?? 1)
-          : (openingStock?.id ?? -1),
-        openingStockQnt: this.isReadDailyMode ? (report?.openingStockQnt ?? '') : openingStock?.openingStockQnt ?? '',
+        openingStockId: this.isReadDailyMode ? (report?.openingStockId ?? 1) : (openingStock?.id ?? -1),
+        openingStockQnt: this.isReadDailyMode ? (report?.openingStockQnt ?? '') : (openingStock?.openingStockQnt ?? ''),
         recieved: report?.recieved ?? '',
         add: report?.add ?? '',
         staffMeal: report?.staffMeal ?? '',
         transfer: report?.transfer ?? '',
         dameged: report?.dameged ?? '',
-        sales: report?.sales ?? '',
-
-        closeStock: this.isReadDailyMode ? (report?.closeStock ?? '') : closing1
-        // dameged:  report.dameged,
-
+        sales: report?.sales ?? ''
       };
-
       if (report && report.note) {
         s.note = report.note
       }
 
       return s
     });
+
+
+
+    // 2. دمج المنتجات الفرعية مع الرئيسية
 
     let productsHaveSubProducts: any[] = [];
     let idsToDelete: any[] = [];
@@ -1282,10 +1272,148 @@ export class BranchComponent {
     this.combinedData = Array.from(groupedByProductId.values());
 
 
+    // 4. الآن نحسب closeStock بعد الدمج
+    this.combinedData = this.combinedData.map((item: any) => {
+      const closeStock = this.calculateClosingStock(item, undefined, item.productUnit);
+      return {
+        ...item,
+        closeStock
+      };
+    });
 
     console.log('combinedData', this.combinedData);
-    console.log('productsHaveSubProducts', productsHaveSubProducts);
   }
+
+
+  // combineDataWithReports() {
+
+  //   this.combinedData = this.data.map((product: any) => {
+  //     const report = this.dailyReports.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
+  //     const openingStock = this.openingStock.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
+
+  //     console.log(report);
+
+
+  //     console.log(product);
+
+  //     // const qnt = report?.qnt ?? '';
+  //     // const status = qnt == '0' ? '4' : (report?.status ?? '0');
+
+  //     var s: any = {
+  //       dailyReportId: report ? report.id : undefined,
+  //       productId: product.id,
+  //       productName: product.name,
+  //       productUnit: product.unit,
+  //       parentProduct: product.parentProduct,
+  //     };
+
+  // if (report && report.note) {
+  //   s.note = report.note
+  // }
+
+  // return s
+  //   });
+
+  // let productsHaveSubProducts: any[] = [];
+  // let idsToDelete: any[] = [];
+
+  // this.combinedData.forEach((item: any, index1: number) => {
+  //   if (item.parentProduct) {
+  //     const parentProduct1 = this.combinedData.find((element: any) => element.productId == item.parentProduct);
+
+  //     if (parentProduct1) {
+  //       const index = productsHaveSubProducts.findIndex((d: any) => d.productId == item.parentProduct);
+
+  //       // استبعاد بعض الحقول من المنتج الفرعي
+  //       const {
+  //         openingStockId, openingStockQnt, recieved, transfer, closeStock, productName1, productUnit,
+  //         ...filteredItem
+  //       } = item;
+
+  //       // استبعاد الحقول من المنتج الرئيسي
+  //       const {
+  //         add, dameged, parentProduct, sales, staffMeal, ...filteredParent
+  //       } = parentProduct1;
+
+  //       if (index != -1) {
+  //         productsHaveSubProducts[index].products.push(filteredItem);
+  //       } else {
+  //         filteredParent.products = [filteredItem];
+  //         productsHaveSubProducts.push(filteredParent);
+  //       }
+
+  //       idsToDelete.push(item.productId);
+  //     }
+  //   }
+  // });
+
+
+
+  // // إزالة العناصر الفرعية من القائمة الأصلية
+  // this.combinedData = this.combinedData
+  //   .filter((item: any) => !idsToDelete.includes(item.productId))
+  //   .concat(productsHaveSubProducts); // إضافة المجموعات الجديدة
+
+  // const groupedByProductId = new Map();
+
+  // this.combinedData.forEach(item => {
+  //   const existing = groupedByProductId.get(item.productId);
+
+  //   // إذا كان المنتج الحالي يحتوي على منتجات فرعية أو لم تتم إضافته بعد
+  //   if (!existing || (item.products?.length && (!existing.products || existing.products.length === 0))) {
+  //     groupedByProductId.set(item.productId, item);
+  //   }
+  // });
+
+  // // إعادة تعيين combinedData فقط إلى المنتجات المرغوبة
+  // this.combinedData = Array.from(groupedByProductId.values());
+
+
+  //    this.combinedData = this.data.map((product: any) => {
+  //     const report = this.dailyReports.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
+  //     const openingStock = this.openingStock.find((o: any) => o.productId === product.id && o.branchId == this.branch.id);
+
+  //     console.log(report);
+
+
+  //     console.log(product);
+
+  //     // const qnt = report?.qnt ?? '';
+  //     // const status = qnt == '0' ? '4' : (report?.status ?? '0');
+  //     const closing1 = this.calculateClosingStock(report, openingStock, product.productUnit);
+  //     var s: any = {
+  //       dailyReportId: report ? report.id : undefined,
+  //       productId: product.id,
+  //       productName: product.name,
+  //       productUnit: product.unit,
+  //       parentProduct: product.parentProduct,
+  //       openingStockId: this.isReadDailyMode
+  //         ? (report?.openingStockId ?? 1)
+  //         : (openingStock?.id ?? -1),
+  //       openingStockQnt: this.isReadDailyMode ? (report?.openingStockQnt ?? '') : openingStock?.openingStockQnt ?? '',
+  //       recieved: report?.recieved ?? '',
+  //       add: report?.add ?? '',
+  //       staffMeal: report?.staffMeal ?? '',
+  //       transfer: report?.transfer ?? '',
+  //       dameged: report?.dameged ?? '',
+  //       sales: report?.sales ?? '',
+
+  //       closeStock: this.isReadDailyMode ? (report?.closeStock ?? '') : closing1
+  //       // dameged:  report.dameged,
+
+  //     };
+
+  //     if (report && report.note) {
+  //       s.note = report.note
+  //     }
+
+  //     return s
+  //   });
+
+
+  //   console.log('combinedData', this.combinedData);
+  //   console.log('productsHaveSubProducts', productsHaveSubProducts);
+  // }
 
   calculateClosingStock(
     reportOrData: any,
@@ -1807,55 +1935,6 @@ export class BranchComponent {
 
   }
 
-  onQuantityComplete(field: string, item: any, i: number, subProduct: any = null) {
-    if (field === 'add' || field === 'transfer' || field === 'damaged') {
-      if (this.ifEnabledNoteFiled()) {
-        const input = window.prompt(' السبب:');
-
-        if (input === null || input.length == 0) {
-          // this.combinedData[i][field] = ""
-          // تم الإلغاء من قبل المستخدم
-          console.log("cenceled", this.combinedData[i]);
-
-          return;
-        }
-
-        if (subProduct) {
-          this.combinedData[i].products[subProduct.i].note = input
-        } else {
-          this.combinedData[i].note = input
-        }
-
-        if (field === 'add' || field === 'damaged') {
-
-        }
-
-        // const a = this.dialyNote.findIndex((data: any) => data.item.dailyReportId == item.dailyReportId)
-        // if (a == -1) {
-
-        //   item.note = input
-        //   this.dialyNote.push({
-        //     item: item,
-        //     field: field
-        //   })
-        // } else {
-        //   this.dialyNote[a] = {
-        //     item: item,
-        //     field: field
-        //   }
-        // }
-      } else {
-        if (subProduct) {
-          this.combinedData[i].products[subProduct.i].note = undefined
-        } else {
-          this.combinedData[i].note = undefined
-        }
-      }
-
-
-    }
-  }
-
 
   isModalOpen = false;
 
@@ -1949,6 +2028,8 @@ export class BranchComponent {
     // }
 
     console.log(this.combinedData[i]);
+    console.log(subProduct);
+
 
     this.combinedData[i][field] = item[field] ?? '';
 
@@ -1996,6 +2077,11 @@ export class BranchComponent {
     }
 
 
+    console.log("eeee", field);
+    console.log('eeee', Number(item[field] ?? 0));
+    console.log('eeee', item);
+    // this.openModal(field, item, i, subProduct)
+
 
     if (field === 'add' || field === 'transfer' || field === 'dameged') {
       // console.log("this.handleDilogReson", this.handleDilogReson);
@@ -2021,20 +2107,29 @@ export class BranchComponent {
         }
 
         if (field === 'transfer') {
-          if (subProduct) {
-            if (Number(item.products[subProduct.i][field] ?? 0) !== 0) {
-              // this.showReasonDialog = true
-              this.openModal(field, item, i, subProduct)
+          console.log('frfrfr', Number(item[field] ?? 0));
+          console.log('frfrfr', item);
 
 
-            }
-          } else {
-            if (Number(item[field] ?? 0) !== 0) {
-              // this.showReasonDialog = true
-              this.openModal(field, item, i, subProduct)
+          if (Number(item[field] ?? 0) !== 0) {
+            // this.showReasonDialog = true
+            this.openModal(field, item, i, subProduct)
 
-            }
           }
+          // if (subProduct) {
+          //   if (Number(subProduct[field] ?? 0) !== 0) {
+          //     // this.showReasonDialog = true
+          //     this.openModal(field, item, i, subProduct)
+
+
+          //   }
+          // } else {
+          //   if (Number(item[field] ?? 0) !== 0) {
+          //     // this.showReasonDialog = true
+          //     this.openModal(field, item, i, subProduct)
+
+          //   }
+          // }
         }
 
         if (field === 'dameged') {
@@ -2843,6 +2938,25 @@ export class BranchComponent {
   async saveChangesDaily() {
     if (this.orderDailyToUpdate.length === 0) return;
 
+    // this.orderDailyToUpdate = this.orderDailyToUpdate.map((item: any) => {
+    //   // إذا كانت المنتجات الفرعية موجودة
+    //   if (item.products && Array.isArray(item.products)) {
+    //     item.products = item.products.map((sub: any) => {
+    //       if (sub.note === undefined) {
+    //         delete sub.note;
+    //       }
+    //       return sub;
+    //     });
+    //   }
+
+    //   // للمنتج الرئيسي نفسه
+    //   if (item.note === undefined) {
+    //     delete item.note;
+    //   }
+
+    //   return item;
+    // });
+
     this.isLoading = true;
     const batch1 = writeBatch(this.apiService.db);
 
@@ -2863,8 +2977,32 @@ export class BranchComponent {
               updatedAt: Timestamp.now(),
             };
 
-            const docRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
-            batch1.update(docRef, updatedSubProduct);
+            console.log(updatedSubProduct);
+
+            if (dailyReportId) {
+              const docRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
+              batch1.update(docRef, updatedSubProduct);
+            } else {
+              const docRef = doc(collection(this.apiService.db, collectionNames.dailyReports)); // توليد doc ID تلقائي
+              batch1.set(docRef, {
+                ...updatedSubProduct,
+                branchId: this.branch.id,
+                typeId: this.selectedType.id,
+                date: Timestamp.fromDate(this.dateToAddInDaily!),
+                createdAt: Timestamp.now()
+
+              });
+            }
+
+            // const docRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
+            // batch1.update(docRef, updatedSubProduct);
+            // if (dailyReportId) {
+
+            // }
+            // else {
+            //   add
+            // }
+
           }
         }
 
@@ -3198,7 +3336,7 @@ export class BranchComponent {
       if (item.products) {
         return item.products.some((subitem: any) => {
           const isAddNegative = Number(subitem?.add ?? 0) < 0;
-          const isTransferNonZero = Number(subitem?.transfer ?? 0) !== 0;
+          const isTransferNonZero = Number(item.transfer) !== 0;
           const isDamagedPositive = Number(subitem?.dameged ?? 0) > 0;
 
           return isAddNegative || isTransferNonZero || isDamagedPositive;
