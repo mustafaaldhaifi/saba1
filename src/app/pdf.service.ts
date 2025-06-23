@@ -778,11 +778,117 @@ export class PdfService {
     };
   }
 
-  exportMonthlyReport(dataByDay: { date: string, data: any[][] }[], branchName: string) {
+  exportMonthlyReport(dataByDay: { date: string, data: any }[], branchName: string) {
     const doc = new jsPDF();
-
+    doc.setFont('ARIAL', 'normal');
     dataByDay.forEach((dailyReport, index) => {
       const { date, data } = dailyReport;
+
+      const rows: any[] = [];
+
+      for (const item of data) {
+        if (Array.isArray(item.products) && item.products.length > 0) {
+          const productCount = item.products.length;
+
+          for (let i = 0; i < productCount; i++) {
+            const sub = item.products[i];
+
+            const row = [];
+
+            // 1. اسم المنتج الفرعي (دائمًا)
+            row.push({ content: sub.productName });
+
+            // 2. openingStockQnt (خلية مدمجة rowspan فقط لأول صف)
+            if (i === 0) {
+              row.push({
+                content: item.openingStockQnt,
+                rowSpan: productCount,
+                styles: { halign: 'center', valign: 'middle', ineWidth: 0, },
+              });
+            }
+            // else {
+            //   row.push({ content: '' }); // خلايا فارغة لبقية الصفوف
+            // }
+
+            // 3. recieved (نفس الطريقة)
+            if (i === 0) {
+              row.push({
+                content: item.recieved,
+                rowSpan: productCount,
+                styles: { halign: 'center', valign: 'middle' },
+              });
+            }
+            //  else {
+            //   row.push({ content: '' });
+            // }
+
+            // 4. add
+            console.log("addd", sub.add);
+
+            row.push({ content: sub.add ?? '' });
+
+            // 5. sales
+            // لو sub.sales قيمته صفر أو أي قيمة أخرى، نعرضها مباشرة
+            row.push({ content: sub.sales != null ? sub.sales : '--' });
+
+            // 6. staffMeal
+            row.push({ content: sub.staffMeal ?? '' });
+
+            // 7. transfer (خلية مدمجة مثل السابق)
+            if (i === 0) {
+              row.push({
+                content: item.transfer ?? '',
+                rowSpan: productCount,
+                styles: { halign: 'center', valign: 'middle' },
+              });
+            }
+            // else {
+            //   row.push({ content: '' });
+            // }
+
+            // 8. dameged
+            row.push({ content: sub.dameged ?? '' });
+
+            // 9. closeStock (خلية مدمجة)
+            if (i === 0) {
+              row.push({
+                content: item.closeStock ?? '',
+                rowSpan: productCount,
+                styles: { halign: 'center', valign: 'middle' },
+              });
+            }
+            // else {
+            //   row.push({ content: '' });
+            // }
+
+            console.log("rppppw", row);
+
+
+
+
+            // أخيراً، أضف الصف
+            rows.push(row);
+            console.log("rppppws", rows);
+          }
+        } else {
+          // منتجات بدون منتجات فرعية
+          rows.push([
+            { content: item.productName },
+            { content: item.openingStockQnt },
+            { content: item.recieved },
+            { content: item.add },
+            { content: item.sales },
+            { content: item.staffMeal },
+            { content: item.transfer },
+            { content: item.dameged },
+            { content: item.closeStock },
+          ]);
+        }
+      }
+
+      console.log("finalRows", rows);
+
+
 
       const topHeader = [
         [
@@ -823,7 +929,6 @@ export class PdfService {
           },
         ],
       ];
-
       const headerRow: any[] = [];
       headerRow.push(this.items({ name: 'العناصر' }));
       headerRow.push(this.items({ name: 'الموجودة' }));
@@ -834,23 +939,9 @@ export class PdfService {
       headerRow.push(this.items({ name: 'تحويل' }));
       headerRow.push(this.items({ name: 'التالف' }));
       headerRow.push(this.items({ name: 'المتبقي' }));
+
+
       const topHeader2 = [headerRow];
-
-      const rows: any[][] = [];
-      const maxRows = 36;
-      const cellsPerRow = data[0]?.length || 0;
-
-      for (let i = 0; i < maxRows; i++) {
-        rows.push(new Array(cellsPerRow).fill(''));
-      }
-
-      for (let i = 0; i < data.length; i++) {
-        const rowIndex = i % maxRows;
-        const colStart = Math.floor(i / maxRows) * cellsPerRow;
-        for (let j = 0; j < cellsPerRow; j++) {
-          rows[rowIndex][colStart + j] = data[i][j];
-        }
-      }
 
       autoTable(doc, {
         head: [...topHeader, ...topHeader2],
@@ -860,28 +951,98 @@ export class PdfService {
           fontStyle: 'normal',
           fontSize: 8,
           textColor: '#000000',
-          halign: 'center',
+          halign: 'center', // Make sure all text in the table is right-aligned
         },
         headStyles: {
-          halign: 'right',
+          halign: 'center',
           fontStyle: 'normal',
         },
-        columnStyles: {
-          0: { halign: 'center' },
-          1: { halign: 'center' },
-          2: { halign: 'center' },
-          3: { halign: 'center' },
-          4: { halign: 'center' },
-        },
-        margin: { horizontal: 10 },
-        startY: 25,
-        theme: 'striped',
-        didParseCell: function (data) {
-          if (data.section === 'body') {
-            data.cell.styles.lineWidth = { top: 0, bottom: 0.2, left: 0.2, right: 0.2 };
-            data.cell.styles.lineColor = [0, 0, 0];
+        //  theme: 'striped', // optional, helps with visibility
+
+        // styles: {
+        //   fontSize: 8,
+        //   cellPadding: 3,
+        //   halign: 'center',
+        // },
+
+        /** 🔽 Capture where the table ends */
+        didDrawPage: (data1) => {
+          const notes: string[] = [];
+          let counter = 1;
+
+          // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
+          data.forEach((element: any) => {
+
+            if (Array.isArray(element.products)) {
+              element.products.forEach((sub: any) => {
+                if (sub.note) {
+                  var filed = ""
+                  var colmn = ""
+                  if (Number(sub?.add ?? 0) < 0) {
+                    colmn = "الجرد"
+                    filed = "add"
+                  } else if (Number(sub?.dameged ?? 0) > 0) {
+                    colmn = "التالف"
+                    filed = "dameged"
+
+                  }
+                  else if (Number(sub?.transfer ?? 0) !== 0) {
+                    colmn = " التحويل"
+                    filed = "transfer"
+
+                  }
+                  if (colmn.length > 0) {
+                    notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
+                  }
+
+                }
+              });
+            }
+            if (element.note) {
+              var filed = ""
+              var colmn = ""
+              if (Number(element?.add ?? 0) < 0) {
+                colmn = "الجرد"
+                filed = "add"
+              } else if (Number(element?.dameged ?? 0) > 0) {
+                colmn = "التالف"
+                filed = "dameged"
+
+              }
+              else if (Number(element?.transfer ?? 0) !== 0) {
+                colmn = " التحويل"
+                filed = "transfer"
+
+              }
+              if (colmn.length > 0) {
+                notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note} `);
+              }
+            }
+          });
+
+          // عرض الملاحظات في أسفل الصفحة (بدون تكرار كلمة "ملاحظة")
+          if (notes.length > 0) {
+            const startY = data1.cursor!.y + 10;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const rightMargin = 10;
+            const lineHeight = 6;
+
+            doc.setFontSize(10);
+            doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, startY);
+
+            notes.forEach((note, index) => {
+              doc.text(
+                note,
+                pageWidth - doc.getTextWidth(note) - rightMargin,
+                startY + (index + 1) * lineHeight,
+                // { align: 'right' }
+              );
+            });
           }
-        },
+        }
+        ,
+        startY: 20,
+        theme: 'grid',
       });
 
       // إضافة صفحة جديدة إن لم تكن الصفحة الأخيرة

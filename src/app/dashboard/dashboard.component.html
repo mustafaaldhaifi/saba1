@@ -16,6 +16,7 @@
   </div>
 
 
+
   <!-- <button (click)="addProductsToCity()">add Products To City</button> -->
   <!-- <button (click)="exportProductsToFile()">buckup product</button> -->
   <!-- <button (click)="exportBranchesOrdersToFile()">buckup  branches orders</button> -->
@@ -44,7 +45,7 @@
         class="dropdown form-select">
         <option value="ryad">الرياض</option>
         <option value="other">خارج الرياض</option>
-        <option *ngIf="selectedType && selectedType.id == '5'" value="all">الكل</option>
+        <!-- <option *ngIf="selectedType && selectedType.id == '5'" value="all">الكل</option> -->
       </select>
     </div>
 
@@ -70,7 +71,7 @@
     <!-- /// -->
     <div *ngIf="selectedBranch && selectedType &&selectedType.id == '5' ">{{selectedBranch.name}}</div>
 
-    <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
+    <!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
       <label for="options" class="dropdown-label me-2">Select Dialy Date:</label>
       <select id="options" (ngModelChange)="onDateDailyChange($event)" [(ngModel)]="selectedDailyDate"
         class="dropdown form-select">
@@ -78,7 +79,7 @@
           Date: {{ item.date.toDate() | date:'mediumDate' }}
         </option>
       </select>
-    </div>
+    </div> -->
     <button (click)="search()" class="btn btn-primary" [disabled]="ifEnabledSearech()==false">
       Search
     </button>
@@ -286,6 +287,8 @@
 
                     <!-- <button (click)="reset(branch)">reset</button> -->
                     <!-- <button (click)="addOrderDate(branch)">add date</button> -->
+                    <button (click)="getOrders_FROM_DB(branch,'2025-06-15','2025-06-25')">get orders</button>
+
 
 
                   </div>
@@ -408,7 +411,7 @@
 
   <ng-container *ngIf="selectedType && selectedType.id == '5'">
 
-    <div style="text-align: center;direction: rtl;">
+    <div *ngIf="data.length > 0" style="text-align: center;direction: rtl;">
       <div class="dropdown-container mb-3 d-flex align-items-center gap-3 justify-content-center">
         <div>
           <label for="startDate" class="dropdown-label me-2">من تاريخ:</label>
@@ -421,6 +424,28 @@
           <input id="endDate" type="date" class="form-control" [(ngModel)]="endDate" (change)="onDateRangeChange()" />
         </div>
       </div>
+
+      <!-- <button class="btn btn-primary" (click)="showDailyReport()">
+        عرض التقرير
+      </button>
+      <button class="btn btn-primary" (click)="showDailyReportFromLocal()">
+        عرض التقرير local
+      </button> -->
+
+      <div class="dropdown-container" *ngIf="startDate.length > 0 && endDate.length > 0">
+        <label for="options" class="dropdown-label">العمود</label>
+        <select id="options" [(ngModel)]="selectedColumn" (ngModelChange)="onColumnChange()" class="dropdown">
+          <option value="add">الجرد</option>
+          <option value="sales">مبيعات</option>
+          <option value="transfer">تحويل</option>
+          <option value="staffMeal">وجبة موظف</option>
+          <option value="recieved">مستلم</option>
+        </select>
+      </div>
+
+      <!-- <button class="btn btn-primary" (click)="showDailyReportFromLocal()">
+        get
+      </button> -->
     </div>
 
 
@@ -442,6 +467,7 @@
               vertical-align: middle;
               font-weight: bold;
               position: relative;
+              width: 20px;
             ">
               <div style="display: flex; flex-direction: column; align-items: center;" (click)="onSelectBranch(branch)">
                 <span (click)="printOrderDetail(branch)">{{ branch.name }}</span>
@@ -454,7 +480,7 @@
                   <a *ngIf="orders.length > 0" (click)="exportPdf(branch)" style=" cursor: pointer;" title="تصدير PDF">
                     <i class="fas fa-file-pdf"></i>
                   </a>
-                  <button (click)="goToBranch(branch)">open</button>
+                  <button (click)="goToBranch(branch)" class="btn btn-success">open</button>
                 </div>
               </div>
             </th>
@@ -475,37 +501,81 @@
         </thead>
         <tbody>
           <!-- Existing Products -->
-          <tr class="fixed-column id-column" *ngFor="let product of data; let i = index; trackBy: trackByProductId;">
-            <td (click)="deleteProduct(product.id)" class="delete-cell">
-              {{ i + 1 }}
-            </td>
-            <td class="fixed-column name-column">
-              <input type="text" [value]="product.name" [(ngModel)]="product.name"
-                (ngModelChange)="onProductNameChange(i, product)" class="product-input">
-            </td>
-            <td class="fixed-column unit-column">
-              <input type="text" [value]="product.unit" [(ngModel)]="product.unit"
-                (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
-            </td>
-            <!-- <td class="fixed-column unitF-column" *ngIf="selectedType.id != '5'">
-              <input type="text" [value]="product.unitF" [(ngModel)]="product.unitF"
-                (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
-            </td> -->
+          <!-- عرض المنتجات -->
+          <ng-container *ngFor="let product of data; let i = index">
+            <!-- إذا المنتج يحتوي على منتجات فرعية -->
+            <ng-container *ngIf="product.subProducts?.length > 0; else singleProduct">
+              <tr *ngFor="let sub of product.subProducts; let j = index">
+                <!-- أول صف فقط يحتوي على معلومات المنتج الرئيسي بشكل عمودي -->
+                <!-- <td *ngIf="j === 0" [attr.rowspan]="product.subProducts.length" class="vertical-header-cell">
+                  {{ i + 1 }}
+                </td> -->
+                <td *ngIf="j === 0" [attr.rowspan]="product.subProducts.length">
 
-            <!-- Quantity and Status for each branch -->
-            <ng-container *ngFor="let branch of branches; trackBy: trackByBranchId">
-              <td class="branch-cell" colspan="3">
-                <!-- Find the matching order once per cell -->
-                <ng-container *ngIf="getOrder(branch.id, product.id) as order">
-                  <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qnt"
-                    (ngModelChange)="onOrderChange(order)" class="quantity-input">
+                  <input
+                    style="writing-mode: vertical-rl; transform: rotate(180deg); font-weight: bold; text-align: center;"
+                    type="text" [(ngModel)]="product.name" class="product-input"
+                    (ngModelChange)="onProductNameChange(i, product)" />
+                  <!-- {{ product.name }} -->
+
+                </td>
+
+                <!-- بيانات المنتج الفرعي -->
+                <td class="fixed-column name-column">
+                  <input type="text" [(ngModel)]="sub.name" class="product-input"
+                    (ngModelChange)="onProductNameChange(i, sub, j)" />
+
+                </td>
+                <td class="fixed-column unit-column">
+                  <input type="text" [(ngModel)]="sub.unit" class="product-input"
+                    (ngModelChange)="onProductNameChange(i, sub, j)" />
+                  <!-- {{ sub.unit }} -->
+                </td>
+
+                <td *ngIf="selectedType.id != '5'" class="unitF-column">
+                  {{ sub.unitF }}
+                </td>
+
+                <ng-container *ngFor="let branch of branches; trackBy: trackByBranchId">
+                  <td colspan="3" class="branch-cell">
+                    <ng-container *ngIf="getColumnReport(branch.id, sub.id) as order">
+                      {{order}}
+                    </ng-container>
+                  </td>
                 </ng-container>
-              </td>
-
-
-
+              </tr>
             </ng-container>
-          </tr>
+
+            <!-- المنتج العادي (بدون منتجات فرعية) -->
+            <ng-template #singleProduct>
+              <tr class="id-column">
+                <td (click)="deleteProduct(product.id)" class="delete-cell">
+                  {{ i + 1 }}
+                </td>
+                <td class="fixed-column name-column">
+                  <input type="text" [(ngModel)]="product.name" class="product-input"
+                    (ngModelChange)="onProductNameChange(i, product)" />
+                </td>
+                <td class="fixed-column unit-column">
+                  <input type="text" [(ngModel)]="product.unit" class="unit-input"
+                    (ngModelChange)="onProductNameChange(i, product)" />
+                </td>
+                <td *ngIf="selectedType.id != '5'" class="fixed-column unitF-column">
+                  <input type="text" [(ngModel)]="product.unitF" class="unit-input"
+                    (ngModelChange)="onProductNameChange(i, product)" />
+                </td>
+                <ng-container *ngFor="let branch of branches; trackBy: trackByBranchId">
+                  <td colspan="3" class="branch-cell">
+                    <!-- <button (click)="getColumnReport2(branch.id, product.id)">get</button> -->
+                    <ng-container *ngIf="getColumnReport(branch.id, product.id) as order">
+                      {{order}}
+                    </ng-container>
+                  </td>
+                </ng-container>
+              </tr>
+            </ng-template>
+          </ng-container>
+
 
           <!-- New Products to Add -->
           <tr *ngFor="let newProduct of productsToAdd; let i = index;">

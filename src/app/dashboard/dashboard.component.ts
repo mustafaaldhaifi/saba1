@@ -81,6 +81,7 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+
   goToBranch(branch: Branch) {
     console.log(branch);
 
@@ -397,17 +398,29 @@ export class DashboardComponent implements OnInit {
   }
   async onSelectChange(event: any) {
     this.selectedOption = event
-
     this.isLoading = true
-    if (this.types.length > 0) {
-      this.selectedType = this.types[0]
-      this.selectedDatey = null
-      this.isOn = null;
-      this.isGetData = false
-      this.datesToAdd = []
-      this.data = []
-      this.orders = []
-      await this.getSharedData()
+
+    if (this.selectedOption == 'all') {
+
+      const ryadBranches = await this.fetchBranchesByName('ryad');
+      const otherBranches = await this.fetchBranchesByName('other');
+
+      this.branches = [...ryadBranches, ...otherBranches];
+
+    } else {
+
+
+      if (this.types.length > 0) {
+        this.selectedType = this.types[0]
+        this.selectedDatey = null
+        this.isOn = null;
+        this.isGetData = false
+        this.datesToAdd = []
+        this.data = []
+        this.orders = []
+        await this.getSharedData()
+      }
+
     }
     this.isLoading = false
   }
@@ -420,7 +433,7 @@ export class DashboardComponent implements OnInit {
   selectedDatey: any;
 
 
-  data: Product[] = [];
+  data: any[] = [];
   branches: Branch[] = [];
   orders: Order[] = [];
   types: any = [];
@@ -679,10 +692,41 @@ export class DashboardComponent implements OnInit {
 
       this.data = await this.fetchProducts()
 
+
+      if (this.selectedType.id == '5') {
+        // الخطوة 1: نسخ البيانات الأصلية مؤقتًا
+        const allProducts = [...this.data];
+
+        // الخطوة 2: استخراج المنتجات الرئيسية
+        const mainProducts = allProducts
+          .filter((p: any) => !p.parentProduct)
+          .map(p => ({
+            ...p,
+            subProducts: [] // نضيف مصفوفة للفرعيات
+          }));
+
+        // الخطوة 3: إنشاء خريطة للوصول السريع للمنتجات الرئيسية
+        const productMap = new Map(mainProducts.map((p: any) => [p.id, p]));
+
+        // الخطوة 4: ربط كل منتج فرعي بالمنتج الرئيسي
+        allProducts.forEach((p: any) => {
+          if (p.parentProduct) {
+            const parent = productMap.get(p.parentProduct);
+            if (parent) {
+              parent.subProducts.push(p);
+            }
+          }
+        });
+
+        // الخطوة 5: تعيين النتيجة النهائية في this.data
+        this.data = mainProducts;
+      }
+
+
       // for (const item of this.data) {
       //   await this.updateCreatedAtValue(item);
       // }
-      console.log(this.data);
+      console.log('products', this.data);
 
 
       if (this.selectedDatey) {
@@ -808,6 +852,14 @@ export class DashboardComponent implements OnInit {
     // console.log("branches:", this.preOrders);
   }
 
+  private async fetchBranchesByName(city: string): Promise<Branch[]> {
+
+    // const city = this.selectedOption;
+    this.branchUpdates = await this.branchService.getLastupdate(city, this.apiService)
+    return await this.branchService.getBranches(city, this.branchUpdates, this.apiService)
+    // console.log("branches:", this.preOrders);
+  }
+
   async exportProductsToFile(): Promise<void> {
     const db = getFirestore();
     const q = query(collection(db, "products"),
@@ -865,7 +917,7 @@ export class DashboardComponent implements OnInit {
 
   private async fetchProducts(): Promise<Product[]> {
     this.isLoading = true
-    const city = this.selectedOption;
+    const city = this.selectedOption == 'all' ? 'ryad' : this.selectedOption;
     const typeId = this.selectedType.id;
 
     // const productsInfo = this.productService.getProductsFromLocal(city, typeId);
@@ -1237,6 +1289,7 @@ export class DashboardComponent implements OnInit {
     const auth = getAuth();
     signOut(auth).then(() => {
       this.orderService.remove()
+       localStorage.removeItem("dailyCache");
       this.router.navigate(['/login']);
     }).catch(console.error);
   }
@@ -1247,20 +1300,20 @@ export class DashboardComponent implements OnInit {
     this.ifHasChanges = true
   }
 
-  onProductNameChange(index: number, product: any): void {
-    const prod = this.productsToUpdate[index];
+  onProductNameChange(index: number, product: any, subIndex?: number): void {
+    // نبحث هل المنتج موجود مسبقًا في productsToUpdate حسب id
+    const existingIndex = this.productsToUpdate.findIndex(p => p.id === product.id);
 
-    console.log(prod);
-
-    if (prod) {
-      this.productsToUpdate[index] = product;
+    if (existingIndex !== -1) {
+      // حدث المنتج الموجود
+      this.productsToUpdate[existingIndex] = product;
     } else {
+      // أضف المنتج الجديد
       this.productsToUpdate.push(product);
     }
-    this.ifHasChanges = true
 
+    this.ifHasChanges = true;
   }
-
   async deleteProduct(id: string): Promise<void> {
     const confirmed = confirm('Are you sure you want to delete this product and associated orders?');
     if (!confirmed) return;
@@ -2649,18 +2702,597 @@ export class DashboardComponent implements OnInit {
       const from = new Date(this.startDate);
       const to = new Date(this.endDate);
 
+      // تصفير الوقت لتوحيد المقارنة
+      from.setHours(0, 0, 0, 0);
+      to.setHours(0, 0, 0, 0);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // التحقق من أن البداية قبل النهاية
       if (from > to) {
         alert('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+        this.endDate = '';
         return;
       }
 
-      this.filteredReports = this.dailyReportsDates.filter((item: any) => {
-        const itemDate = item.date.toDate(); // تأكد أنه Date
-        return itemDate >= from && itemDate <= to;
-      });
+      // منع اختيار تاريخ اليوم أو المستقبل
+      if (to >= today) {
+        alert('لا يمكن اختيار تاريخ اليوم أو تاريخ مستقبلي');
+        this.endDate = '';
+        return;
+      }
 
-      console.log('البيانات المفلترة:', this.filteredReports);
+      // في حال اختيار عمود (فلتر معين)، نفذ البحث بالكاش
+      if (this.selectedColumn) {
+        this.showDailyReportFromCache();
+      }
     }
   }
+
+
+
+  async showDailyReport() {
+    this.isLoading = true
+    try {
+      // const from = new Date(this.startDate);
+      // const to = new Date(this.endDate);
+
+      // Start of day (00:00:00.000 UTC)
+      const startOfDay = new Date(this.startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const from = Timestamp.fromDate(startOfDay);
+
+      // End of day (23:59:59.999 UTC)
+      const endOfDay = new Date(this.endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      const to = Timestamp.fromDate(endOfDay);
+
+      const q = query(
+        collection(this.apiService.db, collectionNames.dailyReports),
+        where("typeId", "==", this.selectedType.id),
+        where("date", ">=", from),
+        where("date", "<=", to),
+      );
+
+      const snapshot = await getDocs(q);
+
+      const dataFromServer = snapshot.docs.map(doc => ({
+        id: doc.id,
+        productId: doc.data()['productId'],
+        branchId: doc.data()['branchId'],
+        openingStockId: doc.data()['openingStockId'],
+        openingStockQnt: doc.data()['openingStockQnt'],
+        recieved: doc.data()['recieved'],
+        add: doc.data()['add'],
+        sales: doc.data()['sales'],
+        staffMeal: doc.data()['staffMeal'],
+        transfer: doc.data()['transfer'],
+        dameged: doc.data()['dameged'],
+        note: doc.data()['note'],
+        date: doc.data()['date'],
+        createdAt: doc.data()['createdAt'],
+        closeStock: doc.data()['closeStock'],
+      }));
+
+      console.log('dataFromServer', dataFromServer);
+
+      localStorage.setItem('dailyReportDashboard', JSON.stringify(dataFromServer))
+    } catch (error) {
+      console.log('dataFromServer error', error);
+    }
+    finally {
+      this.isLoading = false
+    }
+
+
+  }
+
+  dailyReports: any = []
+
+  async showDailyReportFromLocal() {
+    const dataFromLocal = localStorage.getItem('dailyReportDashboard');
+
+    if (dataFromLocal) {
+      this.dailyReports = JSON.parse(dataFromLocal);
+
+      // نحول startDate و endDate إلى "yyyy-MM-dd"
+      const from = this.formatDateTime(new Date(this.startDate));
+      const to = this.formatDateTime(new Date(this.endDate));
+
+      this.dailyReports = this.dailyReports
+        .map((report: any) => {
+          const reportDate = new Date(report.date.seconds * 1000);
+          const reportDateStr = this.formatDateTime(reportDate);
+
+          const reportCreatedAt = new Date(report.createdAt.seconds * 1000);
+          const reportCreatedAtStr = this.formatDateTime(reportCreatedAt);
+
+
+          return {
+            ...report,
+            formattedDate: reportDateStr, // نضيف التاريخ بشكل نصي
+            formattedCreatedAt: reportCreatedAtStr // نضيف التاريخ بشكل نصي
+          };
+        })
+        .filter((report: any) => {
+          return report.formattedDate >= from && report.formattedDate <= to;
+        });
+
+      console.log('dailyReports', this.dailyReports);
+      const uniqueDates = new Set<string>();
+
+      this.dailyReports.forEach((report: any) => {
+        // const date = new Date(report.date.seconds * 1000);
+        // const day = date.getUTCDate().toString().padStart(2, '0');
+        // const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+        // const year = date.getUTCFullYear();
+        // const formatted = `${year}-${month}-${day}`;
+        uniqueDates.add(report.formattedCreatedAt);
+      });
+
+      console.log('📅 التواريخ الفريدة:', Array.from(uniqueDates));
+    }
+  }
+
+
+  // async showDailyReportFromLocal() {
+  //   const dataFromLocal = localStorage.getItem('dailyReportDashboard');
+  //   if (dataFromLocal) {
+  //     this.dailyReports = JSON.parse(dataFromLocal);
+
+  //     const from = this.formatDateOnly(new Date(this.startDate));
+  //     const to = this.formatDateOnly(new Date(this.endDate));
+
+  //     this.dailyReports = this.dailyReports.filter((report: any) => {
+  //       const reportDate = new Date(report.date.seconds * 1000);
+  //       const reportDateStr = this.formatDateOnly(reportDate);
+  //       return reportDateStr >= from && reportDateStr <= to;
+  //     });
+  //   }
+
+
+
+  //   console.log('dailyReports', this.dailyReports);
+  // }
+
+  // تساعدنا لمقارنة التاريخ فقط بدون وقت
+  // formatDateOnly(date: Date): string {
+  //   const year = date.getFullYear();
+  //   const month = ('0' + (date.getMonth() + 1)).slice(-2);
+  //   const day = ('0' + date.getDate()).slice(-2);
+  //   return `${year}-${month}-${day}`; // مثال: "2025-08-01"
+  // }
+  formatDateTime(date: Date): string {
+    const year = date.getFullYear();
+    const month = ('0' + (date.getMonth() + 1)).slice(-2);
+    const day = ('0' + date.getDate()).slice(-2);
+    const hours = ('0' + date.getHours()).slice(-2);
+    const minutes = ('0' + date.getMinutes()).slice(-2);
+    const seconds = ('0' + date.getSeconds()).slice(-2);
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  selectedColumn: any
+  getColumnReport(branchId: any, productId: any): any {
+    // console.log("branchIdbranchId",branchId);
+
+    const result = this.dailyReports.filter((order: any) =>
+      order.branchId === branchId &&
+      order.productId === productId
+    );
+
+
+
+    return result.reduce((total: number, p: any) => total + Number(p[this.selectedColumn] || 0), 0)
+    // console.log(result);
+
+  }
+
+  getColumnReport2(branchId: any, productId: any): any {
+
+    const result = this.dailyReports.filter((order: any) =>
+      order.branchId === branchId &&
+      order.productId === productId
+    );
+
+    console.log(result);
+
+
+    return result.reduce((total: number, p: any) => total + Number(p[this.selectedColumn] || 0), 0)
+    console.log(result);
+
+  }
+
+  async onColumnChange() {
+    // this.showDailyReportFromLocal()
+    this.showDailyReportFromCache()
+  }
+
+  ////
+
+  async showDailyReportFromCache() {
+    this.isLoading = true;
+    try {
+      // تنظيف الكاش القديم (مثلاً: حذف الشهور غير الحالية)
+      this.cleanupOldCache();
+
+      // إعداد التواريخ
+      const from = new Date(this.startDate);
+      const to = new Date(this.endDate);
+      // from.setUTCHours(0, 0, 0, 0);
+      // to.setUTCHours(0, 0, 0, 0);
+
+      // استخراج أيام النطاق
+      const rangeDays: number[] = [];
+      const current = new Date(from);
+      while (current <= to) {
+        rangeDays.push(current.getDate());
+        current.setDate(current.getDate() + 1);
+      }
+
+      const month = from.getMonth();
+      const year = from.getFullYear();
+
+      const cache = this.getCache(); // الكاش الكامل
+      let monthCache = cache.find((c: any) => c.month === month && c.year === year);
+
+      // إذا لم يكن هناك كاش لهذا الشهر
+      if (!monthCache) {
+        const startOfMonth = new Date(year, month, 1, 0, 0, 0, 0);
+        const endOfRange = new Date(to);
+        // endOfRange.setUTCHours(23, 59, 59, 999);
+
+        console.log("startOfMonth", startOfMonth);
+        console.log("endOfRange", endOfRange);
+
+
+        const q = query(
+          collection(this.apiService.db, collectionNames.dailyReports),
+          where("typeId", "==", this.selectedType.id),
+          where("date", ">=", Timestamp.fromDate(startOfMonth)),
+          where("date", "<=", Timestamp.fromDate(endOfRange))
+        );
+
+
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        console.log("first data", data);
+
+        monthCache = {
+          month,
+          year,
+          data,
+          fetchedDays: [...rangeDays],
+          lastFetchedAt: new Date().toISOString()
+        };
+
+        cache.push(monthCache);
+      } else {
+        // استخراج الأيام غير الموجودة في الكاش
+        const rangeDaysNeedSearch = rangeDays.filter(d => !monthCache.fetchedDays.includes(d));
+
+        if (rangeDaysNeedSearch.length > 0) {
+          const minDay = Math.min(...rangeDaysNeedSearch);
+          const maxDay = Math.max(...rangeDaysNeedSearch);
+
+          const minDate = new Date(year, month, minDay, 0, 0, 0, 0);
+          const maxDate = new Date(year, month, maxDay, 23, 59, 59, 999);
+
+          const q = query(
+            collection(this.apiService.db, collectionNames.dailyReports),
+            where("typeId", "==", this.selectedType.id),
+            where("date", ">=", Timestamp.fromDate(minDate)),
+            where("date", "<=", Timestamp.fromDate(maxDate))
+          );
+
+          console.log("startOfMonth", minDate);
+          console.log("endOfRange", maxDate);
+
+          const snapshot = await getDocs(q);
+          const newData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+          console.log("from server");
+
+          console.log("rangeDaysNeedSearch:", rangeDaysNeedSearch);
+          console.log("rangeDaysNeedSearchData:", newData);
+
+          // دمج البيانات بدون تكرار
+          monthCache.data.push(...newData);
+          monthCache.fetchedDays.push(...rangeDaysNeedSearch);
+          monthCache.fetchedDays = Array.from(new Set(monthCache.fetchedDays)).sort((a: any, b: any) => a - b);
+          monthCache.lastFetchedAt = new Date().toISOString();
+        }
+
+        // تحديث البيانات المعدلة حسب updatedAt
+        const updatedSnapshot = await getDocs(query(
+          collection(this.apiService.db, collectionNames.dailyReports),
+          where("typeId", "==", this.selectedType.id),
+          where("updatedAt", ">=", Timestamp.fromDate(new Date(monthCache.lastFetchedAt)))
+        ));
+
+        const updatedData = updatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        console.log('updatedData', updatedData);
+
+        for (const updated of updatedData) {
+          const index = monthCache.data.findIndex((d: any) => d.id === updated.id);
+          if (index !== -1) {
+            monthCache.data[index] = updated;
+          } else {
+            monthCache.data.push(updated);
+          }
+        }
+
+        monthCache.lastFetchedAt = new Date().toISOString();
+
+        // تحديث الكاش داخل القائمة
+        const index = cache.findIndex((c: any) => c.month === month && c.year === year);
+        if (index !== -1) cache[index] = monthCache;
+        else cache.push(monthCache);
+      }
+
+      // حفظ الكاش النهائي
+      localStorage.setItem('dailyCache', JSON.stringify(cache));
+      console.log("✅ Cache updated:", cache);
+
+      // استخراج البيانات للعرض
+      const latestCache = this.getCache();
+      const target = latestCache.find((c: any) => c.month === month && c.year === year);
+      if (target) {
+        const fromDate = new Date(this.startDate);
+        const toDate = new Date(this.endDate);
+        fromDate.setHours(0, 0, 0, 0);
+        toDate.setHours(23, 59, 59, 999);
+        // fromDate.setUTCHours(0, 0, 0, 0);
+        // toDate.setUTCHours(23, 59, 59, 999);
+
+        this.dailyReports = target.data.filter((item: any) => {
+          const itemDate = new Date(item.date.seconds * 1000); // ✅ تحويل يدوي
+          return itemDate >= fromDate && itemDate <= toDate;
+        });
+
+        console.log("📊 Loaded dailyReports:", this.dailyReports);
+      }
+    } catch (error) {
+      console.error("❌ Error in showDailyReportFromCache:", error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+
+  // async showDailyReportFromCache() {
+
+  //   this.isLoading = true
+  //   try {
+  //     this.cleanupOldCache();
+
+  //     let from = new Date(this.startDate);
+  //     let to = new Date(this.endDate);
+
+  //     // تصفير الوقت
+  //     from.setUTCHours(0, 0, 0, 0);
+  //     to.setUTCHours(0, 0, 0, 0);
+
+  //     // استخراج الأيام كأرقام
+  //     let rangeDays: number[] = [];
+  //     const current = new Date(from);
+
+  //     while (current <= to) {
+  //       rangeDays.push(current.getDate());
+  //       current.setDate(current.getDate() + 1);
+  //     }
+
+
+
+
+
+  //     const month = from.getMonth();
+  //     const year = from.getFullYear();
+
+  //     let start = from;
+  //     const cache = this.getCache();
+  //     let monthCache = cache.find((c: any) => c.month === month && c.year === year);
+
+  //     // إذا الشهر غير موجود، نبدأ من أول يوم في الشهر
+  //     if (!monthCache) {
+  //       start = this.getFirstDayOfMonth(from);
+  //       start.setUTCHours(0, 0, 0, 0);
+  //       const q = query(
+  //         collection(this.apiService.db, collectionNames.dailyReports),
+  //         where("typeId", "==", this.selectedType.id),
+  //         where("date", ">=", Timestamp.fromDate(start)),
+  //         where("date", "<=", Timestamp.fromDate(to)),
+  //       );
+
+  //       const snapshot = await getDocs(q);
+
+  //       const data = snapshot.docs.map(doc => {
+  //         return {
+  //           id: doc.id,
+  //           ...doc.data()
+  //         };
+  //       });
+
+  //       console.log("dataaa", data);
+
+
+  //       monthCache = { month, year, data: [], lastFetchedAt: '', fetchedDays: [] };
+  //       monthCache.data = data
+  //       monthCache.fetchedDays = rangeDays;
+  //       monthCache.lastFetchedAt = new Date().toISOString();
+  //       cache.push(monthCache);
+  //     } else {
+  //       let rangeDaysNeedSearch = rangeDays.filter(d => !monthCache.fetchedDays.includes(d));
+
+  //       if (rangeDaysNeedSearch.length !== 0) {
+  //         const minDay = Math.min(...rangeDaysNeedSearch);
+  //         const maxDay = Math.max(...rangeDaysNeedSearch);
+
+  //         const baseDate = new Date(this.startDate); // أي تاريخ ضمن نفس الشهر والسنة
+  //         const year = baseDate.getFullYear();
+  //         const month = baseDate.getMonth();
+
+  //         // إنشاء التاريخين
+  //         const minDate = new Date(Date.UTC(year, month, minDay, 0, 0, 0, 0));
+  //         const maxDate = new Date(Date.UTC(year, month, maxDay, 23, 59, 59, 999));
+
+  //         const q = query(
+  //           collection(this.apiService.db, collectionNames.dailyReports),
+  //           where("typeId", "==", this.selectedType.id),
+  //           where("date", ">=", Timestamp.fromDate(minDate)),
+  //           where("date", "<=", Timestamp.fromDate(maxDate)),
+  //         );
+
+  //         const snapshot = await getDocs(q);
+
+  //         const data = snapshot.docs.map(doc => {
+  //           return {
+  //             id: doc.id,
+  //             ...doc.data()
+  //           };
+  //         });
+
+  //         console.log("rangeDaysNeedSearch", rangeDaysNeedSearch);
+  //         console.log("rangeDaysNeedSearchData", data);
+
+
+  //         monthCache.data.push(...data)
+  //         monthCache.fetchedDays.push(...rangeDaysNeedSearch)
+  //         const now = new Date();
+  //         monthCache.lastFetchedAt = now.toISOString();
+
+  //         // ثم مباشرة:
+
+
+  //         // إيجاد موقع العنصر في الكاش
+  //         const index = cache.findIndex((c: any) => c.month === month && c.year === year);
+
+  //         if (index !== -1) {
+  //           cache[index] = monthCache;
+  //         } else {
+  //           cache.push(monthCache);
+  //         }
+
+  //       }
+  //       // حفظ التحديث
+
+
+
+
+  //       // 1. جلب التحديثات
+  //       const q1 = query(
+  //         collection(this.apiService.db, collectionNames.dailyReports),
+  //         where("typeId", "==", this.selectedType.id),
+  //         where("updatedAt", ">=", Timestamp.fromDate(new Date(monthCache.lastFetchedAt)))
+  //       );
+  //       const snapshot1 = await getDocs(q1);
+  //       const updatedData = snapshot1.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  //       console.log("updatedData", updatedData);
+  //       // 2. تحديث monthCache.data
+  //       for (const updated of updatedData) {
+  //         const index = monthCache.data.findIndex((d: any) => d.id === updated.id);
+  //         if (index !== -1) {
+  //           monthCache.data[index] = updated;
+  //         } else {
+  //           monthCache.data.push(updated);
+  //         }
+  //       }
+
+  //       // 3. تحديث الوقت والكاش
+  //       monthCache.lastFetchedAt = new Date().toISOString();
+
+  //       const index2 = cache.findIndex((c: any) => c.month === month && c.year === year);
+  //       if (index2 !== -1) cache[index2] = monthCache;
+  //       else cache.push(monthCache);
+
+  //       // localStorage.setItem('dailyCache', JSON.stringify(cache));
+
+
+  //       //  localStorage.setItem('dailyCache', JSON.stringify(cache));
+
+  //     }
+
+  //     localStorage.setItem('dailyCache', JSON.stringify(cache));
+
+  //     console.log("dailyCache", this.getCache());
+
+  //     const localData = this.getCache()
+  //     if (localData.length > 0) {
+  //       const index2 = localData.findIndex((c: any) => c.month === month && c.year === year);
+  //       this.dailyReports = cache[index2].data
+  //       console.log('dailyReports', this.dailyReports);
+  //       console.log('rgg', this.dailyReports);
+
+
+  //     }
+
+  //   } catch (error) {
+
+  //     console.log(error);
+
+  //   }
+  //   finally {
+  //     this.isLoading = false
+  //   }
+
+  // }
+
+
+  cleanupOldCache() {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const currentDay = today.getDate();
+
+    if (currentDay >= 6) {
+      const cache = this.getCache();
+      const updatedCache = cache.filter((c: any) => c.month === currentMonth && c.year === currentYear);
+      localStorage.setItem('dailyCache', JSON.stringify(updatedCache));
+    }
+  }
+
+  getCache() {
+    const cache = localStorage.getItem('dailyCache');
+    return cache ? JSON.parse(cache) : [];
+  }
+
+  getFirstDayOfMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  }
+
+  async getOrders_FROM_DB(branch: any, fromS: string, toS: string) {
+    let from = new Date(fromS);
+    let to = new Date(toS);
+
+    // تصفير الوقت
+    from.setUTCHours(0, 0, 0, 0);
+    to.setUTCHours(23, 59, 59, 999);
+    const q = query(
+      collection(this.apiService.db, collectionNames.branchesOrders),
+      where("typeId", "==", this.selectedType.id),
+      where("branchId", "==", branch.id),
+      where("city", "==", this.selectedOption),
+      where("createdAt", ">=", Timestamp.fromDate(from)),
+      where("createdAt", "<=", Timestamp.fromDate(to))
+    );
+
+    const snapshot = await getDocs(q);
+
+    const data = snapshot.docs.map(doc => {
+      return {
+        id: doc.id,
+        ...doc.data()
+      };
+    });
+
+    console.log("data1223", data);
+
+  }
+
 
 }

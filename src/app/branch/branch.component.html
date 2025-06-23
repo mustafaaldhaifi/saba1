@@ -239,8 +239,8 @@
             {{branch.data.name}}
         </div>
     </div>
-
-    <button *ngIf="isLastDayOfMonth()" (click)="exportallPdfDaily()">Export All pdf</button>
+<!-- *ngIf="isLastDayOfMonth()" -->
+    <button *ngIf="isAdmin==false && isLastDayOfMonth()"  (click)="exportallPdfDaily()">Export All pdf</button>
 
     <button *ngIf="dailyReports.length > 0" (click)="exportPdfDaily()">Export pdf</button>
     <button *ngIf="orderDailyToUpdate.length > 0" (click)="saveChangesDaily()">Save Changes</button>
