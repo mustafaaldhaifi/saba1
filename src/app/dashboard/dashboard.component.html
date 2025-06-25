@@ -287,7 +287,7 @@
 
                     <!-- <button (click)="reset(branch)">reset</button> -->
                     <!-- <button (click)="addOrderDate(branch)">add date</button> -->
-                    <button (click)="getOrders_FROM_DB(branch,'2025-06-15','2025-06-25')">get orders</button>
+                    <!-- <button (click)="getOrders_FROM_DB(branch,'2025-06-15','2025-06-25')">get orders</button> -->
 
 
 
@@ -440,13 +440,17 @@
           <option value="transfer">تحويل</option>
           <option value="staffMeal">وجبة موظف</option>
           <option value="recieved">مستلم</option>
+          <option value="dameged">تالف</option>
+          <option value="closeStock">المتبقي</option>
         </select>
       </div>
 
       <!-- <button class="btn btn-primary" (click)="showDailyReportFromLocal()">
         get
       </button> -->
+      <button (click)="exportDailytToExcel()" class="btn btn-primary">Export Daily to Excel</button>
     </div>
+
 
 
 
@@ -504,7 +508,8 @@
           <!-- عرض المنتجات -->
           <ng-container *ngFor="let product of data; let i = index">
             <!-- إذا المنتج يحتوي على منتجات فرعية -->
-            <ng-container *ngIf="product.subProducts?.length > 0; else singleProduct">
+            <ng-container
+              *ngIf="product.subProducts?.length > 0 && !['transfer', 'recieved','closeStock'].includes(selectedColumn) ; else singleProduct">
               <tr *ngFor="let sub of product.subProducts; let j = index">
                 <!-- أول صف فقط يحتوي على معلومات المنتج الرئيسي بشكل عمودي -->
                 <!-- <td *ngIf="j === 0" [attr.rowspan]="product.subProducts.length" class="vertical-header-cell">

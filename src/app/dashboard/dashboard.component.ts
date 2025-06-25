@@ -1289,7 +1289,7 @@ export class DashboardComponent implements OnInit {
     const auth = getAuth();
     signOut(auth).then(() => {
       this.orderService.remove()
-       localStorage.removeItem("dailyCache");
+      localStorage.removeItem("dailyCache");
       this.router.navigate(['/login']);
     }).catch(console.error);
   }
@@ -1860,6 +1860,74 @@ export class DashboardComponent implements OnInit {
   private formatDate(date: Date): string {
     return date.toISOString().slice(0, 10).replace(/-/g, '');
   }
+  exportDailytToExcel() {
+    const wsData = [];
+
+    // Header
+    const header1 = [this.selectedColumn];
+    const header2 = ['#', "المنتج"];
+    this.branches.forEach(branch => header2.push(branch.name));
+    wsData.push(header1);
+    wsData.push(header2);
+
+    // الحقول التي لا تحتاج subProducts
+    const skipSubFields = ['transfer', 'recieved', 'closeStock'];
+
+    this.data.forEach((product, rowIndex) => {
+      const hasSub = product.subProducts && product.subProducts.length > 0;
+
+      if (skipSubFields.includes(this.selectedColumn)) {
+        // فقط المنتجات الرئيسية
+        const mainRow = [rowIndex + 1, product.name];
+        this.branches.forEach(branch => {
+          mainRow.push(this.getColumnReport(branch.id, product.id));
+        });
+        wsData.push(mainRow);
+      } else {
+        if (hasSub) {
+          // أضف فقط المنتجات الفرعية (بدون الرئيسيي)
+          product.subProducts.forEach((sub: any) => {
+            const subRow = ['', sub.name];
+            this.branches.forEach(branch => {
+              subRow.push(this.getColumnReport(branch.id, sub.id));
+            });
+            wsData.push(subRow);
+          });
+        } else {
+          // لا يوجد subProducts → أضف المنتج الرئيسي
+          const mainRow = [rowIndex + 1, product.name];
+          this.branches.forEach(branch => {
+            mainRow.push(this.getColumnReport(branch.id, product.id));
+          });
+          wsData.push(mainRow);
+        }
+      }
+    });
+
+    // Create worksheet
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 30 },
+      ...Array(this.branches.length).fill({ wch: 15 })
+    ];
+
+    // Row heights
+    ws['!rows'] = [
+      { hpx: 30 },
+      { hpx: 25 }
+    ];
+
+    // Create and save workbook
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders Report');
+
+    const fileName = `${this.startDate}_${this.endDate}_Daily.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  }
+
 
   exportToExcel() {
     // Prepare data and styling
@@ -2885,7 +2953,12 @@ export class DashboardComponent implements OnInit {
 
 
 
-    return result.reduce((total: number, p: any) => total + Number(p[this.selectedColumn] || 0), 0)
+    if (this.selectedColumn == 'closeStock') {
+      return result.length > 0 ? result[result.length - 1].closeStock : 0;
+    } else {
+      return result.reduce((total: number, p: any) => total + Number(p[this.selectedColumn] || 0), 0)
+    }
+
     // console.log(result);
 
   }

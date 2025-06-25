@@ -1818,6 +1818,17 @@ export class BranchComponent {
 
   async saveDaily() {
 
+    const confirmed = confirm(`هل انت متأكد من تسجيل جميع الاستلامات`);
+    if (!confirmed) {
+      return
+    };
+    const confirmed1 = confirm(`هل انت متأكد من جميع الادخالات لايمكن التعديل بعد الحفظ`);
+    if (!confirmed1) {
+      return
+    };
+
+    this.isLoading = true
+
     let newCombinedData: any[] = [];
 
     this.combinedData.forEach(group => {
@@ -1841,16 +1852,7 @@ export class BranchComponent {
     console.log("nnnnn", newCombinedData);
 
 
-    const confirmed = confirm(`هل انت متأكد من تسجيل جميع الاستلامات`);
-    if (!confirmed) {
-      return
-    };
-    const confirmed1 = confirm(`هل انت متأكد من جميع الادخالات لايمكن التعديل بعد الحفظ`);
-    if (!confirmed1) {
-      return
-    };
 
-    this.isLoading = true
     try {
       let openStockToAdd: any = []
       let openStockToUpdate: any = []
