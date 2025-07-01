@@ -778,7 +778,7 @@ export class PdfService {
     };
   }
 
-  exportMonthlyReport(dataByDay: { date: string, data: any }[], branchName: string) {
+  exportMonthlyReport(date: string, dataByDay: { date: string, data: any }[], branchName: string) {
     const doc = new jsPDF();
     doc.setFont('ARIAL', 'normal');
     dataByDay.forEach((dailyReport, index) => {
@@ -1051,7 +1051,7 @@ export class PdfService {
       }
     });
 
-    doc.save(`${branchName}_Monthly_Report.pdf`);
+    doc.save(`${date}_${branchName}_Monthly_Report.pdf`);
   }
 
 }

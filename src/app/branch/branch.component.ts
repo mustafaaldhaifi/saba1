@@ -31,6 +31,8 @@ export class BranchComponent {
 
   isAdmin = false
   dialyNote: any[] = [];
+  Object: any;
+  fullyFilledMonths: any;
 
   exportPdf() {
     const pdfService = new PdfService();
@@ -1170,6 +1172,8 @@ export class BranchComponent {
     await this.getOpeningStock();
     await this.deleteOldDailyReportsDatesIfSixthOfMonth();
     this.combineDataWithReports()
+    this.groupDatesByMonth();
+    console.log('groupedDailyDates', this.groupedDailyDates);
 
   }
 
@@ -2308,51 +2312,192 @@ export class BranchComponent {
     // pdfService.exportDaily()
   }
 
-  async exportallPdfDaily() {
-    this.isLoading = true
-    const pdfService = new PdfService();
-    let finalData: { date: string, data: any, }[] = [];
+  groupedDailyDates: Record<string, { dates: string[]; fullyFilled: boolean, hasBeenExported: boolean }> = {};
 
-    for (const element of this.dailyReportsDates) {
-      // this.dateToAddInDaily = element;
+  groupDatesByMonth() {
+    const grouped: Record<string, { dates: string[]; fullyFilled: boolean; hasBeenExported: boolean }> = {};
 
-      const dailyReportUpdates = await this.dailyReportService.getLastupdate(
-        this.branch.id,
-        Timestamp.fromDate(this.normalizeDate(element)),
-        this.apiService
-      );
+    // قراءة التواريخ المصدّرة مسبقًا من localStorage
+    const exportedDates: string[] = JSON.parse(localStorage.getItem('exportedDailyDates') || '[]');
 
-      const dailyReports = await this.dailyReportService.getData(
-        this.selectedType.id,
-        this.branch.id,
-        element,
-        element,
-        dailyReportUpdates,
-        this.apiService
-      );
+    for (const dateStr of this.dailyReportsDates) {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1; // 1-based month
+      const key = `${year}-${month}`;
 
-      const date = this.dailyReportService.getDateKey(element);
+      if (!grouped[key]) {
+        grouped[key] = { dates: [], fullyFilled: false, hasBeenExported: false };
+      }
 
-      finalData.push({
-        data: this.returnCombineDataWithReports(dailyReports),
-        date: date
-      });
+      grouped[key].dates.push(dateStr);
     }
 
-    this.isReadDailyMode = true
-    // اطبع النتيجة للتأكد
-    console.log("Final Data", finalData);
+    for (const key in grouped) {
+      const [yearStr, monthStr] = key.split("-");
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10);
+      const totalDays = new Date(year, month, 0).getDate();
+      const daysSet = new Set<number>();
 
-    // إنشاء PDF واحد للشهر كله
-    pdfService.exportMonthlyReport(finalData, this.branch.data.name);
+      for (const dateStr of grouped[key].dates) {
+        const date = new Date(dateStr);
+        daysSet.add(date.getDate());
+      }
+
+      grouped[key].fullyFilled = daysSet.size === totalDays;
+
+      // تحقق إذا تم تصدير كل تواريخ هذا الشهر مسبقًا
+      const allExported = exportedDates.includes(key);
+      grouped[key].hasBeenExported = allExported;
+    }
+
+    this.groupedDailyDates = grouped;
+  }
+
+
+  // groupDatesByMonth(): Record<string, { dates: string[]; fullyFilled: boolean }> {
+  //   const grouped: Record<string, { dates: string[]; fullyFilled: boolean }> = {};
+
+  //   for (const dateStr of this.dailyReportsDates) {
+  //     const date = new Date(dateStr);
+  //     const year = date.getFullYear();
+  //     const month = date.getMonth() + 1; // 1-based month
+  //     const day = date.getDate();
+  //     const key = `${year}-${month}`;
+
+  //     if (!grouped[key]) {
+  //       grouped[key] = { dates: [], fullyFilled: false };
+  //     }
+
+  //     grouped[key].dates.push(dateStr);
+  //   }
+
+  //   // بعد التجميع، نحسب إذا كان كل شهر مكتمل
+  //   for (const key in grouped) {
+  //     const [yearStr, monthStr] = key.split("-");
+  //     const year = parseInt(yearStr, 10);
+  //     const month = parseInt(monthStr, 10);
+  //     const totalDays = new Date(year, month, 0).getDate(); // ✅ عدد أيام الشهر
+  //     const daysSet = new Set<number>();
+
+  //     for (const dateStr of grouped[key].dates) {
+  //       const date = new Date(dateStr);
+  //       daysSet.add(date.getDate());
+  //     }
+
+  //     grouped[key].fullyFilled = daysSet.size === totalDays;
+  //     if key in local  grouped[key].hasbeenexported =true
+
+  //   }
+
+  //   return grouped;
+  // }
+
+
+
+  getFullyFilledMonths(): { month: number; year: number }[] {
+    const monthMap = new Map<string, Set<number>>();
+
+    for (const dateStr of this.dailyReportsDates) {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      const month = date.getMonth(); // 0 = Jan, 5 = Jun, etc.
+      const day = date.getDate();
+      const key = `${year}-${month}`;
+
+      if (!monthMap.has(key)) {
+        monthMap.set(key, new Set<number>());
+      }
+      monthMap.get(key)!.add(day);
+    }
+
+    const result: { month: number; year: number }[] = [];
+
+    for (const [key, daysSet] of monthMap.entries()) {
+      const [yearStr, monthStr] = key.split('-');
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      if (daysSet.size === daysInMonth) {
+        result.push({ year, month });
+      }
+    }
+
+    return result;
+  }
+
+
+  async exportallPdfDaily(date: string, dates: any) {
+
+    this.isLoading = true
+    // const pdfService = new PdfService();
+    // let finalData: { date: string, data: any, }[] = [];
+
+    // for (const element of dates) {
+    //   // this.dateToAddInDaily = element;
+
+    //   const dailyReportUpdates = await this.dailyReportService.getLastupdate(
+    //     this.branch.id,
+    //     Timestamp.fromDate(this.normalizeDate(element)),
+    //     this.apiService
+    //   );
+
+    //   const dailyReports = await this.dailyReportService.getData(
+    //     this.selectedType.id,
+    //     this.branch.id,
+    //     element,
+    //     element,
+    //     dailyReportUpdates,
+    //     this.apiService
+    //   );
+
+    //   const date = this.dailyReportService.getDateKey(element);
+
+    //   finalData.push({
+    //     data: this.returnCombineDataWithReports(dailyReports),
+    //     date: date
+    //   });
+    // }
+
+    // this.isReadDailyMode = true
+    // // اطبع النتيجة للتأكد
+    // console.log("Final Data", finalData);
+
+    // // إنشاء PDF واحد للشهر كله
+    // pdfService.exportMonthlyReport(date, finalData, this.branch.data.name);
+
+
+    /// Start save localy
+    const key = 'exportedDailyDates';
+
+    // 1. جلب القيمة الحالية من localStorage (كـ JSON array)
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+
+    // 2. التأكد من أنها مصفوفة
+    if (!Array.isArray(existing)) {
+      console.warn(`${key} is corrupted. Resetting.`);
+      localStorage.setItem(key, JSON.stringify([date]));
+      return;
+    }
+
+    // 3. إضافة التاريخ فقط إذا لم يكن موجودًا
+    if (!existing.includes(date)) {
+      existing.push(date);
+      localStorage.setItem(key, JSON.stringify(existing));
+    }
+    ///
     this.isLoading = false
-
+    this.groupedDailyDates = {}
+    this.groupDatesByMonth()
   }
 
   isLastDayOfMonth(): boolean {
-    const testDate = new Date();
-    testDate.setDate(testDate.getDate() + 1); // أضف يوم واحد
-    return testDate.getDate() === 1; // إذا اليوم التالي هو أول يوم في الشهر، إذن اليوم هو آخر يوم
+    // const testDate = new Date();
+    // testDate.setDate(testDate.getDate() + 1); // أضف يوم واحد
+    // return testDate.getDate() === 1; // إذا اليوم التالي هو أول يوم في الشهر، إذن اليوم هو آخر يوم
+    return true;
   }
 
   returnCombineDataWithReports(dailyReports: any) {

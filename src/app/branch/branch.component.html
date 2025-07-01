@@ -239,8 +239,19 @@
             {{branch.data.name}}
         </div>
     </div>
-<!-- *ngIf="isLastDayOfMonth()" -->
-    <button *ngIf="isAdmin==false && isLastDayOfMonth()"  (click)="exportallPdfDaily()">Export All pdf</button>
+    <!-- *ngIf="isLastDayOfMonth()" -->
+
+    <!-- *ngIf="isAdmin==false && isLastDayOfMonth()"  -->
+
+    <div *ngIf="isAdmin==false && groupedDailyDates">
+        <div *ngFor="let item of groupedDailyDates | keyvalue">
+            <button *ngIf="item.value.fullyFilled === true && item.value.hasBeenExported === false"
+                (click)="exportallPdfDaily( item.key,item.value.dates)">Export All {{ item.key }}</button>
+        </div>
+    </div>
+
+
+    <!-- <button (click)="exportallPdfDaily()">Export Daily All pdf</button> -->
 
     <button *ngIf="dailyReports.length > 0" (click)="exportPdfDaily()">Export pdf</button>
     <button *ngIf="orderDailyToUpdate.length > 0" (click)="saveChangesDaily()">Save Changes</button>
@@ -409,7 +420,7 @@
                         </ng-template>
 
 
-                        
+
                         <td>
                             <input [attr.tabindex]="6000 + i" [disabled]="isReadDailyMode === true && isAdmin==false"
                                 (blur)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
@@ -461,9 +472,9 @@
         (click)="saveDaily()">Save</button>
 
 
- 
+
 
 </ng-container>
 
-   <app-reason-dialog *ngIf="showReasonDialog" (onConfirm)="handleReasonConfirm($event)"
-        (onCancel)="handleReasonCancel()"></app-reason-dialog>
+<app-reason-dialog *ngIf="showReasonDialog" (onConfirm)="handleReasonConfirm($event)"
+    (onCancel)="handleReasonCancel()"></app-reason-dialog>
