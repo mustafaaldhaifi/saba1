@@ -679,7 +679,7 @@ export class PdfService {
               if (sub.note) {
                 var filed = ""
                 var colmn = ""
-                if (Number(sub?.add ?? 0) < 0) {
+                if (Number(sub?.add ?? 0) !== 0) {
                   colmn = "الجرد"
                   filed = "add"
                 } else if (Number(sub?.dameged ?? 0) > 0) {
@@ -690,7 +690,10 @@ export class PdfService {
                 else if (Number(sub?.transfer ?? 0) !== 0) {
                   colmn = " التحويل"
                   filed = "transfer"
-
+                }
+                else if (Number(sub?.recieved ?? 0) !== 0) {
+                  colmn = " المستلم"
+                  filed = "recieved"
                 }
                 if (colmn.length > 0) {
                   notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
@@ -713,6 +716,11 @@ export class PdfService {
             else if (Number(element?.transfer ?? 0) !== 0) {
               colmn = " التحويل"
               filed = "transfer"
+
+            }
+            else if (Number(element?.recieved ?? 0) !== 0) {
+              colmn = " المستلم"
+              filed = "recieved"
 
             }
             if (colmn.length > 0) {
@@ -1052,6 +1060,177 @@ export class PdfService {
     });
 
     doc.save(`${date}_${branchName}_Monthly_Report.pdf`);
+  }
+  exportMonthlyReportNotes(date: string, dataByDay: { date: string, data: any }[], branchName: string) {
+    const doc = new jsPDF();
+    doc.setFont('ARIAL', 'normal');
+    let currentY = 20;
+    dataByDay.forEach((dailyReport, index) => {
+      const { date, data } = dailyReport;
+
+
+      const topHeader = [
+        [
+          {
+            content: 'SABA (Authentic Yemini Cuisine)',
+            styles: {
+              halign: 'left' as HAlignType,
+              fontStyle: 'normal' as FontStyle,
+              fontSize: 8,
+              lineWidth: 0.2,
+              lineColor: [0, 0, 0] as Color,
+            },
+            colSpan: 3, // دمج العمودين الأول والثاني في هذا السطر
+          },
+          {
+            content: ` ${date} : التاريخ`,
+            styles: {
+              halign: 'right' as HAlignType,
+              fontStyle: 'normal' as FontStyle,
+              fontSize: 8,
+
+              lineWidth: 0.2,
+              lineColor: [0, 0, 0] as Color,
+            },
+            colSpan: 3, // دمج العمودين الثالث والرابع في هذا السطر
+          },
+          {
+            content: `${branchName} : اسم الفرع`,
+            styles: {
+              halign: 'right' as HAlignType,
+              fontStyle: 'normal' as FontStyle,
+              fontSize: 8,
+              lineWidth: 0.2,
+
+              lineColor: [0, 0, 0] as Color,
+            },
+            colSpan: 3, // دمج العمودين الثالث والرابع في هذا السطر
+          },
+        ],
+      ];
+      const headerRow: any[] = [];
+      headerRow.push(this.items({ name: 'العناصر' }));
+      headerRow.push(this.items({ name: 'الموجودة' }));
+      headerRow.push(this.items({ name: 'المستلم' }));
+      headerRow.push(this.items({ name: 'الجرد' }));
+      headerRow.push(this.items({ name: 'مبيعات' }));
+      headerRow.push(this.items({ name: 'وجبة موظف' }));
+      headerRow.push(this.items({ name: 'تحويل' }));
+      headerRow.push(this.items({ name: 'التالف' }));
+      headerRow.push(this.items({ name: 'المتبقي' }));
+
+
+      const topHeader2 = [headerRow];
+
+      autoTable(doc, {
+        head: [...topHeader, ...topHeader2],
+        styles: {
+          font: 'ARIAL',
+          fontStyle: 'normal',
+          fontSize: 8,
+          textColor: '#000000',
+          halign: 'center', // Make sure all text in the table is right-aligned
+        },
+        headStyles: {
+          halign: 'center',
+          fontStyle: 'normal',
+        },
+        //  theme: 'striped', // optional, helps with visibility
+
+        // styles: {
+        //   fontSize: 8,
+        //   cellPadding: 3,
+        //   halign: 'center',
+        // },
+
+        /** 🔽 Capture where the table ends */
+        didDrawPage: (data1) => {
+          const notes: string[] = [];
+          let counter = 1;
+
+          // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
+          data.forEach((element: any) => {
+
+            if (Array.isArray(element.products)) {
+              element.products.forEach((sub: any) => {
+                if (sub.note) {
+                  var filed = ""
+                  var colmn = ""
+                  if (Number(sub?.add ?? 0) < 0) {
+                    colmn = "الجرد"
+                    filed = "add"
+                  } else if (Number(sub?.dameged ?? 0) > 0) {
+                    colmn = "التالف"
+                    filed = "dameged"
+
+                  }
+                  else if (Number(sub?.transfer ?? 0) !== 0) {
+                    colmn = " التحويل"
+                    filed = "transfer"
+
+                  }
+                  if (colmn.length > 0) {
+                    notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
+                  }
+
+                }
+              });
+            }
+            if (element.note) {
+              var filed = ""
+              var colmn = ""
+              if (Number(element?.add ?? 0) < 0) {
+                colmn = "الجرد"
+                filed = "add"
+              } else if (Number(element?.dameged ?? 0) > 0) {
+                colmn = "التالف"
+                filed = "dameged"
+
+              }
+              else if (Number(element?.transfer ?? 0) !== 0) {
+                colmn = " التحويل"
+                filed = "transfer"
+
+              }
+              if (colmn.length > 0) {
+                notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note} `);
+              }
+            }
+          });
+
+          // عرض الملاحظات في أسفل الصفحة (بدون تكرار كلمة "ملاحظة")
+          if (notes.length > 0) {
+            const startY = data1.cursor!.y + 10;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const rightMargin = 10;
+            const lineHeight = 6;
+
+            doc.setFontSize(10);
+            doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, startY);
+
+            notes.forEach((note, index) => {
+              doc.text(
+                note,
+                pageWidth - doc.getTextWidth(note) - rightMargin,
+                startY + (index + 1) * lineHeight,
+                // { align: 'right' }
+              );
+            });
+            currentY = startY + (notes.length + 1) * lineHeight;
+          }
+        }
+        ,
+        startY: currentY,
+        theme: 'grid',
+      });
+
+      // إضافة صفحة جديدة إن لم تكن الصفحة الأخيرة
+      // if (index < dataByDay.length - 1) {
+      //   doc.addPage();
+      // }
+    });
+
+    doc.save(`${date}_${branchName}_Monthly_Report_Notes.pdf`);
   }
 
 }

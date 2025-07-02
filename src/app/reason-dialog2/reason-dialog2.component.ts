@@ -3,12 +3,11 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   imports: [FormsModule],
-  selector: 'app-reason-dialog',
-  templateUrl: './reason-dialog.component.html',
-  styleUrls: ['./reason-dialog.component.css']
+  selector: 'app-reason-dialog2',
+  templateUrl: './reason-dialog2.component.html',
+  styleUrls: ['./reason-dialog2.component.css']
 })
-export class ReasonDialogComponent {
-  reason: string = '';
+export class ReasonDialogComponent2 {
   provider: string = '';
 
   isRecieved = false
@@ -16,15 +15,15 @@ export class ReasonDialogComponent {
   @Output() onConfirm = new EventEmitter<string>();
   @Output() onCancel = new EventEmitter<void>();
 
-  @ViewChild('reasonInput') reasonInput!: ElementRef;
+  @ViewChild('reasonInput2') reasonInput2!: ElementRef;
 
   ngAfterViewInit(): void {
     setTimeout(() => {
-      this.reasonInput.nativeElement.focus();
+      this.reasonInput2.nativeElement.focus();
     });
   }
   confirm() {
-    this.onConfirm.emit(this.reason);
+    this.onConfirm.emit("تم الاستلام من المورد: " + this.provider);
   }
 
   cancel() {

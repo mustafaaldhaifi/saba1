@@ -243,10 +243,12 @@
 
     <!-- *ngIf="isAdmin==false && isLastDayOfMonth()"  -->
 
-    <div *ngIf="isAdmin==false && groupedDailyDates">
+    <div *ngIf=" groupedDailyDates">
         <div *ngFor="let item of groupedDailyDates | keyvalue">
             <button *ngIf="item.value.fullyFilled === true && item.value.hasBeenExported === false"
                 (click)="exportallPdfDaily( item.key,item.value.dates)">Export All {{ item.key }}</button>
+            <button *ngIf="item.value.fullyFilled === true && item.value.hasBeenExportedNotes === false"
+                (click)="exportallNotesPdfDaily( item.key,item.value.dates)">Export All Notes {{ item.key }}</button>
         </div>
     </div>
 

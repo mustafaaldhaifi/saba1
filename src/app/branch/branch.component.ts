@@ -15,6 +15,7 @@ import { retry } from 'rxjs';
 import { ReasonDialogComponent } from "../reason-dialog/reason-dialog.component";
 import { ModalService } from '../CustomModalService';
 import { AlertDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { ReasonDialogComponent2 } from '../reason-dialog2/reason-dialog2.component';
 
 @Component({
   selector: 'app-branch',
@@ -1484,10 +1485,11 @@ export class BranchComponent {
 
   isModalOpen = false;
 
-  openModal(field: string, item: any, i: number, subProduct: any = null) {
+  openModal(field: string, item: any, i: number, subProduct: any = null, isRecieved = false) {
     const productUnit = item.productUnit ?? 1;
     if (this.isModalOpen == false) {
-      const modalRef = this.modalService.open(ReasonDialogComponent);
+      const modalRef = isRecieved ? this.modalService.open(ReasonDialogComponent2) : this.modalService.open(ReasonDialogComponent);
+
       modalRef.result.then((result) => {
         if (result === null || result.length == 0) {
           if (field == 'transfer') {
@@ -1629,7 +1631,7 @@ export class BranchComponent {
     // this.openModal(field, item, i, subProduct)
 
 
-    if (field === 'add' || field === 'transfer' || field === 'dameged') {
+    if (field === 'add' || field === 'transfer' || field === 'dameged' || field === 'recieved') {
       // console.log("this.handleDilogReson", this.handleDilogReson);
 
 
@@ -1638,12 +1640,12 @@ export class BranchComponent {
 
         if (field === 'add') {
           if (subProduct) {
-            if (Number(item.products[subProduct.i][field] ?? 0) < 0) {
+            if (Number(item.products[subProduct.i][field] ?? 0) !== 0) {
               // this.showReasonDialog = true
               this.openModal(field, item, i, subProduct)
             }
           } else {
-            if (Number(item[field] ?? 0) < 0) {
+            if (Number(item[field] ?? 0) !== 0) {
               // this.showReasonDialog = true
               this.openModal(field, item, i, subProduct)
 
@@ -1690,6 +1692,24 @@ export class BranchComponent {
             if (Number(item[field] ?? 0) > 0) {
               // this.showReasonDialog = true
               this.openModal(field, item, i, subProduct)
+
+
+            }
+          }
+        }
+
+        if (field === 'recieved') {
+          if (subProduct) {
+            if (Number(item.products[subProduct.i][field] ?? 0) > 0) {
+              // this.showReasonDialog = true
+              this.openModal(field, item, i, subProduct, true)
+
+
+            }
+          } else {
+            if (Number(item[field] ?? 0) > 0) {
+              // this.showReasonDialog = true
+              this.openModal(field, item, i, subProduct, true)
 
 
             }
@@ -2312,13 +2332,14 @@ export class BranchComponent {
     // pdfService.exportDaily()
   }
 
-  groupedDailyDates: Record<string, { dates: string[]; fullyFilled: boolean, hasBeenExported: boolean }> = {};
+  groupedDailyDates: Record<string, { dates: string[]; fullyFilled: boolean, hasBeenExported: boolean, hasBeenExportedNotes: boolean }> = {};
 
   groupDatesByMonth() {
-    const grouped: Record<string, { dates: string[]; fullyFilled: boolean; hasBeenExported: boolean }> = {};
+    const grouped: Record<string, { dates: string[]; fullyFilled: boolean; hasBeenExported: boolean, hasBeenExportedNotes: boolean }> = {};
 
     // قراءة التواريخ المصدّرة مسبقًا من localStorage
     const exportedDates: string[] = JSON.parse(localStorage.getItem('exportedDailyDates') || '[]');
+    const exportedDatesNotes: string[] = JSON.parse(localStorage.getItem('exportedDailyDatesNotes') || '[]');
 
     for (const dateStr of this.dailyReportsDates) {
       const date = new Date(dateStr);
@@ -2327,7 +2348,7 @@ export class BranchComponent {
       const key = `${year}-${month}`;
 
       if (!grouped[key]) {
-        grouped[key] = { dates: [], fullyFilled: false, hasBeenExported: false };
+        grouped[key] = { dates: [], fullyFilled: false, hasBeenExported: false, hasBeenExportedNotes: false };
       }
 
       grouped[key].dates.push(dateStr);
@@ -2350,6 +2371,9 @@ export class BranchComponent {
       // تحقق إذا تم تصدير كل تواريخ هذا الشهر مسبقًا
       const allExported = exportedDates.includes(key);
       grouped[key].hasBeenExported = allExported;
+
+      const allExportedNotes = exportedDatesNotes.includes(key);
+      grouped[key].hasBeenExportedNotes = allExportedNotes;
     }
 
     this.groupedDailyDates = grouped;
@@ -2432,41 +2456,41 @@ export class BranchComponent {
   async exportallPdfDaily(date: string, dates: any) {
 
     this.isLoading = true
-    // const pdfService = new PdfService();
-    // let finalData: { date: string, data: any, }[] = [];
+    const pdfService = new PdfService();
+    let finalData: { date: string, data: any, }[] = [];
 
-    // for (const element of dates) {
-    //   // this.dateToAddInDaily = element;
+    for (const element of dates) {
+      // this.dateToAddInDaily = element;
 
-    //   const dailyReportUpdates = await this.dailyReportService.getLastupdate(
-    //     this.branch.id,
-    //     Timestamp.fromDate(this.normalizeDate(element)),
-    //     this.apiService
-    //   );
+      const dailyReportUpdates = await this.dailyReportService.getLastupdate(
+        this.branch.id,
+        Timestamp.fromDate(this.normalizeDate(element)),
+        this.apiService
+      );
 
-    //   const dailyReports = await this.dailyReportService.getData(
-    //     this.selectedType.id,
-    //     this.branch.id,
-    //     element,
-    //     element,
-    //     dailyReportUpdates,
-    //     this.apiService
-    //   );
+      const dailyReports = await this.dailyReportService.getData(
+        this.selectedType.id,
+        this.branch.id,
+        element,
+        element,
+        dailyReportUpdates,
+        this.apiService
+      );
 
-    //   const date = this.dailyReportService.getDateKey(element);
+      const date = this.dailyReportService.getDateKey(element);
 
-    //   finalData.push({
-    //     data: this.returnCombineDataWithReports(dailyReports),
-    //     date: date
-    //   });
-    // }
+      finalData.push({
+        data: this.returnCombineDataWithReports(dailyReports),
+        date: date
+      });
+    }
 
-    // this.isReadDailyMode = true
-    // // اطبع النتيجة للتأكد
-    // console.log("Final Data", finalData);
+    this.isReadDailyMode = true
+    // اطبع النتيجة للتأكد
+    console.log("Final Data", finalData);
 
-    // // إنشاء PDF واحد للشهر كله
-    // pdfService.exportMonthlyReport(date, finalData, this.branch.data.name);
+    // إنشاء PDF واحد للشهر كله
+    pdfService.exportMonthlyReport(date, finalData, this.branch.data.name);
 
 
     /// Start save localy
@@ -2489,7 +2513,69 @@ export class BranchComponent {
     }
     ///
     this.isLoading = false
-    this.groupedDailyDates = {}
+    this.groupDatesByMonth()
+  }
+
+  async exportallNotesPdfDaily(date: string, dates: any) {
+
+    this.isLoading = true
+    const pdfService = new PdfService();
+    let finalData: { date: string, data: any, }[] = [];
+
+    for (const element of dates) {
+      // this.dateToAddInDaily = element;
+
+      const dailyReportUpdates = await this.dailyReportService.getLastupdate(
+        this.branch.id,
+        Timestamp.fromDate(this.normalizeDate(element)),
+        this.apiService
+      );
+
+      const dailyReports = await this.dailyReportService.getData(
+        this.selectedType.id,
+        this.branch.id,
+        element,
+        element,
+        dailyReportUpdates,
+        this.apiService
+      );
+
+      const date = this.dailyReportService.getDateKey(element);
+
+      finalData.push({
+        data: this.returnCombineDataWithReports(dailyReports),
+        date: date
+      });
+    }
+
+    this.isReadDailyMode = true
+    // اطبع النتيجة للتأكد
+    console.log("Final Data", finalData);
+
+    // إنشاء PDF واحد للشهر كله
+    pdfService.exportMonthlyReportNotes(date, finalData, this.branch.data.name);
+
+
+    /// Start save localy
+    const key = 'exportedDailyDatesNotes';
+
+    // 1. جلب القيمة الحالية من localStorage (كـ JSON array)
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+
+    // 2. التأكد من أنها مصفوفة
+    if (!Array.isArray(existing)) {
+      console.warn(`${key} is corrupted. Resetting.`);
+      localStorage.setItem(key, JSON.stringify([date]));
+      return;
+    }
+
+    // 3. إضافة التاريخ فقط إذا لم يكن موجودًا
+    if (!existing.includes(date)) {
+      existing.push(date);
+      localStorage.setItem(key, JSON.stringify(existing));
+    }
+    ///
+    this.isLoading = false
     this.groupDatesByMonth()
   }
 
@@ -3094,30 +3180,30 @@ export class BranchComponent {
   // }
 
 
-  async saveDailyNote() {
-    if (!this.selectedDateToAddObject) {
-      return
-    }
+  // async saveDailyNote() {
+  //   if (!this.selectedDateToAddObject) {
+  //     return
+  //   }
 
-    try {
-      this.isLoading = true;
-      const batch = writeBatch(this.apiService.db);
-      const docRef = doc(this.apiService.db, collectionNames.dailyReportsDates, this.selectedDateToAddObject.id);
-      batch.update(docRef, {
-        note: this.dialyNote,
-        updatedAt: Timestamp.now()
-      });
+  //   try {
+  //     this.isLoading = true;
+  //     const batch = writeBatch(this.apiService.db);
+  //     const docRef = doc(this.apiService.db, collectionNames.dailyReportsDates, this.selectedDateToAddObject.id);
+  //     batch.update(docRef, {
+  //       note: this.dialyNote,
+  //       updatedAt: Timestamp.now()
+  //     });
 
-      await batch.commit();
-      this.selectedDateToAddObject.note = this.dialyNote
-      console.log("Doneee");
+  //     await batch.commit();
+  //     this.selectedDateToAddObject.note = this.dialyNote
+  //     console.log("Doneee");
 
-    } catch (error) {
-      console.log(error);
+  //   } catch (error) {
+  //     console.log(error);
 
-    }
-    this.isLoading = false
-  }
+  //   }
+  //   this.isLoading = false
+  // }
   ifEnabledNoteFiled() {
 
     // if (!Array.isArray(this.combinedData)) return false;
@@ -3125,23 +3211,26 @@ export class BranchComponent {
     return this.combinedData.some((item: any) => {
       if (item.products) {
         return item.products.some((subitem: any) => {
-          const isAddNegative = Number(subitem?.add ?? 0) < 0;
+          const isAddNegative = Number(subitem?.add ?? 0) !== 0;
           const isTransferNonZero = Number(item.transfer) !== 0;
+          const isRecieved = Number(item.recieved) > 0;
+
           const isDamagedPositive = Number(subitem?.dameged ?? 0) > 0;
 
-          return isAddNegative || isTransferNonZero || isDamagedPositive;
+          return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved;
         });
       } else {
-        const isAddNegative = Number(item.add) < 0;
+        const isAddNegative = Number(item.add) !== 0;
         const isTransferNonZero = Number(item.transfer) !== 0;
         const isDamagedPositive = Number(item.dameged) > 0;
+        const isRecieved = Number(item.recieved) > 0;
 
         console.log('isAddNegative', isAddNegative);
         console.log('isTransferNonZero', isTransferNonZero);
         console.log('isDamagedPositive', isDamagedPositive);
 
 
-        return isAddNegative || isTransferNonZero || isDamagedPositive;
+        return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved;
       }
 
     });
