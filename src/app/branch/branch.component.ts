@@ -3,7 +3,7 @@ import { Component, ElementRef, inject, Inject, PLATFORM_ID, QueryList, ViewChil
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, DocumentReference, getDoc, getDocs, getFirestore, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
@@ -1014,7 +1014,18 @@ export class BranchComponent {
     })).sort((a, b) => b.date.seconds - a.date.seconds);
     this.dailyReportsDates1 = this.dailyReportsDates
 
-    console.log(this.dailyReportsDates);
+    // const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
+    // const serverTimestamp = Timestamp.now();
+    // await setDoc(tempRef, { serverTime: serverTimestamp });
+    // const tempSnap = await getDoc(tempRef);
+    // const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
+
+
+    // console.log("this.dailyReportsDates1", this.dailyReportsDates1);
+
+
+
+    // console.log(this.dailyReportsDates);
 
     const serverDatesKeys = this.dailyReportsDates.map((item: any) =>
       this.dailyReportService.getDateKey(item.date.toDate())
@@ -1103,7 +1114,12 @@ export class BranchComponent {
 
       this.dateToAddInDaily = new Date(now.getFullYear(), now.getMonth(), 1);  // Set the current time if no report exists
       console.log('No report for today.');
+
+      // const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate)
+      // console.log("filterd: : ", itemToDelete);
     }
+
+
 
     // this.selectedDateToAddObject = this.dailyReportsDates1.find((report: any) => {
     //   const reportDate = report.date.toDate(); // تحويل من Firestore Timestamp إلى JavaScript Date
@@ -1158,6 +1174,15 @@ export class BranchComponent {
 
 
     this.dailyReportsDates = this.dailyReportsDates.map((data: any) => data.date.toDate())
+
+
+    // const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
+    // const serverTimestamp = Timestamp.now();
+    // await setDoc(tempRef, { serverTime: serverTimestamp });
+    // const tempSnap = await getDoc(tempRef);
+    // const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
+    // const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate)
+    // console.log("filterd: : ", itemToDelete);
 
 
     // await this.getDailyReports();
@@ -1980,7 +2005,7 @@ export class BranchComponent {
 
     this.dateToAddInDaily = $event
 
-    console.log(this.dailyReportsDates1);
+    console.log('this.dailyReportsDates1', this.dailyReportsDates1);
 
     this.selectedDateToAddObject = this.dailyReportsDates1.find((report: any) => {
       const reportDate = report.date.toDate(); // تحويل من Firestore Timestamp إلى JavaScript Date
@@ -2211,13 +2236,34 @@ export class BranchComponent {
     }
   }
 
+  getItemsInPreviousMonthFromServer(items: any[], serverDate: Date): any[] {
+    const startOfPrevMonth = new Date(serverDate.getFullYear(), serverDate.getMonth() - 1, 1, 0, 0, 0);
+    const endOfPrevMonth = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59);
+
+    return items
+      .filter(item => {
+        const itemDate = item.date?.toDate?.();
+        return itemDate instanceof Date &&
+          itemDate >= startOfPrevMonth &&
+          itemDate <= endOfPrevMonth;
+      })
+      .map(item => {
+        const dateObj = item.date.toDate();
+        const readableDate = this.formatDateOnly(dateObj); // مثل: "2025-06-14"
+        return { ...item, readableDate };
+      });
+  }
+  formatDateOnly(date: Date): string {
+    const year = date.getFullYear();
+    const month = ('0' + (date.getMonth() + 1)).slice(-2);
+    const day = ('0' + date.getDate()).slice(-2);
+    return `${year}-${month}-${day}`;
+  }
+
   async deleteOldDailyReportsDatesIfSixthOfMonth() {
     try {
       // 1. الحصول على وقت السيرفر
       const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
-      const serverTimestamp = Timestamp.now();
-      await setDoc(tempRef, { serverTime: serverTimestamp });
-
       const tempSnap = await getDoc(tempRef);
       const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
       console.log("serverTime", serverDate);
@@ -2227,98 +2273,197 @@ export class BranchComponent {
         return;
       }
 
-      // 2. تحقق من أن اليوم هو السادس
-      console.log(serverDate.getDate());
-
+      // 2. التحقق من اليوم
       if (serverDate.getDate() < 6) {
         console.log('اليوم ليس السادس، لا حاجة للحذف.');
+        const start = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
+        const end = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59);
+        console.log("start", start);
+        console.log("end", end);
         return;
       }
 
-      // 3. حضّر البيانات للحذف
-      const batch = writeBatch(this.apiService.db);
-      let deletedCount = 0;
+      // 3. تحديد المستندات القديمة من dailyReportsDates
+      const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate);
+      const deleteRefs: DocumentReference[] = [];
 
-      this.dailyReportsDates1.forEach((item: any) => {
-        console.log("DATE", item);
-        const reportDate = item.date.toDate()
-
-        console.log("DATE", reportDate);
-
-        const isPreviousMonth = reportDate instanceof Date &&
-          (reportDate.getFullYear() <= serverDate.getFullYear() &&
-            (
-              reportDate.getMonth() < serverDate.getMonth()));
-
-        if (isPreviousMonth && item.id) {
-          const docRef = doc(this.apiService.db, 'dailyReportsDates', item.id);
-          batch.delete(docRef);
-          deletedCount++;
+      itemToDelete.forEach((item: any) => {
+        if (item?.id) {
+          deleteRefs.push(doc(this.apiService.db, 'dailyReportsDates', item.id));
         }
       });
 
-      // 4. تنفيذ الحذف إذا كان هناك شيء للحذف
-      if (deletedCount > 0) {
+      // 4. حذف dailyReports القديمة
+      const start = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
+      const end = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59);
 
-        let start = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
-        let end = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59); // last day of month
+      const q = query(
+        collection(this.apiService.db, collectionNames.dailyReports),
+        where("branchId", "==", this.branch.id),
+        where("typeId", "==", this.selectedType.id),
+        where("date", ">=", Timestamp.fromDate(start)),
+        where("date", "<=", Timestamp.fromDate(end)),
+      );
 
-        const q = query(
-          collection(this.apiService.db, collectionNames.dailyReports),
-          where("branchId", "==", this.branch.id),
-          where("typeId", "==", this.selectedType.id),
-          where("date", ">=", Timestamp.fromDate(start)),
-          where("date", "<=", Timestamp.fromDate(end)),
-        );
+      const snapshot = await getDocs(q);
+      snapshot.docs.forEach(docSnap => deleteRefs.push(docSnap.ref));
 
-        const snapshot = await getDocs(q);
-        const dailyReportsToDelete = snapshot.docs.map(doc =>
+      // 5. حذف dailyReportsUpdates القديمة
+      const q1 = query(
+        collection(this.apiService.db, collectionNames.dailyReportsUpdates),
+        where("branchId", "==", this.branch.id),
+        where("date", ">=", Timestamp.fromDate(start)),
+        where("date", "<=", Timestamp.fromDate(end)),
+      );
 
-        ({
-          id: doc.id,
-          date: doc.data()['date'].toDate(),
-        }))
-        console.log('dailyReportsToDelete', dailyReportsToDelete);
+      const snapshot1 = await getDocs(q1);
+      snapshot1.docs.forEach(docSnap => deleteRefs.push(docSnap.ref));
 
-        dailyReportsToDelete.forEach((item: any) => {
-          const docRef = doc(this.apiService.db, collectionNames.dailyReports, item.id);
-          batch.delete(docRef);
-        })
+      console.log(`📦 عدد المستندات المراد حذفها: ${deleteRefs.length}`);
 
-        let start1 = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
-        let end1 = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59); // last day of month
+      // 6. حذف على دفعات من 300
+      const chunkSize = 300;
+      for (let i = 0; i < deleteRefs.length; i += chunkSize) {
+        const chunk = deleteRefs.slice(i, i + chunkSize);
+        const batch = writeBatch(this.apiService.db);
+        chunk.forEach(ref => batch.delete(ref));
 
-        const q1 = query(
-          collection(this.apiService.db, collectionNames.dailyReportsUpdates),
-          where("branchId", "==", this.branch.id),
-          where("date", ">=", Timestamp.fromDate(start1)),
-          where("date", "<=", Timestamp.fromDate(end1)),
-        );
-
-        const snapshot1 = await getDocs(q1);
-        const dailyReportsUpdateToDelete1 = snapshot1.docs.map(doc => ({
-          id: doc.id,
-        }))
-        console.log('dailyReportsUpdateToDelete1', dailyReportsUpdateToDelete1);
-
-        dailyReportsUpdateToDelete1.forEach((item: any) => {
-          const docRef = doc(this.apiService.db, collectionNames.dailyReportsUpdates, item.id);
-          batch.delete(docRef);
-        })
-
-        console.log(`تم حذف ${dailyReportsUpdateToDelete1.length} من   التحديثات للجرد اليومي القديمة.`);
-
-        await batch.commit();
-        console.log(`تم حذف ${deletedCount} من التواريخ القديمة.`);
-        window.location.reload()
-      } else {
-        console.log('لا توجد تواريخ قديمة للحذف.');
+        try {
+          await batch.commit();
+          console.log(`✅ تم حذف دفعة ${i / chunkSize + 1} (${chunk.length} مستند)`);
+        } catch (error) {
+          console.error(`❌ خطأ في دفعة ${i / chunkSize + 1}:`, error);
+        }
       }
 
+      console.log('✅ تم حذف جميع المستندات القديمة بنجاح.');
+      window.location.reload();
+
     } catch (error) {
-      console.error('حدث خطأ أثناء حذف التواريخ القديمة:', error);
+      console.error('❌ حدث خطأ أثناء حذف التواريخ القديمة:', error);
     }
   }
+
+
+
+  // async deleteOldDailyReportsDatesIfSixthOfMonth() {
+  //   try {
+  //     // 1. الحصول على وقت السيرفر
+  //     const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
+  //     const serverTimestamp = Timestamp.now();
+  //     // await setDoc(tempRef, { serverTime: serverTimestamp });
+
+  //     const tempSnap = await getDoc(tempRef);
+  //     const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
+  //     console.log("serverTime", serverDate);
+
+  //     if (!(serverDate instanceof Date)) {
+  //       console.error('فشل في الحصول على وقت السيرفر');
+  //       return;
+  //     }
+
+  //     // 2. تحقق من أن اليوم هو السادس
+  //     console.log(serverDate.getDate());
+
+  //     if (serverDate.getDate() < 6) {
+  //       console.log('اليوم ليس السادس، لا حاجة للحذف.');
+  //       let start = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
+  //       let end = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59); // last day of month
+
+  //       console.log("start", start);
+  //       console.log("end", end);
+
+
+  //       return;
+  //     }
+
+  //     // 3. حضّر البيانات للحذف
+  //     const batch = writeBatch(this.apiService.db);
+  //     let deletedCount = 0;
+
+  //     const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate)
+  //     console.log("filterd: : ", itemToDelete);
+
+  //     itemToDelete.forEach((item: any) => {
+  //       console.log("DATE", item);
+  //       const reportDate = item.date.toDate()
+
+  //       console.log("DATE", reportDate);
+
+  //       const isPreviousMonth = reportDate instanceof Date &&
+  //         (reportDate.getFullYear() <= serverDate.getFullYear() &&
+  //           (
+  //             reportDate.getMonth() < serverDate.getMonth()));
+
+  //       if (isPreviousMonth && item.id) {
+  //         const docRef = doc(this.apiService.db, 'dailyReportsDates', item.id);
+  //         batch.delete(docRef);
+  //         deletedCount++;
+  //       }
+  //     });
+
+  //     // 4. تنفيذ الحذف إذا كان هناك شيء للحذف
+  //     if (deletedCount > 0) {
+
+  //       let start = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
+  //       let end = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59); // last day of month
+
+  //       const q = query(
+  //         collection(this.apiService.db, collectionNames.dailyReports),
+  //         where("branchId", "==", this.branch.id),
+  //         where("typeId", "==", this.selectedType.id),
+  //         where("date", ">=", Timestamp.fromDate(start)),
+  //         where("date", "<=", Timestamp.fromDate(end)),
+  //       );
+
+  //       const snapshot = await getDocs(q);
+  //       const dailyReportsToDelete = snapshot.docs.map(doc =>
+
+  //       ({
+  //         id: doc.id,
+  //         date: doc.data()['date'].toDate(),
+  //       }))
+  //       console.log('dailyReportsToDelete', dailyReportsToDelete);
+
+  //       dailyReportsToDelete.forEach((item: any) => {
+  //         const docRef = doc(this.apiService.db, collectionNames.dailyReports, item.id);
+  //         batch.delete(docRef);
+  //       })
+
+  //       let start1 = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
+  //       let end1 = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59); // last day of month
+
+  //       const q1 = query(
+  //         collection(this.apiService.db, collectionNames.dailyReportsUpdates),
+  //         where("branchId", "==", this.branch.id),
+  //         where("date", ">=", Timestamp.fromDate(start1)),
+  //         where("date", "<=", Timestamp.fromDate(end1)),
+  //       );
+
+  //       const snapshot1 = await getDocs(q1);
+  //       const dailyReportsUpdateToDelete1 = snapshot1.docs.map(doc => ({
+  //         id: doc.id,
+  //       }))
+  //       console.log('dailyReportsUpdateToDelete1', dailyReportsUpdateToDelete1);
+
+  //       dailyReportsUpdateToDelete1.forEach((item: any) => {
+  //         const docRef = doc(this.apiService.db, collectionNames.dailyReportsUpdates, item.id);
+  //         batch.delete(docRef);
+  //       })
+
+  //       console.log(`تم حذف ${dailyReportsUpdateToDelete1.length} من   التحديثات للجرد اليومي القديمة.`);
+
+  //       await batch.commit();
+  //       console.log(`تم حذف ${deletedCount} من التواريخ القديمة.`);
+  //       window.location.reload()
+  //     } else {
+  //       console.log('لا توجد تواريخ قديمة للحذف.');
+  //     }
+
+  //   } catch (error) {
+  //     console.error('حدث خطأ أثناء حذف التواريخ القديمة:', error);
+  //   }
+  // }
 
   exportPdfDaily() {
     const pdfService = new PdfService();
