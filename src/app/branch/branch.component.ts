@@ -987,6 +987,7 @@ export class BranchComponent {
 
   dailyReportsDates: any = []
   dailyReportsDates1: any = []
+  filteredLocalReports: any
   async getDailyReportsDates(): Promise<void> {
 
 
@@ -1031,16 +1032,16 @@ export class BranchComponent {
       this.dailyReportService.getDateKey(item.date.toDate())
     );
 
-    const filteredLocalReports = this.dailyReportService.getLocalData().filter((localReport: any) =>
+    this.filteredLocalReports = this.dailyReportService.getLocalData().filter((localReport: any) =>
       serverDatesKeys.includes(localReport.date)
     );
 
-    this.dailyReportService.saveToLocal(filteredLocalReports)
+    this.dailyReportService.saveToLocal(this.filteredLocalReports)
 
     // ثم خزّن هذه البيانات المفلترة كبياناتك المحلية الجديدة
     // this.dailyReportService.saveLocalData(filteredLocalReports);
 
-    console.log("dddaaates", filteredLocalReports);
+    console.log("dddaaates", this.filteredLocalReports);
 
 
 
@@ -1176,13 +1177,27 @@ export class BranchComponent {
     this.dailyReportsDates = this.dailyReportsDates.map((data: any) => data.date.toDate())
 
 
-    // const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
-    // const serverTimestamp = Timestamp.now();
-    // await setDoc(tempRef, { serverTime: serverTimestamp });
-    // const tempSnap = await getDoc(tempRef);
-    // const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
-    // const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate)
-    // console.log("filterd: : ", itemToDelete);
+    const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
+    const serverTimestamp = Timestamp.now();
+    await setDoc(tempRef, { serverTime: serverTimestamp });
+    const tempSnap = await getDoc(tempRef);
+    const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
+    const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate)
+    console.log("filterd: : ", itemToDelete);
+
+    // const a = localStorage.getItem("dailyReport")
+
+    const startOfPrevMonth = new Date(serverDate.getFullYear(), serverDate.getMonth() - 1, 1);
+    const endOfPrevMonth = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59);
+
+    const filtered = this.filteredLocalReports.filter((item: any) => {
+      const itemDate = new Date(item.date); // لأن date عبارة عن string
+      return !(itemDate >= startOfPrevMonth && itemDate <= endOfPrevMonth);
+    });
+
+    console.log("fresh data", filtered);
+
+
 
 
     // await this.getDailyReports();
@@ -2336,6 +2351,16 @@ export class BranchComponent {
         }
       }
 
+      const startOfPrevMonth = new Date(serverDate.getFullYear(), serverDate.getMonth() - 1, 1);
+      const endOfPrevMonth = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59);
+
+      const filtered = this.filteredLocalReports.filter((item: any) => {
+        const itemDate = new Date(item.date); // لأن date عبارة عن string
+        return !(itemDate >= startOfPrevMonth && itemDate <= endOfPrevMonth);
+      });
+      this.dailyReportService.saveToLocal(filtered)
+
+      
       console.log('✅ تم حذف جميع المستندات القديمة بنجاح.');
       window.location.reload();
 
