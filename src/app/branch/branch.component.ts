@@ -2301,6 +2301,9 @@ export class BranchComponent {
       // 3. تحديد المستندات القديمة من dailyReportsDates
       const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate);
       const deleteRefs: DocumentReference[] = [];
+      if (itemToDelete.length == 0) {
+        return
+      }
 
       itemToDelete.forEach((item: any) => {
         if (item?.id) {
@@ -2360,7 +2363,7 @@ export class BranchComponent {
       });
       this.dailyReportService.saveToLocal(filtered)
 
-      
+
       console.log('✅ تم حذف جميع المستندات القديمة بنجاح.');
       window.location.reload();
 
