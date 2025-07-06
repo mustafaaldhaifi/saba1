@@ -705,7 +705,7 @@ export class PdfService {
           if (element.note) {
             var filed = ""
             var colmn = ""
-            if (Number(element?.add ?? 0) < 0) {
+            if (Number(element?.add ?? 0) !== 0) {
               colmn = "الجرد"
               filed = "add"
             } else if (Number(element?.dameged ?? 0) > 0) {
@@ -742,10 +742,16 @@ export class PdfService {
           notes.forEach((note, index) => {
             doc.text(
               note,
-              pageWidth - doc.getTextWidth(note) - rightMargin,
+              pageWidth - rightMargin,
               startY + (index + 1) * lineHeight,
-              // { align: 'right' }
+              { align: 'right' }
             );
+            // doc.text(
+            //   note,
+            //   pageWidth - doc.getTextWidth(note) - rightMargin,
+            //   startY + (index + 1) * lineHeight,
+            //   // { align: 'right' }
+            // );
           });
         }
       }
@@ -986,7 +992,7 @@ export class PdfService {
                 if (sub.note) {
                   var filed = ""
                   var colmn = ""
-                  if (Number(sub?.add ?? 0) < 0) {
+                  if (Number(sub?.add ?? 0) !== 0) {
                     colmn = "الجرد"
                     filed = "add"
                   } else if (Number(sub?.dameged ?? 0) > 0) {
@@ -997,7 +1003,10 @@ export class PdfService {
                   else if (Number(sub?.transfer ?? 0) !== 0) {
                     colmn = " التحويل"
                     filed = "transfer"
-
+                  }
+                  else if (Number(sub?.recieved ?? 0) !== 0) {
+                    colmn = " المستلم"
+                    filed = "recieved"
                   }
                   if (colmn.length > 0) {
                     notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
@@ -1009,7 +1018,7 @@ export class PdfService {
             if (element.note) {
               var filed = ""
               var colmn = ""
-              if (Number(element?.add ?? 0) < 0) {
+              if (Number(element?.add ?? 0) !== 0) {
                 colmn = "الجرد"
                 filed = "add"
               } else if (Number(element?.dameged ?? 0) > 0) {
@@ -1020,6 +1029,11 @@ export class PdfService {
               else if (Number(element?.transfer ?? 0) !== 0) {
                 colmn = " التحويل"
                 filed = "transfer"
+
+              }
+              else if (Number(element?.recieved ?? 0) !== 0) {
+                colmn = " المستلم"
+                filed = "recieved"
 
               }
               if (colmn.length > 0) {
@@ -1041,10 +1055,16 @@ export class PdfService {
             notes.forEach((note, index) => {
               doc.text(
                 note,
-                pageWidth - doc.getTextWidth(note) - rightMargin,
+                pageWidth - rightMargin,
                 startY + (index + 1) * lineHeight,
-                // { align: 'right' }
+                { align: 'right' }
               );
+              // doc.text(
+              //   note,
+              //   pageWidth - doc.getTextWidth(note) - rightMargin,
+              //   startY + (index + 1) * lineHeight,
+              //   // { align: 'right' }
+              // );
             });
           }
         }
@@ -1149,6 +1169,7 @@ export class PdfService {
           let counter = 1;
 
           // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
+          // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
           data.forEach((element: any) => {
 
             if (Array.isArray(element.products)) {
@@ -1156,7 +1177,7 @@ export class PdfService {
                 if (sub.note) {
                   var filed = ""
                   var colmn = ""
-                  if (Number(sub?.add ?? 0) < 0) {
+                  if (Number(sub?.add ?? 0) !== 0) {
                     colmn = "الجرد"
                     filed = "add"
                   } else if (Number(sub?.dameged ?? 0) > 0) {
@@ -1167,7 +1188,10 @@ export class PdfService {
                   else if (Number(sub?.transfer ?? 0) !== 0) {
                     colmn = " التحويل"
                     filed = "transfer"
-
+                  }
+                  else if (Number(sub?.recieved ?? 0) !== 0) {
+                    colmn = " المستلم"
+                    filed = "recieved"
                   }
                   if (colmn.length > 0) {
                     notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
@@ -1179,7 +1203,7 @@ export class PdfService {
             if (element.note) {
               var filed = ""
               var colmn = ""
-              if (Number(element?.add ?? 0) < 0) {
+              if (Number(element?.add ?? 0) !== 0) {
                 colmn = "الجرد"
                 filed = "add"
               } else if (Number(element?.dameged ?? 0) > 0) {
@@ -1190,6 +1214,11 @@ export class PdfService {
               else if (Number(element?.transfer ?? 0) !== 0) {
                 colmn = " التحويل"
                 filed = "transfer"
+
+              }
+              else if (Number(element?.recieved ?? 0) !== 0) {
+                colmn = " المستلم"
+                filed = "recieved"
 
               }
               if (colmn.length > 0) {
@@ -1211,12 +1240,17 @@ export class PdfService {
             notes.forEach((note, index) => {
               doc.text(
                 note,
-                pageWidth - doc.getTextWidth(note) - rightMargin,
+                pageWidth - rightMargin,
                 startY + (index + 1) * lineHeight,
-                // { align: 'right' }
+                { align: 'right' }
               );
+              // doc.text(
+              //   note,
+              //   pageWidth - doc.getTextWidth(note) - rightMargin,
+              //   startY + (index + 1) * lineHeight,
+              //   // { align: 'right' }
+              // );
             });
-            currentY = startY + (notes.length + 1) * lineHeight;
           }
         }
         ,
