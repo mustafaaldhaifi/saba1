@@ -341,7 +341,7 @@
                                 [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
                         </td>
                         <td>
-                            <input [attr.tabindex]="2000 + i" [disabled]="isReadDailyMode === true && isAdmin==false"
+                            <input [attr.tabindex]="2000 + i" [disabled]="isDisabledDailyField()"
                                 [(ngModel)]="item.recieved" (blur)="onQuantityChange('recieved', item, i)" min="0"
                                 step="any" type="number" required>
 
@@ -351,7 +351,7 @@
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
-                                            [disabled]="isReadDailyMode && isAdmin==false"
+                                            [disabled]="isDisabledDailyField()"
                                             (blur)="onQuantityChange('add', item, i,{i:s,subProduct})"
                                             [(ngModel)]="combinedData[i].products[s].add" type="number" required />
                                     </ng-container>
@@ -360,7 +360,7 @@
 
                             <ng-template #normalProduct1>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
-                                    [disabled]="isReadDailyMode  && isAdmin==false"
+                                    [disabled]="isDisabledDailyField()"
                                     (blur)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
                                     type="number" required />
                             </ng-template>
@@ -373,7 +373,7 @@
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
-                                            [disabled]="isReadDailyMode && isAdmin==false"
+                                            [disabled]="isDisabledDailyField()"
                                             (blur)="onQuantityChange('sales', item, i,{i:s,subProduct})"
                                             [(ngModel)]="combinedData[i].products[s].sales" type="number" required />
                                     </ng-container>
@@ -385,7 +385,7 @@
                         <ng-template #normalProduct2>
                             <td>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
-                                    [disabled]=" isReadDailyMode && isAdmin==false"
+                                    [disabled]="isDisabledDailyField()"
                                     (blur)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
                                     type="number" required />
                             </td>
@@ -399,7 +399,7 @@
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
-                                            [disabled]="isReadDailyMode && isAdmin==false"
+                                            [disabled]="isDisabledDailyField()"
                                             (blur)="onQuantityChange('staffMeal', item, i,{i:s,subProduct})"
                                             [(ngModel)]="combinedData[i].products[s].staffMeal" type="number" min="0"
                                             step="any" required />
@@ -412,7 +412,7 @@
                         <ng-template #normalProduct3>
                             <td>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
-                                    [disabled]="isReadDailyMode && isAdmin==false"
+                                    [disabled]="isDisabledDailyField()"
                                     (blur)="onQuantityChange('staffMeal', item, i)" min="0" step="any"
                                     [(ngModel)]="combinedData[i].staffMeal" type="number" required />
 
@@ -424,7 +424,7 @@
 
 
                         <td>
-                            <input [attr.tabindex]="6000 + i" [disabled]="isReadDailyMode === true && isAdmin==false"
+                            <input [attr.tabindex]="6000 + i" [disabled]="isDisabledDailyField()"
                                 (blur)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
                                 type="number" required>
 
@@ -434,7 +434,7 @@
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
-                                            [disabled]="isReadDailyMode && isAdmin==false" min="0" step="any"
+                                            [disabled]="isDisabledDailyField()" min="0" step="any"
                                             (blur)="onQuantityChange('dameged', item, i,{i:s,subProduct})"
                                             [(ngModel)]="combinedData[i].products[s].dameged" type="number" required />
                                     </ng-container>
@@ -443,7 +443,7 @@
 
                             <ng-template #normalProduct4>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
-                                    [disabled]="isReadDailyMode && isAdmin==false" min="0" step="any"
+                                    [disabled]="isDisabledDailyField()" min="0" step="any"
                                     (blur)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
                                     type="number" required />
                             </ng-template>

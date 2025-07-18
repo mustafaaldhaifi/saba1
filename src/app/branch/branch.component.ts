@@ -1818,47 +1818,99 @@ export class BranchComponent {
 
     console.log("proccesed", this.combinedData[i]);
 
+    const meatId = "m1srRxKTFohPt84R9LIA";
+    const boxId = "DPQc6kiIuafANKf5G4Ra";
+    const cupId = "UTnRc0oWxnF8ndBPrcCW";
 
-    // إذا كان المنتج هو اللحم وتم تعديل المبيعات
-    if (field === 'sales' && this.combinedData[i].productId === "m1srRxKTFohPt84R9LIA") {
-      const meatSalesRaw = this.combinedData[i].sales;
-      const cupIndex = this.combinedData.findIndex(p => p.productId === "UTnRc0oWxnF8ndBPrcCW");
+    // فقط إذا تم تعديل المبيعات للحم أو البوكس
+    if (field === 'sales' && (this.combinedData[i].productId === meatId || this.combinedData[i].productId === boxId)) {
+      const meatIndex = this.combinedData.findIndex(p => p.productId === meatId);
+      const boxIndex = this.combinedData.findIndex(p => p.productId === boxId);
+      const cupIndex = this.combinedData.findIndex(p => p.productId === cupId);
 
-      if (cupIndex !== -1) {
-        if (meatSalesRaw === null || meatSalesRaw === undefined || meatSalesRaw === '') {
-          // إذا كانت المبيعات فارغة، اجعل staffMeal فارغة
-          this.combinedData[cupIndex].staffMeal = '';
-        } else {
-          const meatSales = Number(meatSalesRaw) || 0;
-          this.combinedData[cupIndex].staffMeal = meatSales * 2;
-        }
+      if (meatIndex !== -1 && boxIndex !== -1 && cupIndex !== -1) {
+        const meatSales = Number(this.combinedData[meatIndex].sales) || 0;
+        const boxSales = Number(this.combinedData[boxIndex].sales) || 0;
 
-        // تحديث المخزون الختامي لمنتج الكاسات
-        const cupProductUnit = this.combinedData[cupIndex].productUnit ?? 1;
-        this.combinedData[cupIndex].closeStock = this.calculateClosingStock(this.combinedData[cupIndex], undefined, cupProductUnit);
+        // 2 * مبيعات اللحم + 4 * مبيعات البوكس
+        const calculatedStaffMeal = (meatSales * 2) + (boxSales * 4);
+
+        // حفظ القيمة في الكاسات
+        this.combinedData[cupIndex].staffMeal = calculatedStaffMeal;
+
+        // تحديث المخزون الختامي للكاسات
+        const cupUnit = this.combinedData[cupIndex].productUnit ?? 1;
+        this.combinedData[cupIndex].closeStock = this.calculateClosingStock(
+          this.combinedData[cupIndex],
+          undefined,
+          cupUnit
+        );
       }
     }
 
-    if (field === 'sales' && this.combinedData[i].productId === "WMIfaxRKFwUZwI3o3CHk") {
-      const meatSalesRaw = this.combinedData[i].sales;
-      const cupIndex = this.combinedData.findIndex(p => p.productId === "H4g2FAvT5J32lBJFIGf4");
 
-      if (cupIndex !== -1) {
-        if (meatSalesRaw === null || meatSalesRaw === undefined || meatSalesRaw === '') {
-          // إذا كانت المبيعات فارغة، اجعل staffMeal فارغة
-          this.combinedData[cupIndex].staffMeal = '';
-        } else {
-          const meatSales = Number(meatSalesRaw) || 0;
-          this.combinedData[cupIndex].staffMeal = meatSales * 2;
-        }
+    // const meatId = "m1srRxKTFohPt84R9LIA"
+    // const boxId = "DPQc6kiIuafANKf5G4Ra"
+    // // إذا كان المنتج هو اللحم وتم تعديل المبيعات
+    // if (field === 'sales' && (this.combinedData[i].productId === meatId || this.combinedData[i].productId === boxId)) {
+    //   const meatSalesRaw = this.combinedData[i].sales;
 
-        // تحديث المخزون الختامي لمنتج الكاسات
-        const cupProductUnit = this.combinedData[cupIndex].productUnit ?? 1;
-        this.combinedData[cupIndex].closeStock = this.calculateClosingStock(this.combinedData[cupIndex], undefined, cupProductUnit);
-      }
-    }
+    //   const cupIndex = this.combinedData.findIndex(p => p.productId === "UTnRc0oWxnF8ndBPrcCW");
+    //   const boxIndex = this.combinedData.findIndex(p => p.productId === boxId);
+    //   const meatIndex = this.combinedData.findIndex(p => p.productId === meatId);
 
-    if (this.isReadDailyMode && this.isAdmin == true) {
+
+
+    //   if (cupIndex !== -1) {
+    //     const cupSales = Number(this.combinedData[cupIndex].staffMeal) || 0
+    //     if (meatSalesRaw === null || meatSalesRaw === undefined || meatSalesRaw === '') {
+    //       // إذا كانت المبيعات فارغة، اجعل staffMeal فارغة
+    //       if (boxIndex !== -1 && meatIndex !== -1) {
+    //         const meatSales = Number(this.combinedData[meatIndex].staffMeal) || 0
+    //         const boxSales = Number(this.combinedData[boxIndex].staffMeal) || 0
+    //         this.combinedData[cupIndex].staffMeal = meatSales + boxSales;
+    //       }
+
+    //     } else {
+    //       const value = this.combinedData[i].productId === meatId ? 2 : 4
+    //       // const calculated = this.combinedData[i].productId ===  meatId ? Number(meatSalesRaw) || 0 : 
+    //       // const meatSales = Number(meatSalesRaw) || 0;
+
+    //       if (boxIndex !== -1 && meatIndex !== -1) {
+    //         const meatSales = Number(this.combinedData[meatIndex].staffMeal) || 0
+    //         const boxSales = Number(this.combinedData[boxIndex].staffMeal) || 0
+    //         this.combinedData[cupIndex].staffMeal = (meatSales + boxSales) * value;
+    //       }
+
+    //       // this.combinedData[cupIndex].staffMeal = (this.combinedData[i].sales * value) + cupSales;
+    //     }
+
+    //     // تحديث المخزون الختامي لمنتج الكاسات
+    //     const cupProductUnit = this.combinedData[cupIndex].productUnit ?? 1;
+    //     this.combinedData[cupIndex].closeStock = this.calculateClosingStock(this.combinedData[cupIndex], undefined, cupProductUnit);
+    //   }
+    // }
+
+    // if (field === 'sales' && this.combinedData[i].productId === "WMIfaxRKFwUZwI3o3CHk") {
+    //   const meatSalesRaw = this.combinedData[i].sales;
+    //   const cupIndex = this.combinedData.findIndex(p => p.productId === "H4g2FAvT5J32lBJFIGf4");
+
+    //   if (cupIndex !== -1) {
+    //     if (meatSalesRaw === null || meatSalesRaw === undefined || meatSalesRaw === '') {
+    //       // إذا كانت المبيعات فارغة، اجعل staffMeal فارغة
+    //       this.combinedData[cupIndex].staffMeal = '';
+    //     } else {
+    //       const meatSales = Number(meatSalesRaw) || 0;
+    //       this.combinedData[cupIndex].staffMeal = meatSales * 2;
+    //     }
+
+    //     // تحديث المخزون الختامي لمنتج الكاسات
+    //     const cupProductUnit = this.combinedData[cupIndex].productUnit ?? 1;
+    //     this.combinedData[cupIndex].closeStock = this.calculateClosingStock(this.combinedData[cupIndex], undefined, cupProductUnit);
+    //   }
+    // }
+
+    if (this.isDisabledDailyField() === false && this.isReadDailyMode == true) {
       const index = this.orderDailyToUpdate.findIndex((data: any) => item.productId == data.productId)
       if (index == -1) {
         this.orderDailyToUpdate.push(item)
@@ -3483,6 +3535,24 @@ export class BranchComponent {
 
     this.handleDilogReson = null
     this.showReasonDialog = false;
+  }
+
+
+  isDisabledDailyField() {
+    // isReadDailyMode === true && isAdmin==false
+    if (this.isAdmin == false) {
+      if (this.isReadDailyMode == false) {
+        return false;
+      }
+
+      if (this.allowableEdits.includes('5')) {
+        return false;
+      }
+      return true;
+    } else {
+
+      return false;
+    }
   }
 
 }

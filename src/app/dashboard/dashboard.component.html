@@ -85,11 +85,11 @@
     </button>
   </div>
 
-  <div class="card p-4 mb-4 shadow-sm" *ngIf="selectedType && selectedType.id != '5'">
+  <div class="card p-4 mb-4 shadow-sm">
     <h5 class="mb-4 text-primary fw-bold border-bottom pb-2">التحكم في الإعدادات</h5>
 
     <!-- حالة الإضافة -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4" *ngIf="selectedType && selectedType.id != '5'">
       <span class="text-secondary fw-semibold">حالة الإضافة</span>
       <label class="form-switch">
         <input type="checkbox" class="form-check-input" [checked]="isOn" (click)="toggle()">
@@ -109,33 +109,36 @@
         <button class="btn btn-outline-primary btn-sm" (click)="getAllowableEdits()">عرض</button>
       </ng-template>
     </div>
+    <div *ngIf="selectedType && selectedType.id != '5'">
+      <!-- Open Dates -->
+      <h6 class="text-primary fw-bold mb-3 border-top pt-3">فتح التواريخ</h6>
 
-    <!-- Open Dates -->
-    <h6 class="text-primary fw-bold mb-3 border-top pt-3">فتح التواريخ</h6>
+      <!-- اختيار التاريخ -->
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <input type="date" class="form-control w-auto" [(ngModel)]="date3"
+          [class.is-invalid]="!isDateValid() && date3" />
+        <button class="btn btn-success" (click)="addOpenDate()" *ngIf="isDateValid()">
+          <i class="fas fa-plus me-1"></i> إضافة
+        </button>
+      </div>
 
-    <!-- اختيار التاريخ -->
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-      <input type="date" class="form-control w-auto" [(ngModel)]="date3" [class.is-invalid]="!isDateValid() && date3" />
-      <button class="btn btn-success" (click)="addOpenDate()" *ngIf="isDateValid()">
-        <i class="fas fa-plus me-1"></i> إضافة
-      </button>
-    </div>
+      <!-- تحذير التاريخ -->
+      <div *ngIf="!isDateValid() && date3" class="text-danger small mb-3">
+        الرجاء اختيار تاريخ صحيح في المستقبل
+      </div>
 
-    <!-- تحذير التاريخ -->
-    <div *ngIf="!isDateValid() && date3" class="text-danger small mb-3">
-      الرجاء اختيار تاريخ صحيح في المستقبل
-    </div>
+      <!-- التواريخ المفتوحة -->
+      <div class="d-flex flex-wrap gap-2">
+        <button *ngFor="let item of datesToAdd" class="btn btn-outline-primary position-relative pe-4"
+          (click)="onSelectdDateOpenDate(item.createdAt)">
+          {{ item.createdAt.toDate() | date: 'mediumDate' }}
+          <span class="position-absolute top-50 end-0 translate-middle-y me-2"
+            (click)="deleteOpenDate(item.id); $event.stopPropagation()" title="حذف التاريخ">
+            <i class="fas fa-trash-alt text-danger"></i>
+          </span>
+        </button>
+      </div>
 
-    <!-- التواريخ المفتوحة -->
-    <div class="d-flex flex-wrap gap-2">
-      <button *ngFor="let item of datesToAdd" class="btn btn-outline-primary position-relative pe-4"
-        (click)="onSelectdDateOpenDate(item.createdAt)">
-        {{ item.createdAt.toDate() | date: 'mediumDate' }}
-        <span class="position-absolute top-50 end-0 translate-middle-y me-2"
-          (click)="deleteOpenDate(item.id); $event.stopPropagation()" title="حذف التاريخ">
-          <i class="fas fa-trash-alt text-danger"></i>
-        </span>
-      </button>
     </div>
 
     <!-- تحميل -->
