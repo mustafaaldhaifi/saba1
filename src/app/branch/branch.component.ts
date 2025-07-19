@@ -817,11 +817,7 @@ export class BranchComponent {
   }
 
   checkIfHasEmptyOrder() {
-
-    return this.combinedData.some(e => e.id === -1);
-
-
-
+    return this.combinedData.some(e => e.id === -1)
   }
 
 
@@ -850,6 +846,10 @@ export class BranchComponent {
     }
 
   }
+
+  /**
+   *  to check previous orders is all have complete change status
+   */
   isChangeStatus() {
     const r = this.preOrders.some((e: any) => e.status !== '1')
     return r
@@ -3035,6 +3035,45 @@ export class BranchComponent {
     else return false
 
   }
+
+  isDisabledDropDown(): boolean {
+    const changeStatus = this.isChangeStatus();
+    const isActive = this.isOn;
+    const isPreOrderStatusOne = this.selectedPreOrder.status === '1';
+    const hasEmptyOrder = this.checkIfHasEmptyOrder();
+    const isTypeAllowed = this.isSelectedTypeAllowed();
+
+    // console.log('isChangeStatus():', changeStatus);
+    // console.log('isOn:', isActive);
+    // console.log('selectedPreOrder.status === "1":', isPreOrderStatusOne);
+    // console.log('checkIfHasEmptyOrder():', hasEmptyOrder);
+    // console.log('isSelectedTypeAllowed():', isTypeAllowed);
+    if (isPreOrderStatusOne === true) {
+      if (isActive === false) {
+        return true
+      }
+      return false
+    }
+    else {
+      if (changeStatus === true) {
+        if (isTypeAllowed === true) {
+          return false
+        }
+      }
+      return true
+    }
+    ////
+
+
+    // return (
+    //   !changeStatus ||
+    //   !isActive ||
+    //   isPreOrderStatusOne ||
+    //   hasEmptyOrder ||
+    //   !isTypeAllowed
+    // );
+  }
+
 
   async saveChangesDaily() {
     if (this.orderDailyToUpdate.length === 0) return;

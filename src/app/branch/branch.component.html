@@ -126,7 +126,7 @@
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
                                     <select
-                                        [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1' || checkIfHasEmptyOrder() === true"
+                                        [disabled]="isDisabledDropDown()"
                                         [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
 
@@ -147,7 +147,7 @@
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
                                     <select
-                                        [disabled]="isChangeStatus() == false || isOn === false || selectedPreOrder.status == '1' || checkIfHasEmptyOrder() === true"
+                                        [disabled]="isDisabledDropDown()"
                                         [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
 
