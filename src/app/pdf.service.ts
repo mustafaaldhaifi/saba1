@@ -677,6 +677,27 @@ export class PdfService {
           if (Array.isArray(element.products)) {
             element.products.forEach((sub: any) => {
               if (sub.note) {
+                // var filed = ""
+                // var colmn = ""
+                // if (Number(sub?.add ?? 0) !== 0) {
+                //   colmn = "الجرد"
+                //   filed = "add"
+                // } else if (Number(sub?.dameged ?? 0) > 0) {
+                //   colmn = "التالف"
+                //   filed = "dameged"
+
+                // }
+                // else if (Number(sub?.transfer ?? 0) !== 0) {
+                //   colmn = " التحويل"
+                //   filed = "transfer"
+                // }
+                // else if (Number(sub?.recieved ?? 0) !== 0) {
+                //   colmn = " المستلم"
+                //   filed = "recieved"
+                // }
+                // if (colmn.length > 0) {
+                //   notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
+                // }
                 var filed = ""
                 var colmn = ""
                 if (Number(sub?.add ?? 0) !== 0) {
@@ -703,6 +724,29 @@ export class PdfService {
             });
           }
           if (element.note) {
+            // var filed = ""
+            // var colmn = ""
+            // if (Number(element?.add ?? 0) !== 0) {
+            //   colmn = "الجرد"
+            //   filed = "add"
+            // } else if (Number(element?.dameged ?? 0) > 0) {
+            //   colmn = "التالف"
+            //   filed = "dameged"
+
+            // }
+            // else if (Number(element?.transfer ?? 0) !== 0) {
+            //   colmn = " التحويل"
+            //   filed = "transfer"
+
+            // }
+            // else if (Number(element?.recieved ?? 0) !== 0) {
+            //   colmn = " المستلم"
+            //   filed = "recieved"
+
+            // }
+            // if (colmn.length > 0) {
+            //   notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note} `);
+            // }
             var filed = ""
             var colmn = ""
             if (Number(element?.add ?? 0) !== 0) {
@@ -730,30 +774,63 @@ export class PdfService {
         });
 
         // عرض الملاحظات في أسفل الصفحة (بدون تكرار كلمة "ملاحظة")
+        // if (notes.length > 0) {
+        //   const startY = data1.cursor!.y + 10;
+        //   const pageWidth = doc.internal.pageSize.getWidth();
+        //   const rightMargin = 10;
+        //   const lineHeight = 6;
+
+        //   doc.setFontSize(10);
+        //   doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, startY);
+
+        //   notes.forEach((note, index) => {
+        //     doc.text(
+        //       note,
+        //       pageWidth - rightMargin,
+        //       startY + (index + 1) * lineHeight,
+        //       { align: 'right' }
+        //     );
+        //     // doc.text(
+        //     //   note,
+        //     //   pageWidth - doc.getTextWidth(note) - rightMargin,
+        //     //   startY + (index + 1) * lineHeight,
+        //     //   // { align: 'right' }
+        //     // );
+        //   });
+        // }
         if (notes.length > 0) {
-          const startY = data1.cursor!.y + 10;
+          const lineHeight = 6;
+          const pageHeight = doc.internal.pageSize.getHeight();
           const pageWidth = doc.internal.pageSize.getWidth();
           const rightMargin = 10;
-          const lineHeight = 6;
+
+          let currentY = data1.cursor!.y + 10;
+
+          // تحقق من وجود مساحة لعنوان الملاحظات
+          if (currentY + lineHeight > pageHeight - 10) {
+            doc.addPage();
+            currentY = 20;
+          }
 
           doc.setFontSize(10);
-          doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, startY);
+          doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+          currentY += lineHeight;
 
-          notes.forEach((note, index) => {
-            doc.text(
-              note,
-              pageWidth - rightMargin,
-              startY + (index + 1) * lineHeight,
-              { align: 'right' }
-            );
-            // doc.text(
-            //   note,
-            //   pageWidth - doc.getTextWidth(note) - rightMargin,
-            //   startY + (index + 1) * lineHeight,
-            //   // { align: 'right' }
-            // );
+          notes.forEach((note) => {
+            // تحقق إذا كنا تجاوزنا حدود الصفحة
+            if (currentY + lineHeight > pageHeight - 10) {
+              doc.addPage();
+              currentY = 20;
+
+              doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+              currentY += lineHeight;
+            }
+
+            doc.text(note, pageWidth - rightMargin, currentY, { align: 'right' });
+            currentY += lineHeight;
           });
         }
+
       }
       ,
       startY: 20,
@@ -762,6 +839,197 @@ export class PdfService {
 
     doc.save(`${branchName}_Daily_${date}.pdf`);
   }
+
+  //   exportPDF5(data: any[], date: string, branchName: string, note: any) {
+  //     const doc = new jsPDF();
+  //     doc.setFont('ARIAL', 'normal');
+  //     const rows: any[] = [];
+
+  //     // إعداد صفوف الجدول
+  //     for (const item of data) {
+  //       if (Array.isArray(item.products) && item.products.length > 0) {
+  //         const productCount = item.products.length;
+
+  //         for (let i = 0; i < productCount; i++) {
+  //           const sub = item.products[i];
+  //           const row = [];
+
+  //           row.push({ content: sub.productName });
+
+  //           if (i === 0) {
+  //             row.push({ content: item.openingStockQnt, rowSpan: productCount, styles: { halign: 'center', valign: 'middle' } });
+  //             row.push({ content: item.recieved, rowSpan: productCount, styles: { halign: 'center', valign: 'middle' } });
+  //           }
+
+  //           row.push({ content: sub.add ?? '' });
+  //           row.push({ content: sub.sales != null ? sub.sales : '--' });
+  //           row.push({ content: sub.staffMeal ?? '' });
+
+  //           if (i === 0) {
+  //             row.push({ content: item.transfer ?? '', rowSpan: productCount, styles: { halign: 'center', valign: 'middle' } });
+  //           }
+
+  //           row.push({ content: sub.dameged ?? '' });
+
+  //           if (i === 0) {
+  //             row.push({ content: item.closeStock ?? '', rowSpan: productCount, styles: { halign: 'center', valign: 'middle' } });
+  //           }
+
+  //           rows.push(row);
+  //         }
+  //       } else {
+  //         rows.push([
+  //           { content: item.productName },
+  //           { content: item.openingStockQnt },
+  //           { content: item.recieved },
+  //           { content: item.add },
+  //           { content: item.sales },
+  //           { content: item.staffMeal },
+  //           { content: item.transfer },
+  //           { content: item.dameged },
+  //           { content: item.closeStock },
+  //         ]);
+  //       }
+  //     }
+
+  //     // رؤوس الجدول
+  //    const topHeader = [[
+  //   {
+  //     content: 'SABA (Authentic Yemini Cuisine)',
+  //     styles: {
+  //       halign: 'left' as HAlignType,
+  //       fontSize: 8
+  //     },
+  //     colSpan: 3
+  //   },
+  //   {
+  //     content: ` ${date} : التاريخ`,
+  //     styles: {
+  //       halign: 'right' as HAlignType,
+  //       fontSize: 8
+  //     },
+  //     colSpan: 3
+  //   },
+  //   {
+  //     content: `${branchName} : اسم الفرع`,
+  //     styles: {
+  //       halign: 'right' as HAlignType,
+  //       fontSize: 8
+  //     },
+  //     colSpan: 3
+  //   }
+  // ]];
+
+
+  //     const headerRow = [
+  //       this.items({ name: 'العناصر' }),
+  //       this.items({ name: 'الموجودة' }),
+  //       this.items({ name: 'المستلم' }),
+  //       this.items({ name: 'الجرد' }),
+  //       this.items({ name: 'مبيعات' }),
+  //       this.items({ name: 'وجبة موظف' }),
+  //       this.items({ name: 'تحويل' }),
+  //       this.items({ name: 'التالف' }),
+  //       this.items({ name: 'المتبقي' }),
+  //     ];
+
+  //     autoTable(doc, {
+  //     head: [...topHeader, headerRow],
+  //       body: rows,
+  //       styles: {
+  //         font: 'ARIAL',
+  //         fontStyle: 'normal',
+  //         fontSize: 8,
+  //         textColor: '#000000',
+  //         halign: 'center',
+  //       },
+  //       headStyles: {
+  //         halign: 'center',
+  //         fontStyle: 'normal',
+  //       },
+  //       startY: 20,
+  //       theme: 'grid',
+
+  //       didDrawPage: (data1) => {
+  //         const notes: string[] = [];
+
+  //         // تجميع الملاحظات من العناصر الفرعية والرئيسية
+  //         data.forEach((element: any) => {
+  //           if (Array.isArray(element.products)) {
+  //             element.products.forEach((sub: any) => {
+  //               if (sub.note) {
+  //                 let field = "";
+  //                 let column = "";
+  //                 if (Number(sub?.add ?? 0) !== 0) {
+  //                   column = "الجرد"; field = "add";
+  //                 } else if (Number(sub?.dameged ?? 0) > 0) {
+  //                   column = "التالف"; field = "dameged";
+  //                 } else if (Number(sub?.transfer ?? 0) !== 0) {
+  //                   column = "التحويل"; field = "transfer";
+  //                 } else if (Number(sub?.recieved ?? 0) !== 0) {
+  //                   column = "المستلم"; field = "recieved";
+  //                 }
+
+  //                 if (column.length > 0) {
+  //                   notes.push(`ملاحظة في عمود ${column} ${sub.productName} ${sub[field]} : ${sub.note}`);
+  //                 }
+  //               }
+  //             });
+  //           }
+
+  //           if (element.note) {
+  //             let field = "";
+  //             let column = "";
+  //             if (Number(element?.add ?? 0) !== 0) {
+  //               column = "الجرد"; field = "add";
+  //             } else if (Number(element?.dameged ?? 0) > 0) {
+  //               column = "التالف"; field = "dameged";
+  //             } else if (Number(element?.transfer ?? 0) !== 0) {
+  //               column = "التحويل"; field = "transfer";
+  //             } else if (Number(element?.recieved ?? 0) !== 0) {
+  //               column = "المستلم"; field = "recieved";
+  //             }
+
+  //             if (column.length > 0) {
+  //               notes.push(`ملاحظة في عمود ${column} ${element.productName} ${element[field]} : ${element.note}`);
+  //             }
+  //           }
+  //         });
+
+  //         // عرض الملاحظات أسفل الجدول
+  //         if (notes.length > 0) {
+  //           const lineHeight = 6;
+  //           const pageHeight = doc.internal.pageSize.getHeight();
+  //           const pageWidth = doc.internal.pageSize.getWidth();
+  //           const rightMargin = 10;
+  //           let currentY = data1.cursor!.y + 10;
+
+  //           // طباعة العنوان مرة واحدة فقط
+  //           doc.setFontSize(10);
+  //           if (currentY + lineHeight > pageHeight - 10) {
+  //             doc.addPage();
+  //             currentY = 20;
+  //           }
+  //           doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+  //           currentY += lineHeight;
+
+  //           notes.forEach((note) => {
+  //             if (currentY + lineHeight > pageHeight - 10) {
+  //               doc.addPage();
+  //               currentY = 20;
+  //               doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+  //               currentY += lineHeight;
+  //             }
+
+  //             doc.text(note, pageWidth - rightMargin, currentY, { align: 'right' });
+  //             currentY += lineHeight;
+  //           });
+  //         }
+  //       }
+  //     });
+
+  //     doc.save(`${branchName}_Daily_${date}.pdf`);
+  //   }
 
 
   items({
@@ -1081,13 +1349,228 @@ export class PdfService {
 
     doc.save(`${date}_${branchName}_Monthly_Report.pdf`);
   }
+  // exportMonthlyReportNotes(date: string, dataByDay: { date: string, data: any }[], branchName: string) {
+  //   const doc = new jsPDF();
+  //   doc.setFont('ARIAL', 'normal');
+  //   let currentY = 20;
+  //   dataByDay.forEach((dailyReport, index) => {
+  //     const { date, data } = dailyReport;
+
+
+  // const topHeader = [
+  //   [
+  //     {
+  //       content: 'SABA (Authentic Yemini Cuisine)',
+  //       styles: {
+  //         halign: 'left' as HAlignType,
+  //         fontStyle: 'normal' as FontStyle,
+  //         fontSize: 8,
+  //         lineWidth: 0.2,
+  //         lineColor: [0, 0, 0] as Color,
+  //       },
+  //       colSpan: 3, // دمج العمودين الأول والثاني في هذا السطر
+  //     },
+  //     {
+  //       content: ` ${date} : التاريخ`,
+  //       styles: {
+  //         halign: 'right' as HAlignType,
+  //         fontStyle: 'normal' as FontStyle,
+  //         fontSize: 8,
+
+  //         lineWidth: 0.2,
+  //         lineColor: [0, 0, 0] as Color,
+  //       },
+  //       colSpan: 3, // دمج العمودين الثالث والرابع في هذا السطر
+  //     },
+  //     {
+  //       content: `${branchName} : اسم الفرع`,
+  //       styles: {
+  //         halign: 'right' as HAlignType,
+  //         fontStyle: 'normal' as FontStyle,
+  //         fontSize: 8,
+  //         lineWidth: 0.2,
+
+  //         lineColor: [0, 0, 0] as Color,
+  //       },
+  //       colSpan: 3, // دمج العمودين الثالث والرابع في هذا السطر
+  //     },
+  //   ],
+  // ];
+
+
+  //     autoTable(doc, {
+  //       head: [...topHeader],
+  //       styles: {
+  //         font: 'ARIAL',
+  //         fontStyle: 'normal',
+  //         fontSize: 8,
+  //         textColor: '#000000',
+  //         halign: 'center', // Make sure all text in the table is right-aligned
+  //       },
+  //       headStyles: {
+  //         halign: 'center',
+  //         fontStyle: 'normal',
+  //       },
+  //       //  theme: 'striped', // optional, helps with visibility
+
+  //       // styles: {
+  //       //   fontSize: 8,
+  //       //   cellPadding: 3,
+  //       //   halign: 'center',
+  //       // },
+
+  //       /** 🔽 Capture where the table ends */
+  //       didDrawPage: (data1) => {
+  //         const notes: string[] = [];
+  //         let counter = 1;
+
+  //         // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
+  //         // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
+  //         data.forEach((element: any) => {
+
+  //           if (Array.isArray(element.products)) {
+  //             element.products.forEach((sub: any) => {
+  //               if (sub.note) {
+  //                 var filed = ""
+  //                 var colmn = ""
+  //                 if (Number(sub?.add ?? 0) !== 0) {
+  //                   colmn = "الجرد"
+  //                   filed = "add"
+  //                 } else if (Number(sub?.dameged ?? 0) > 0) {
+  //                   colmn = "التالف"
+  //                   filed = "dameged"
+
+  //                 }
+  //                 else if (Number(sub?.transfer ?? 0) !== 0) {
+  //                   colmn = " التحويل"
+  //                   filed = "transfer"
+  //                 }
+  //                 else if (Number(sub?.recieved ?? 0) !== 0) {
+  //                   colmn = " المستلم"
+  //                   filed = "recieved"
+  //                 }
+  //                 if (colmn.length > 0) {
+  //                   notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
+  //                 }
+
+  //               }
+  //             });
+  //           }
+  //           if (element.note) {
+  //             var filed = ""
+  //             var colmn = ""
+  //             if (Number(element?.add ?? 0) !== 0) {
+  //               colmn = "الجرد"
+  //               filed = "add"
+  //             } else if (Number(element?.dameged ?? 0) > 0) {
+  //               colmn = "التالف"
+  //               filed = "dameged"
+
+  //             }
+  //             else if (Number(element?.transfer ?? 0) !== 0) {
+  //               colmn = " التحويل"
+  //               filed = "transfer"
+
+  //             }
+  //             else if (Number(element?.recieved ?? 0) !== 0) {
+  //               colmn = " المستلم"
+  //               filed = "recieved"
+
+  //             }
+  //             if (notes.length > 0) {
+  //               const lineHeight = 6;
+  //               const pageHeight = doc.internal.pageSize.getHeight();
+  //               const pageWidth = doc.internal.pageSize.getWidth();
+  //               const rightMargin = 10;
+
+  //               let currentY = data1.cursor!.y + 10;
+
+  //               // تحقق من وجود مساحة كافية لطباعة العنوان
+  //               if (currentY + lineHeight > pageHeight - 10) {
+  //                 doc.addPage();
+  //                 currentY = 20;
+  //               }
+
+  //               doc.setFontSize(10);
+  //               doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+  //               currentY += lineHeight;
+
+  //               notes.forEach((note) => {
+  //                 // إذا لم يتبقَّ مجال للسطر الحالي، انتقل إلى صفحة جديدة
+  //                 if (currentY + lineHeight > pageHeight - 10) {
+  //                   doc.addPage();
+  //                   currentY = 20;
+
+  //                   // إعادة طباعة العنوان
+  //                   doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+  //                   currentY += lineHeight;
+  //                 }
+
+  //                 doc.text(note, pageWidth - rightMargin, currentY, { align: 'right' });
+  //                 currentY += lineHeight;
+  //               });
+  //             }
+
+
+  //             // if (colmn.length > 0) {
+  //             //   notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note} `);
+  //             // }
+  //           }
+  //         });
+
+  //         // عرض الملاحظات في أسفل الصفحة (بدون تكرار كلمة "ملاحظة")
+  //         if (notes.length > 0) {
+  //           const startY = data1.cursor!.y + 10;
+  //           const pageWidth = doc.internal.pageSize.getWidth();
+  //           const rightMargin = 10;
+  //           const lineHeight = 6;
+
+  //           doc.setFontSize(10);
+  //           doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, startY);
+
+  //           notes.forEach((note, index) => {
+  //             doc.text(
+  //               note,
+  //               pageWidth - rightMargin,
+  //               startY + (index + 1) * lineHeight,
+  //               { align: 'right' }
+  //             );
+  //             // doc.text(
+  //             //   note,
+  //             //   pageWidth - doc.getTextWidth(note) - rightMargin,
+  //             //   startY + (index + 1) * lineHeight,
+  //             //   // { align: 'right' }
+  //             // );
+  //           });
+  //         }
+  //       }
+  //       ,
+  //       startY: currentY,
+  //       theme: 'grid',
+  //     });
+
+  //     // إضافة صفحة جديدة إن لم تكن الصفحة الأخيرة
+  //     // if (index < dataByDay.length - 1) {
+  //     //   doc.addPage();
+  //     // }
+  //   });
+
+  //   doc.save(`${date}_${branchName}_Monthly_Report_Notes.pdf`);
+  // }
+
   exportMonthlyReportNotes(date: string, dataByDay: { date: string, data: any }[], branchName: string) {
     const doc = new jsPDF();
     doc.setFont('ARIAL', 'normal');
-    let currentY = 20;
-    dataByDay.forEach((dailyReport, index) => {
-      const { date, data } = dailyReport;
 
+    const lineHeight = 6;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const rightMargin = 10;
+
+    let currentY = 20;
+
+    dataByDay.forEach((dailyReport, index) => {
+      const { date: reportDate, data } = dailyReport;
 
       const topHeader = [
         [
@@ -1103,7 +1586,7 @@ export class PdfService {
             colSpan: 3, // دمج العمودين الأول والثاني في هذا السطر
           },
           {
-            content: ` ${date} : التاريخ`,
+            content: ` ${reportDate} : التاريخ`,
             styles: {
               halign: 'right' as HAlignType,
               fontStyle: 'normal' as FontStyle,
@@ -1128,140 +1611,111 @@ export class PdfService {
           },
         ],
       ];
-      const headerRow: any[] = [];
-      headerRow.push(this.items({ name: 'العناصر' }));
-      headerRow.push(this.items({ name: 'الموجودة' }));
-      headerRow.push(this.items({ name: 'المستلم' }));
-      headerRow.push(this.items({ name: 'الجرد' }));
-      headerRow.push(this.items({ name: 'مبيعات' }));
-      headerRow.push(this.items({ name: 'وجبة موظف' }));
-      headerRow.push(this.items({ name: 'تحويل' }));
-      headerRow.push(this.items({ name: 'التالف' }));
-      headerRow.push(this.items({ name: 'المتبقي' }));
-
-
-      const topHeader2 = [headerRow];
-
+      // رسم الهيدر باستخدام autoTable
       autoTable(doc, {
-        head: [...topHeader, ...topHeader2],
+        head: [...topHeader],
+        body: [],
+        startY: currentY,
         styles: {
           font: 'ARIAL',
-          fontStyle: 'normal',
           fontSize: 8,
-          textColor: '#000000',
-          halign: 'center', // Make sure all text in the table is right-aligned
+          halign: 'center'
         },
         headStyles: {
-          halign: 'center',
           fontStyle: 'normal',
+          halign: 'center'
         },
-        //  theme: 'striped', // optional, helps with visibility
-
-        // styles: {
-        //   fontSize: 8,
-        //   cellPadding: 3,
-        //   halign: 'center',
-        // },
-
-        /** 🔽 Capture where the table ends */
+        theme: 'grid',
         didDrawPage: (data1) => {
-          const notes: string[] = [];
-          let counter = 1;
+          if (data1.cursor) {
+            currentY = data1.cursor.y + 10;
+          } else {
+            currentY += 10; // أو أي قيمة افتراضية مناسبة إذا لم تكن cursor موجودة
+          }
 
-          // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
-          // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
-          data.forEach((element: any) => {
+        }
+      });
 
-            if (Array.isArray(element.products)) {
-              element.products.forEach((sub: any) => {
-                if (sub.note) {
-                  var filed = ""
-                  var colmn = ""
-                  if (Number(sub?.add ?? 0) !== 0) {
-                    colmn = "الجرد"
-                    filed = "add"
-                  } else if (Number(sub?.dameged ?? 0) > 0) {
-                    colmn = "التالف"
-                    filed = "dameged"
+      // استخراج الملاحظات لهذا اليوم
+      const notes: string[] = [];
 
-                  }
-                  else if (Number(sub?.transfer ?? 0) !== 0) {
-                    colmn = " التحويل"
-                    filed = "transfer"
-                  }
-                  else if (Number(sub?.recieved ?? 0) !== 0) {
-                    colmn = " المستلم"
-                    filed = "recieved"
-                  }
-                  if (colmn.length > 0) {
-                    notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
-                  }
-
-                }
-              });
-            }
-            if (element.note) {
-              var filed = ""
-              var colmn = ""
-              if (Number(element?.add ?? 0) !== 0) {
-                colmn = "الجرد"
-                filed = "add"
-              } else if (Number(element?.dameged ?? 0) > 0) {
-                colmn = "التالف"
-                filed = "dameged"
-
-              }
-              else if (Number(element?.transfer ?? 0) !== 0) {
-                colmn = " التحويل"
-                filed = "transfer"
-
-              }
-              else if (Number(element?.recieved ?? 0) !== 0) {
-                colmn = " المستلم"
-                filed = "recieved"
-
+      data.forEach((element: any) => {
+        if (Array.isArray(element.products)) {
+          element.products.forEach((sub: any) => {
+            if (sub.note) {
+              let filed = '';
+              let colmn = '';
+              if (Number(sub?.add ?? 0) !== 0) {
+                colmn = "الجرد"; filed = "add";
+              } else if (Number(sub?.dameged ?? 0) > 0) {
+                colmn = "التالف"; filed = "dameged";
+              } else if (Number(sub?.transfer ?? 0) !== 0) {
+                colmn = "التحويل"; filed = "transfer";
+              } else if (Number(sub?.recieved ?? 0) !== 0) {
+                colmn = "المستلم"; filed = "recieved";
               }
               if (colmn.length > 0) {
-                notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note} `);
+                notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note}`);
               }
             }
           });
+        }
 
-          // عرض الملاحظات في أسفل الصفحة (بدون تكرار كلمة "ملاحظة")
-          if (notes.length > 0) {
-            const startY = data1.cursor!.y + 10;
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const rightMargin = 10;
-            const lineHeight = 6;
-
-            doc.setFontSize(10);
-            doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, startY);
-
-            notes.forEach((note, index) => {
-              doc.text(
-                note,
-                pageWidth - rightMargin,
-                startY + (index + 1) * lineHeight,
-                { align: 'right' }
-              );
-              // doc.text(
-              //   note,
-              //   pageWidth - doc.getTextWidth(note) - rightMargin,
-              //   startY + (index + 1) * lineHeight,
-              //   // { align: 'right' }
-              // );
-            });
+        if (element.note) {
+          let filed = '';
+          let colmn = '';
+          if (Number(element?.add ?? 0) !== 0) {
+            colmn = "الجرد"; filed = "add";
+          } else if (Number(element?.dameged ?? 0) > 0) {
+            colmn = "التالف"; filed = "dameged";
+          } else if (Number(element?.transfer ?? 0) !== 0) {
+            colmn = "التحويل"; filed = "transfer";
+          } else if (Number(element?.recieved ?? 0) !== 0) {
+            colmn = "المستلم"; filed = "recieved";
+          }
+          if (colmn.length > 0) {
+            notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note}`);
           }
         }
-        ,
-        startY: currentY,
-        theme: 'grid',
+
+        if (notes.length === 0) {
+          return;
+        }
       });
 
-      // إضافة صفحة جديدة إن لم تكن الصفحة الأخيرة
-      // if (index < dataByDay.length - 1) {
-      //   doc.addPage();
-      // }
+      // طباعة الملاحظات
+      if (notes.length > 0) {
+        // تحقق من وجود مساحة لطباعة ":ملاحظات"
+        if (currentY + lineHeight > pageHeight - 10) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        doc.setFontSize(10);
+        doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+        currentY += lineHeight;
+
+        notes.forEach((note) => {
+          if (currentY + lineHeight > pageHeight - 10) {
+            doc.addPage();
+            currentY = 20;
+            doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+            currentY += lineHeight;
+          }
+
+          doc.text(note, pageWidth - rightMargin, currentY, { align: 'right' });
+          currentY += lineHeight;
+        });
+      }
+
+      // مسافة قبل اليوم التالي
+      currentY += lineHeight * 2;
+
+      // إضافة صفحة جديدة إذا اقتربنا من نهاية الصفحة
+      if (currentY > pageHeight - 30 && index < dataByDay.length - 1) {
+        doc.addPage();
+        currentY = 20;
+      }
     });
 
     doc.save(`${date}_${branchName}_Monthly_Report_Notes.pdf`);

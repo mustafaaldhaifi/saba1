@@ -915,6 +915,7 @@ export class BranchComponent {
     const auth = getAuth();
     signOut(auth).then(() => {
       this.orderService.remove()
+      localStorage.removeItem("exported");
       this.router.navigate(['/login']);
       window.location.reload();
     }).catch(console.error);
