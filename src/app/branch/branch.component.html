@@ -434,7 +434,7 @@
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
-                                            [disabled]="isDisabledDailyField()" min="0" step="any"
+                                            [disabled]="isDisabledDailyField() || isAdmin === false" min="0" step="any"
                                             (blur)="onQuantityChange('dameged', item, i,{i:s,subProduct})"
                                             [(ngModel)]="combinedData[i].products[s].dameged" type="number" required />
                                     </ng-container>
@@ -443,7 +443,7 @@
 
                             <ng-template #normalProduct4>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
-                                    [disabled]="isDisabledDailyField()" min="0" step="any"
+                                    [disabled]="isDisabledDailyField() || isAdmin === false" min="0" step="any"
                                     (blur)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
                                     type="number" required />
                             </ng-template>

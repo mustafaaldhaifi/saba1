@@ -1622,7 +1622,7 @@ export class BranchComponent {
 
     this.combinedData[i][field] = item[field] ?? '';
 
-    if (this.ifHaveNegativeValue()) {
+    if (Number(this.combinedData[i][field] ?? 0) < 0 && this.isAdmin === false) {
       if (subProduct) {
         this.combinedData[i].products[subProduct.i][field] = ""
       }
@@ -1636,6 +1636,22 @@ export class BranchComponent {
 
       return
     }
+
+
+    // if (this.ifHaveNegativeValue()) {
+    //   if (subProduct) {
+    //     this.combinedData[i].products[subProduct.i][field] = ""
+    //   }
+    //   else {
+
+    //     this.combinedData[i][field] = ""
+    //   }
+    //   console.log("negative");
+
+    //   console.log(this.combinedData[i]);
+
+    //   return
+    // }
 
 
 
