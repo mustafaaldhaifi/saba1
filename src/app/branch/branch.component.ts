@@ -1782,14 +1782,14 @@ export class BranchComponent {
 
         if (field === 'recieved') {
           if (subProduct) {
-            if (Number(item.products[subProduct.i][field] ?? 0) > 0) {
+            if (Number(item.products[subProduct.i][field] ?? 0) !== 0) {
               // this.showReasonDialog = true
               this.openModal(field, item, i, subProduct, true)
 
 
             }
           } else {
-            if (Number(item[field] ?? 0) > 0) {
+            if (Number(item[field] ?? 0) !== 0) {
               // this.showReasonDialog = true
               this.openModal(field, item, i, subProduct, true)
 
