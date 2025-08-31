@@ -295,11 +295,14 @@ export class DashboardComponent implements OnInit {
         throw new Error('Invalid date provided');
       }
 
-      const newData = {
+      var newData = {
         typeId: this.selectedType.id,
         createdAt: Timestamp.fromDate(date),
-        // Add other fields as needed
-      };
+      } as any;
+
+      if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
+        newData.city = this.selectedOption;
+      }
 
       batch.set(docRef, newData);
       await batch.commit();
@@ -1141,9 +1144,27 @@ export class DashboardComponent implements OnInit {
   datesToAdd: any = []
   async getDatesToAdd(): Promise<void> {
     const db = getFirestore();
-    const q = query(collection(db, "openDates"),
-      where("typeId", "==", this.selectedType.id),);
+    // const q = query(collection(db, "openDates"),
+    // if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
+    //   where("city", "==", this.selectedOption)
+    // }
+    //   where("typeId", "==", this.selectedType.id),);
+    // const snapshot = await getDocs(q);
+    const conditions = [
+      where("typeId", "==", this.selectedType.id)
+    ];
+
+    // أضف شرط city فقط إذا كان النوع محدد
+    if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
+      conditions.push(where("city", "==", this.selectedOption));
+    }
+
+    // أنشئ الـ query مع كل الشروط
+    const q = query(collection(db, "openDates"), ...conditions);
+
+    // نفذ الـ query
     const snapshot = await getDocs(q);
+
 
     this.datesToAdd = snapshot.docs.map(doc => ({
       id: doc.id,

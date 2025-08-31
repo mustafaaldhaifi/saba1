@@ -465,6 +465,13 @@ export class BranchComponent {
     const constraints = [
       where("typeId", "==", this.selectedType.id)
     ];
+
+    // أضف شرط city فقط إذا كان النوع محدد
+    if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
+      constraints.push(where("city", "==", this.branch.data.city));
+    }
+
+
     const snapshot = await this.apiService.getData(collectionNames.openDates, constraints)
     this.datesToAdd = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -876,7 +883,7 @@ export class BranchComponent {
 
   }
   addNewOrder(date: any) {
-    if (this.isChangeStatus() == true && this.selectedType.id != this.reportMonthlyTypeId) {
+    if (this.isChangeStatus() === true && this.selectedType.id != this.reportMonthlyTypeId) {
       alert("يجب تسجيل حالة الاستلام للطلبية السابقة"); // "Receipt status must be recorded for previous students"
       return;
     }
