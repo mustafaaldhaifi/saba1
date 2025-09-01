@@ -300,7 +300,7 @@ export class DashboardComponent implements OnInit {
         createdAt: Timestamp.fromDate(date),
       } as any;
 
-      if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
+      if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1" || this.selectedType.id === "bt9w9ZB1H1IizPBugiUl") {
         newData.city = this.selectedOption;
       }
 
@@ -1155,7 +1155,7 @@ export class DashboardComponent implements OnInit {
     ];
 
     // أضف شرط city فقط إذا كان النوع محدد
-    if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
+    if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1" || this.selectedType.id === "bt9w9ZB1H1IizPBugiUl") {
       conditions.push(where("city", "==", this.selectedOption));
     }
 

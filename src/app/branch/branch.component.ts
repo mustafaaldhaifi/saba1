@@ -467,7 +467,7 @@ export class BranchComponent {
     ];
 
     // أضف شرط city فقط إذا كان النوع محدد
-    if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
+    if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1" || this.selectedType.id === "bt9w9ZB1H1IizPBugiUl") {
       constraints.push(where("city", "==", this.branch.data.city));
     }
 
