@@ -1611,6 +1611,7 @@ export class BranchComponent {
   }
 
   onQuantityChange(field: string, item: any, i: number, subProduct: any = null): void {
+
     if (this.isModalOpen == true) {
       return
     }
@@ -1866,10 +1867,16 @@ export class BranchComponent {
 
 
     console.log("proccesed", this.combinedData[i]);
+    var meatId = "m1srRxKTFohPt84R9LIA";
+    var boxId = "DPQc6kiIuafANKf5G4Ra";
+    var cupId = "UTnRc0oWxnF8ndBPrcCW";
+    if (this.branch.data.city !== 'ryad') {
+      meatId = "WMIfaxRKFwUZwI3o3CHk";
+      boxId = "jmGKKo2k53rhgFzWbEkv"
+      cupId = "H4g2FAvT5J32lBJFIGf4"
+    }
 
-    const meatId = "m1srRxKTFohPt84R9LIA";
-    const boxId = "DPQc6kiIuafANKf5G4Ra";
-    const cupId = "UTnRc0oWxnF8ndBPrcCW";
+
 
     // فقط إذا تم تعديل المبيعات للحم أو البوكس
     if (field === 'sales' && (this.combinedData[i].productId === meatId || this.combinedData[i].productId === boxId)) {
