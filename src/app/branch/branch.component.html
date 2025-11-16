@@ -138,7 +138,7 @@
                                     </select>
                                 </label>
                             </span>
-                            <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3'"
+                            <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3' || item.status == '5'"
                                 #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
                                 [(ngModel)]="combinedData[i].qntNotRequirement"
                                 [disabled]="selectedPreOrder.status == '1'"
