@@ -337,6 +337,7 @@ export class DashboardComponent implements OnInit {
       case '2': return 'red';     // لم يتم استلامها
       // case '3': return 'orange';  // كمية غير مطابقة
       case '4': return 'blue';
+      case '5': return 'gold';
       // case '': return 'white';   // غير مطلوبة
       case '0': return 'white';   // غير مطلوبة
 
@@ -2324,6 +2325,7 @@ export class DashboardComponent implements OnInit {
       'No Action': { fill: { fgColor: { rgb: "CCCCCC" } } },     // Gray
       'Received': { fill: { fgColor: { rgb: "00FF00" } } },      // Green
       'Not Received': { fill: { fgColor: { rgb: "FF0000" } } },  // Red
+      'Cash': { fill: { fgColor: { rgb: "FFC000" } } },
       'Not Requested': { fill: { fgColor: { rgb: "FFFFFF" } } }, // White
     };
 
@@ -2493,6 +2495,7 @@ export class DashboardComponent implements OnInit {
       case '1': return 'Received';
       case '2': return 'Not Received';
       case '4': return 'Not Requested';
+      case '5': return 'Cash';
       default: return order.qntNotRequirement;
       // default: return 'Pending';
     }

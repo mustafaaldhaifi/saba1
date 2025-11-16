@@ -372,7 +372,8 @@
                       </option>
                       <option value="2">Not Received</option>
                       <option value="4">Not Requested</option>
-                      <option *ngIf="![0, 1, 2, 4].includes(order.status)" value="{{order.status}}">Not Same
+                      <option value="5">Cash</option>
+                      <option *ngIf="![0, 1, 2, 4,5].includes(order.status)" value="{{order.status}}">Not Same
                         ({{order.qntNotRequirement}})</option>
                     </select>
                   </ng-container>

@@ -134,6 +134,7 @@
                                         <option value="2">لم يتم استلامها</option>
                                         <option value="3">كمية غير مطابقة</option>
                                         <option value="4">غير مطلوبة</option>
+                                        <option value="5">شراء من الكاش</option>
                                     </select>
                                 </label>
                             </span>
@@ -443,7 +444,7 @@
 
                             <ng-template #normalProduct4>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
-                                    [disabled]="isDisabledDailyField() || isAdmin === false" min="0" step="any"
+                                     min="0" step="any"
                                     (blur)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
                                     type="number" required />
                             </ng-template>
