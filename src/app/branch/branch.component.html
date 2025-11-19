@@ -89,6 +89,9 @@
                             <span *ngIf="selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">بالكيلو</span>
 
                         </th>
+                        <th *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
+                            شراء من الكاش
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -125,21 +128,21 @@
                             *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU' && selectedType.id != 'Ikt6pyFoTwvwn7GBIPvv' ">
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
-                                    <select
-                                        [disabled]="isDisabledDropDown()"
-                                        [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
+                                    <select [disabled]="isDisabledDropDown()" [(ngModel)]="item.status"
+                                        [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
 
                                         <option value="1">تم استلامها</option>
                                         <option value="2">لم يتم استلامها</option>
                                         <option value="3">كمية غير مطابقة</option>
                                         <option value="4">غير مطلوبة</option>
-                                        <option value="5">شراء من الكاش</option>
+                                        <!-- <option value="5">شراء من الكاش</option> -->
                                     </select>
                                 </label>
                             </span>
-                            <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '3' || item.status == '5'"
-                                #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
+                            <input style="width: 50px;margin: 5px;" type="number"
+                                *ngIf="item.status == '3' || item.status == '5'" #qntInput="ngModel"
+                                [class.alert-red]="qntInput.invalid && qntInput.touched"
                                 [(ngModel)]="combinedData[i].qntNotRequirement"
                                 [disabled]="selectedPreOrder.status == '1'"
                                 (input)="onInputQ($event, i,combinedData[i])" required>
@@ -147,9 +150,8 @@
                         <td *ngIf="isPreSent === true && selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
-                                    <select
-                                        [disabled]="isDisabledDropDown()"
-                                        [(ngModel)]="item.status" [style.background-color]="getStatusColor(item.status)"
+                                    <select [disabled]="isDisabledDropDown()" [(ngModel)]="item.status"
+                                        [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
 
                                         <option value="1">تم استلامها</option>
@@ -163,12 +165,24 @@
                                 [disabled]="selectedPreOrder.status == '1'"
                                 (input)="onInputQ($event, i,combinedData[i])" required>
                         </td>
-                    </tr>
+                        <td *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
+                            <!-- Checkbox -->
+                            <input [disabled]="isDisabledDropDown()" type="checkbox"
+                                [(ngModel)]="combinedData[i].isCashEnabled" (change)="onCashToggle(i,item)">
+                            <!-- <label>اذا تفعلت اضف ادخال قيمة الكاش</label> -->
+
+                            <!-- Cash Input يظهر فقط إذا الـ checkbox مفعّل -->
+                            <div *ngIf="combinedData[i].isCashEnabled" style="margin-top: 5px;">
+                                <input [disabled]="isDisabledDropDown()" type="number"
+                                    [(ngModel)]="combinedData[i].cashValue" #cashInput="ngModel" required
+                                    class="sticky-input" [class.alert-red]="cashInput.invalid && cashInput.touched"
+                                    placeholder="قيمة الكاش" (input)="onCashInput(i,item)">
+                            </div>
+                        </td>
                 </tbody>
             </table>
         </div>
     </div>
-
 
 
     <!-- Action Buttons -->
@@ -361,9 +375,8 @@
 
                             <ng-template #normalProduct1>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
-                                    [disabled]="isDisabledDailyField()"
-                                    (blur)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
-                                    type="number" required />
+                                    [disabled]="isDisabledDailyField()" (blur)="onQuantityChange('add', item, i)"
+                                    [(ngModel)]="combinedData[i].add" type="number" required />
                             </ng-template>
                         </td>
 
@@ -386,9 +399,8 @@
                         <ng-template #normalProduct2>
                             <td>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
-                                    [disabled]="isDisabledDailyField()"
-                                    (blur)="onQuantityChange('sales', item, i)" [(ngModel)]="combinedData[i].sales"
-                                    type="number" required />
+                                    [disabled]="isDisabledDailyField()" (blur)="onQuantityChange('sales', item, i)"
+                                    [(ngModel)]="combinedData[i].sales" type="number" required />
                             </td>
 
                         </ng-template>
@@ -413,9 +425,8 @@
                         <ng-template #normalProduct3>
                             <td>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
-                                    [disabled]="isDisabledDailyField()"
-                                    (blur)="onQuantityChange('staffMeal', item, i)" min="0" step="any"
-                                    [(ngModel)]="combinedData[i].staffMeal" type="number" required />
+                                    [disabled]="isDisabledDailyField()" (blur)="onQuantityChange('staffMeal', item, i)"
+                                    min="0" step="any" [(ngModel)]="combinedData[i].staffMeal" type="number" required />
 
                             </td>
 
@@ -435,7 +446,7 @@
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
-                                             min="0" step="any"
+                                            min="0" step="any"
                                             (blur)="onQuantityChange('dameged', item, i,{i:s,subProduct})"
                                             [(ngModel)]="combinedData[i].products[s].dameged" type="number" required />
                                     </ng-container>
@@ -443,10 +454,9 @@
                             </ng-container>
 
                             <ng-template #normalProduct4>
-                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
-                                     min="0" step="any"
-                                    (blur)="onQuantityChange('dameged', item, i)" [(ngModel)]="combinedData[i].dameged"
-                                    type="number" required />
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i" min="0"
+                                    step="any" (blur)="onQuantityChange('dameged', item, i)"
+                                    [(ngModel)]="combinedData[i].dameged" type="number" required />
                             </ng-template>
 
                         </td>

@@ -57,6 +57,8 @@ interface Order {
   status: string;
   productId: string;
   branchId: string;
+  cashValue: number;
+  isCashEnabled: any
 }
 
 interface PreOrder {
@@ -994,10 +996,12 @@ export class DashboardComponent implements OnInit {
       qnt: doc.data()['qnt'],
       qntF: doc.data()['qntF'],
       qntNotRequirement: doc.data()['qntNotRequirement'],
-
       status: doc.data()['status']?.toString() || '',
       productId: doc.data()['productId'],
-      branchId: doc.data()['branchId']
+      branchId: doc.data()['branchId'],
+      cashValue: doc.data()['cashValue'],
+      isCashEnabled: doc.data()['isCashEnabled'],
+
     }));
   }
 
@@ -1017,7 +1021,9 @@ export class DashboardComponent implements OnInit {
             qntNotRequirement: undefined,
             status: '',
             productId: product.id,
-            branchId: branch.id
+            branchId: branch.id,
+            cashValue: 0,
+            isCashEnabled: false
           });
         }
       });
@@ -1970,7 +1976,7 @@ export class DashboardComponent implements OnInit {
 
     // Second header row (column titles)
     const header2 = ['', '', '', ''];
-    this.branches.forEach(() => header2.push('Requested Qnt', 'Remain Qnt', 'Status'));
+    this.branches.forEach(() => header2.push('Requested Qnt', 'Remain Qnt', 'Status', 'Cash'));
     wsData.push(header2);
 
     // Existing products
@@ -1984,11 +1990,12 @@ export class DashboardComponent implements OnInit {
         row.push(
           order?.qnt,
           order?.qntF,
-          status
+          status,
+          order?.isCashEnabled === true ? order?.cashValue : ""
         );
 
         // Style for status cell
-        const statusCol = 4 + (branchIndex * 3) + 2;
+        const statusCol = 4 + (branchIndex * 4) + 2;
         const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 2, c: statusCol });
         const d = this.statusStyles(status);
 

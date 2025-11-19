@@ -530,6 +530,8 @@ export class BranchComponent {
       qntF: doc.data()['qntF'],
       qntNotRequirement: doc.data()['qntNotRequirement'],
       status: doc.data()['status'],
+      isCashEnabled: doc.data()['isCashEnabled'],
+      cashValue: doc.data()['cashValue'],
       createdAt: doc.data()['createdAt']
     }));
   }
@@ -797,11 +799,14 @@ export class BranchComponent {
     );
   }
   combineDataWithOrders() {
+    console.log(this.branchOrders);
+
     this.combinedData = this.data.map((product: any) => {
       const order = this.branchOrders.find((o: any) => o.productId === product.id);
       if (order) {
         this.isPreSent = true;
       }
+      console.log("order", order);
       const qnt = order?.qnt ?? '';
       const status = qnt == '0' ? '4' : (order?.status ?? '0');
       return {
@@ -813,7 +818,9 @@ export class BranchComponent {
         qntNotRequirement: order?.qntNotRequirement ?? false,
         unit: product?.unit ?? '',
         unitF: product?.unitF ?? '',
-        status: status
+        status: status,
+        isCashEnabled: order.isCashEnabled ?? false,
+        cashValue: order.cashValue ?? 0,
       };
     });
   }
@@ -3648,6 +3655,28 @@ export class BranchComponent {
 
       return false;
     }
+  }
+
+  onCashToggle(i: number, item: any) {
+    // لما يلغي التفعيل نصفر القيمة
+    if (!this.combinedData[i].isCashEnabled) {
+      this.combinedData[i].cashValue = null;
+      this.combinedData[i].isCashEnabled = false;
+    }
+    this.addToOrdersToUpdate(item)
+  }
+
+  onCashInput(i: number, item: any) {
+    console.log("item::: " + JSON.stringify(item))
+    this.addToOrdersToUpdate(item)
+    const value = this.combinedData[i].cashValue;
+
+    // تحقق أساسي
+    if (value === null || value === '' || value <= 0) {
+      return;
+    }
+
+    // تقدر تضيف تحقق إضافي هنا إذا تحتاج
   }
 
 }
