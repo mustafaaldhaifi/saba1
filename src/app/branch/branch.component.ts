@@ -819,9 +819,10 @@ export class BranchComponent {
         unit: product?.unit ?? '',
         unitF: product?.unitF ?? '',
         status: status,
-        isCashEnabled: order.isCashEnabled ?? false,
-        cashValue: order.cashValue ?? 0,
+        isCashEnabled: order?.isCashEnabled ?? false,
+        cashValue: order?.cashValue ?? 0,
       };
+
     });
   }
   firestoreTimestampToMilliseconds(firestoreTimestamp: any): number {
