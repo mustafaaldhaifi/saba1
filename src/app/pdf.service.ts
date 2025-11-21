@@ -24,7 +24,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 4 : isMonthly ? 3 : 4, // دمج العمودين الأول والثاني في هذا السطر
+          colSpan: isBranch ? 5 : isMonthly ? 3 : 4, // دمج العمودين الأول والثاني في هذا السطر
         },
         {
           content: ` ${date} : التاريخ`,
