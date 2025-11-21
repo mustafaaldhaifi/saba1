@@ -81,8 +81,11 @@ export class BranchComponent {
             product.name,
             // order.qntF,
             // product.unitF,
+            order.qntF,
+            product.unitF,
             order.qnt,
-            product.unit
+            product.unit,
+
           ]);
         }
 

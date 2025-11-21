@@ -24,7 +24,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 3 : isMonthly ? 3 : 4, // دمج العمودين الأول والثاني في هذا السطر
+          colSpan: isBranch ? 5 : isMonthly ? 3 : 4, // دمج العمودين الأول والثاني في هذا السطر
         },
         {
           content: ` ${date} : التاريخ`,
@@ -36,7 +36,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 3 : isMonthly ? 3 : 6, // دمج العمودين الثالث والرابع في هذا السطر
+          colSpan: isBranch ? 5 : isMonthly ? 3 : 6, // دمج العمودين الثالث والرابع في هذا السطر
         },
         {
           content: `${branchName} : اسم الفرع`,
@@ -48,7 +48,7 @@ export class PdfService {
 
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 3 : isMonthly ? 3 : 5, // دمج العمودين الثالث والرابع في هذا السطر
+          colSpan: isBranch ? 5 : isMonthly ? 3 : 5, // دمج العمودين الثالث والرابع في هذا السطر
         },
       ],
     ];
@@ -90,6 +90,8 @@ export class PdfService {
         headerRow.push(this.items({ name: 'الرصيد' }));
         headerRow.push(this.items({ name: 'الوحده' }));
       } else {
+        headerRow.push(this.items({ name: 'المتبقي' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
         headerRow.push(this.items({ name: 'المطلوب' }));
         headerRow.push(this.items({ name: 'الوحده' }));
       }
@@ -100,6 +102,8 @@ export class PdfService {
         headerRow.push(this.items({ name: 'الرصيد' }));
         headerRow.push(this.items({ name: 'الوحده' }));
       } else {
+        headerRow.push(this.items({ name: 'المتبقي' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
         headerRow.push(this.items({ name: 'المطلوب' }));
         headerRow.push(this.items({ name: 'الوحده' }));
       }
@@ -110,6 +114,8 @@ export class PdfService {
         headerRow.push(this.items({ name: 'الرصيد' }));
         headerRow.push(this.items({ name: 'الوحده' }));
       } else {
+        headerRow.push(this.items({ name: 'المتبقي' }));
+        headerRow.push(this.items({ name: 'الوحده' }));
         headerRow.push(this.items({ name: 'المطلوب' }));
         headerRow.push(this.items({ name: 'الوحده' }));
       }
@@ -117,55 +123,7 @@ export class PdfService {
 
     const topHeader2 = [headerRow];
 
-    // const topHeader2 = [
-    //   [
-    //     this.items({ name: 'الاصناف' }),
-    //     ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
-    //     ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
 
-    //     // this.items({ name: 'الرصيد', fontSize: 7 }),
-    //     // this.items({ name: 'الوحدة' }),
-    //     ...(isMonthly === true ? [this.items({ name: 'المطلوب' })] : []),
-    //     ...(isMonthly === true ? [this.items({ name: 'الوحده' })] : []),
-
-    //     // this.items({ name: 'المطلوب' }),
-    //     // this.items({ name: 'الوحدة' }),
-    //     this.items({ name: 'الاصناف' }),
-    //     ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
-    //     ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
-    //     // this.items({ name: 'الرصيد', fontSize: 7 }),
-    //     // this.items({ name: 'الوحدة' }),
-    //     ...(isMonthly === true ? [this.items({ name: 'المطلوب' })] : []),
-    //     ...(isMonthly === true ? [this.items({ name: 'الوحده' })] : []),
-    //     // this.items({ name: 'المطلوب' }),
-    //     // this.items({ name: 'الوحدة' }),
-    //     this.items({ name: 'الاصناف' }),
-    //     ...(isBranch === false ? [this.items({ name: 'الرصيد', fontSize: 7 })] : []),
-    //     ...(isBranch === false ? [this.items({ name: 'الوحدة', fontSize: 7 })] : []),
-    //     // this.items({ name: 'الرصيد', fontSize: 7 }),
-    //     // this.items({ name: 'الوحدة' }),
-    //     this.items({ name: 'المطلوب' }),
-    //     this.items({ name: 'الوحدة' }),
-    //   ],
-    // ];
-    // /////
-    // topHeader2[0].push(this.items({ name: 'الاصناف' }))
-    // if (isBranch) {
-    //   if (isMonthly) {
-    //     topHeader2[0].push(this.items({ name: 'الرصيد' }))
-    //   } else {
-    //     topHeader2[0].push(this.items({ name: 'المطلوب' }))
-    //   }
-    //   topHeader2[0].push(this.items({ name: 'الوحده' }))
-    // } else {
-
-    //   if (isMonthly) {
-    //     topHeader2[0].push(this.items({ name: 'الرصيد' }))
-    //   } else {
-    //     topHeader2[0].push(this.items({ name: 'المطلوب' }))
-    //   }
-    //   topHeader2[0].push(this.items({ name: 'الوحده' }))
-    // }
 
     var rows = [];
     const maxRows = isMonthly ? 50 : 36; // total rows
@@ -181,26 +139,6 @@ export class PdfService {
       }
     }
 
-
-    // for (let index = 0; index < data.length; index++) {
-    //   var array: any = rows[index]
-    //   for (let index2 = 0; index2 < array.length; index2++) {
-    //     array[index2] = data[index][index2];
-    //   }
-    //   rows[index] = array;
-    // }
-    // for (let i = 0; i < data.length; i++) {
-    //   // const dataRow = data[i];
-    //   // const row:any = rows[i] || [];
-
-    //   // for (let j = 0; j < dataRow.length; j++) {
-    //   //   row[j] = dataRow[j];
-    //   // }
-
-    //   // rows[i] = row;
-
-    // }
-    // const maxRows = isMonthly ? 50 : 36; // total rows
     const cellsPerRow = data[0].length;
 
     for (let i = 0; i < data.length; i++) {
@@ -213,48 +151,6 @@ export class PdfService {
         rows[rowIndex][colStart + j] = data[i][j]; // Assign data
       }
     }
-
-    // const rows = [
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   ['', 2, 4, '', 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    //   // ['النوع 2', '200', 'كيس', '30', 'كيس'],
-    //   // ['النوع 3', '150', 'علبة', '20', 'علبة'],
-    //   // Add more rows as necessary
-    // ];
-
 
 
     // Create new PDF document
@@ -287,14 +183,46 @@ export class PdfService {
       theme: 'striped', // optional, helps with visibility
       didParseCell: function (data) {
         // Convert `data.table.head[0]` to `unknown` first, then to `string[]`
-        const headerRow = (data.table.head[0] as unknown) as string[];  // Cast to unknown first, then string[]
-        const columnHeaderCell = headerRow[data.column.index];  // Get the column header by index
+        // const headerRow = (data.table.head[0] as unknown) as string[];  // Cast to unknown first, then string[]
+        // const columnHeaderCell = headerRow[data.column.index];  // Get the column header by index
 
-        if (data.section === 'body' && columnHeaderCell === 'المطلوب') {
-          data.cell.styles.fillColor = [255, 255, 0]; // Yellow background for "المطلوب" column
-        }
-        // تنسيق الحدود
+        // if (data.section === 'body' && columnHeaderCell === 'المطلوب') {
+        //   data.cell.styles.fillColor = [255, 255, 0]; // Yellow background for "المطلوب" column
+        // }
+        // // تنسيق الحدود
+        // if (data.section === 'body') {
+        //   data.cell.styles.lineWidth = { top: 0, bottom: 0.2, left: 0.2, right: 0.2 };
+        //   data.cell.styles.lineColor = [0, 0, 0];
+        // }
+
+        // قم بالتلوين فقط لخلايا محتوى الجدول (body)
         if (data.section === 'body') {
+          // التلوين يكون منطقياً فقط عند isBranch == true وليس شهرياً isMonthly == false
+          if (isBranch && !isMonthly) {
+            const colIndex = data.column.index;
+            // فهارس أعمدة "المتبقي" و "الوحده" (المتبقي)
+            const remainingIndices = [1, 2, 6, 7, 11, 12];
+            // فهارس أعمدة "المطلوب" و "الوحده" (المطلوب)
+            const requiredIndices = [3, 4, 8, 9, 13, 14];
+
+            // لون لأعمدة المتبقي ووحدتها (مثل اللون الأزرق الفاتح)
+            const remainingColor = [204, 229, 255] as any; // Light Blue
+            // لون لأعمدة المطلوب ووحدتها (مثل اللون الأصفر)
+            const requiredColor = [255, 255, 204] as any; // Light Yellow
+
+            // تطبيق لون المتبقي
+            if (remainingIndices.includes(colIndex)) {
+              
+              data.cell.styles.fillColor = remainingColor;
+            }
+            // تطبيق لون المطلوب
+            else if (requiredIndices.includes(colIndex)) {
+              data.cell.styles.fillColor = requiredColor;
+            }
+          }
+
+
+          // تنسيق الحدود
           data.cell.styles.lineWidth = { top: 0, bottom: 0.2, left: 0.2, right: 0.2 };
           data.cell.styles.lineColor = [0, 0, 0];
         }
