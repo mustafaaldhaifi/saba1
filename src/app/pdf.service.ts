@@ -24,7 +24,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 5 : isMonthly ? 3 : 4, // دمج العمودين الأول والثاني في هذا السطر
+          colSpan: isBranch ? 4 : isMonthly ? 3 : 4, // دمج العمودين الأول والثاني في هذا السطر
         },
         {
           content: ` ${date} : التاريخ`,
@@ -36,7 +36,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 5 : isMonthly ? 3 : 6, // دمج العمودين الثالث والرابع في هذا السطر
+          colSpan: isBranch ? 3 : isMonthly ? 3 : 6, // دمج العمودين الثالث والرابع في هذا السطر
         },
         {
           content: `${branchName} : اسم الفرع`,
@@ -48,7 +48,7 @@ export class PdfService {
 
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: isBranch ? 5 : isMonthly ? 3 : 5, // دمج العمودين الثالث والرابع في هذا السطر
+          colSpan: isBranch ? 2 : isMonthly ? 3 : 5, // دمج العمودين الثالث والرابع في هذا السطر
         },
       ],
     ];
@@ -108,54 +108,91 @@ export class PdfService {
         headerRow.push(this.items({ name: 'الوحده' }));
       }
 
-      headerRow.push(this.items({ name: 'الاصناف' }));
+      // headerRow.push(this.items({ name: 'الاصناف' }));
 
-      if (isMonthly) {
-        headerRow.push(this.items({ name: 'الرصيد' }));
-        headerRow.push(this.items({ name: 'الوحده' }));
-      } else {
-        headerRow.push(this.items({ name: 'المتبقي' }));
-        headerRow.push(this.items({ name: 'الوحده' }));
-        headerRow.push(this.items({ name: 'المطلوب' }));
-        headerRow.push(this.items({ name: 'الوحده' }));
-      }
+      // if (isMonthly) {
+      //   headerRow.push(this.items({ name: 'الرصيد' }));
+      //   headerRow.push(this.items({ name: 'الوحده' }));
+      // } else {
+      //   headerRow.push(this.items({ name: 'المتبقي' }));
+      //   headerRow.push(this.items({ name: 'الوحده' }));
+      //   headerRow.push(this.items({ name: 'المطلوب' }));
+      //   headerRow.push(this.items({ name: 'الوحده' }));
+      // }
     }
 
     const topHeader2 = [headerRow];
 
-
-
-    var rows = [];
     const maxRows = isMonthly ? 50 : 36; // total rows
+    const cellsPerRow = data[0] ? data[0].length : 0; // The length of the inner array from getOrders
 
+    // 2. Determine how many columns wide the entire table is (totalTableCols)
+    const totalTableCols = topHeader2[0].length;
+
+    // 3. Pre-fill the rows array with empty strings, ensuring correct total columns
+    var rows = [];
     for (let index = 0; index < maxRows; index++) {
-      if (isBranch == false) {
-        rows.push(['', '', '', '', '', '', '', '', ''])
-      } else {
-        // rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
-        const colCount = topHeader2[0].length;
-        rows.push(new Array(colCount).fill(''));
-
-      }
+      // Fill each row with the exact number of columns defined in the header.
+      rows.push(new Array(totalTableCols).fill(''));
     }
 
-    const cellsPerRow = data[0].length;
-
+    // 4. Correctly map the flat data into the multi-column layout
     for (let i = 0; i < data.length; i++) {
-      const rowIndex = i % maxRows;              // Loop over rows
-      const colStart = Math.floor(i / maxRows) * cellsPerRow; // Next 3 cells block
+      const rowIndex = i % maxRows;               // Which row index (0 to 35/49)
+      // The starting column index for this item's block of data.
+      // Each block occupies `cellsPerRow` columns.
+      // The block index is Math.floor(i / maxRows) (0, 1, 2, ...)
+      const colStart = Math.floor(i / maxRows) * cellsPerRow;
 
-      // Fill 3 cells in the row
+      // Safety check - prevent overflow outside the pre-defined columns
+      if (colStart + cellsPerRow > totalTableCols) {
+        console.warn(`Data item ${i} would overflow column count. Skipping.`);
+        continue;
+      }
+
+      // Fill the cells for the current item
       for (let j = 0; j < cellsPerRow; j++) {
-        if (!rows[rowIndex]) rows[rowIndex] = []; // Ensure row exists
         rows[rowIndex][colStart + j] = data[i][j]; // Assign data
       }
     }
+    // ... (rest o
 
 
-    // Create new PDF document
-    // const doc = new jsPDF();
+    // var rows = [];
+    // const maxRows = isMonthly ? 50 : 36; // total rows
 
+    // for (let index = 0; index < maxRows; index++) {
+    //   if (isBranch == false) {
+    //     rows.push(['', '', '', '', '', '', '', '', ''])
+    //   } else {
+    //     // rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
+    //     const colCount = topHeader2[0].length;
+    //     console.log('colCount', colCount);
+
+    //     rows.push(new Array(colCount).fill(''));
+
+    //   }
+    // }
+
+    // const cellsPerRow = data[0].length;
+
+    // for (let i = 0; i < data.length; i++) {
+
+
+
+    //   const rowIndex = i % maxRows;              // Loop over rows
+    //   const colStart = Math.floor(i / maxRows) * cellsPerRow; // Next 3 cells block
+
+    //   console.log('cellsPerRow', cellsPerRow);
+    //   console.log('rowIndex', rowIndex);
+    //   console.log('maxRows', maxRows);
+    //   console.log('colStart', colStart);
+    //   // Fill 3 cells in the row
+    //   for (let j = 0; j < cellsPerRow; j++) {
+    //     if (!rows[rowIndex]) rows[rowIndex] = []; // Ensure row exists
+    //     rows[rowIndex][colStart + j] = data[i][j]; // Assign data
+    //   }
+    // }
     // Add table with right-aligned columns
     autoTable(doc, {
       head: [...topHeader, ...topHeader2], // Combine topHeader and topHeader2 into one array
@@ -212,7 +249,7 @@ export class PdfService {
 
             // تطبيق لون المتبقي
             if (remainingIndices.includes(colIndex)) {
-              
+
               data.cell.styles.fillColor = remainingColor;
             }
             // تطبيق لون المطلوب
