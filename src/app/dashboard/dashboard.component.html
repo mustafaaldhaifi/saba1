@@ -4,13 +4,17 @@
 
 <div *ngIf="isAdmin">
   <div class="admin-controls">
-    <a (click)="logout()" class="power-off-icon" style="color: red;">
+    <button class="icon-btn logout" (click)="logout()">
       <i class="fas fa-power-off"></i>
-    </a>
-    <h6 (click)="resetStorage()">
-      {{version}}
-    </h6>
-    <button *ngIf="hasChanges() == true" class="btn save-btn" (click)="saveChanges()">
+    </button>
+
+    <h6 class="version-label">{{ version }}</h6>
+
+    <button class="icon-btn reset" (click)="resetStorage()">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <button *ngIf="hasChanges()" class="btn save-btn" (click)="saveChanges()">
       Save Changes
     </button>
   </div>
