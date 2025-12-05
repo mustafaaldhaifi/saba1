@@ -7,7 +7,7 @@
     <a (click)="logout()" class="power-off-icon" style="color: red;">
       <i class="fas fa-power-off"></i>
     </a>
-    <h6>
+    <h6 (click)="resetStorage()">
       {{version}}
     </h6>
     <button *ngIf="hasChanges() == true" class="btn save-btn" (click)="saveChanges()">

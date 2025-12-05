@@ -131,6 +131,7 @@ export class BranchesService {
         id: doc.id,
         name: doc.data()['name'],
         city: doc.data()['city'],
+        order: doc.data()['order'] ?? 1,
       }));
 
       this.updateBranchesInLocal(branches, city);

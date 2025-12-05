@@ -47,6 +47,7 @@ interface Product {
 interface Branch {
   id: string;
   name: string;
+  order: number
 }
 
 interface Order {
@@ -83,6 +84,10 @@ interface GroupedPreOrder {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  resetStorage() {
+    localStorage.removeItem("branches")
+    location.reload();
+  }
 
   goToBranch(branch: Branch) {
     console.log(branch);
@@ -597,7 +602,7 @@ export class DashboardComponent implements OnInit {
         this.getPreOrders(),
         this.getDatesToAdd(),
         this.getSettings(),
-        this.fetchBranches()
+        (await this.fetchBranches()).sort((a, b) => a.order - b.order)
       ]);
 
       // تخزين النتائج بعد الجلب
