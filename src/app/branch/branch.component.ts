@@ -1651,11 +1651,12 @@ export class BranchComponent {
 
             this.combinedData[i][field] = ""
           }
-          console.log("negative");
+          // console.log("negative");
 
-          console.log(this.combinedData[i]);
-
-          return
+          // console.log(this.combinedData[i]);
+          // this.combinedData[i].closeStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+          // return;
+          // return
         }
 
       }
@@ -1670,11 +1671,11 @@ export class BranchComponent {
 
             this.combinedData[i][field] = ""
           }
-          console.log("negative");
+          // console.log("negative");
 
-          console.log(this.combinedData[i]);
-
-          return
+          // console.log(this.combinedData[i]);
+          // this.combinedData[i].closeStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+          return;
         }
 
       }
@@ -1734,7 +1735,9 @@ export class BranchComponent {
 
     if (field === 'add' || field === 'transfer' || field === 'dameged' || field === 'recieved') {
       // console.log("this.handleDilogReson", this.handleDilogReson);
-
+      console.log("eeee1", field);
+      console.log('eeee1', Number(item[field] ?? 0));
+      console.log('eeee1', item);
 
       if (this.ifEnabledNoteFiled()) {
         // this.handleDilogReson = { field, item, i, subProduct }
@@ -1800,14 +1803,22 @@ export class BranchComponent {
         }
 
         if (field === 'recieved') {
+          console.log("RRRWEEE");
+
           if (subProduct) {
-            if (Number(item.products[subProduct.i][field] ?? 0) !== 0) {
+            const a = Number(item.products[subProduct.i][field] ?? 0)
+            console.log("aaa", a);
+
+            if (a !== 0) {
               // this.showReasonDialog = true
               this.openModal(field, item, i, subProduct, true)
 
 
             }
           } else {
+            const a = Number(item[field] ?? 0)
+            console.log("aaa2", a);
+
             if (Number(item[field] ?? 0) !== 0) {
               // this.showReasonDialog = true
               this.openModal(field, item, i, subProduct, true)
@@ -3537,14 +3548,18 @@ export class BranchComponent {
   // }
   ifEnabledNoteFiled() {
 
+    // console.log("");
+
     // if (!Array.isArray(this.combinedData)) return false;
 
     return this.combinedData.some((item: any) => {
+      console.log(item);
+
       if (item.products) {
         return item.products.some((subitem: any) => {
           const isAddNegative = Number(subitem?.add ?? 0) !== 0;
           const isTransferNonZero = Number(item.transfer) !== 0;
-          const isRecieved = Number(item.recieved) > 0;
+          const isRecieved = Number(item.recieved) !== 0;
 
           const isDamagedPositive = Number(subitem?.dameged ?? 0) > 0;
 
@@ -3554,11 +3569,13 @@ export class BranchComponent {
         const isAddNegative = Number(item.add) !== 0;
         const isTransferNonZero = Number(item.transfer) !== 0;
         const isDamagedPositive = Number(item.dameged) > 0;
-        const isRecieved = Number(item.recieved) > 0;
+        const isRecieved = Number(item.recieved) !== 0;
 
         console.log('isAddNegative', isAddNegative);
         console.log('isTransferNonZero', isTransferNonZero);
         console.log('isDamagedPositive', isDamagedPositive);
+        console.log('isREcievesPositive', isRecieved);
+
 
 
         return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved;
