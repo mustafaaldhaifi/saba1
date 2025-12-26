@@ -200,6 +200,7 @@ export class BranchComponent {
     }
 
     try {
+      const currentTimestamp = new Date();
       const s = {
         status: '1',
         updatedFromUser: serverTimestamp(),
@@ -207,6 +208,22 @@ export class BranchComponent {
       batch.update(orderRef, s)
       // Commit the batch (all updates happen in one command)
       await batch.commit();
+
+      if (this.selectedPreOrder) {
+        // تحديث الكائن المختار
+        this.selectedPreOrder = {
+          ...this.selectedPreOrder,
+          status: '1',
+          updatedFromUser: currentTimestamp // نحدثه في الذاكرة بوقت الجهاز الحالي
+        };
+
+        // تحديث المصفوفة الأصلية لضمان مزامنة البيانات في القائمة
+        const index = this.preOrders.findIndex((o: any) => o.id === this.selectedPreOrder.id);
+        if (index !== -1) {
+          this.preOrders[index] = { ...this.selectedPreOrder };
+        }
+      }
+
       alert("يعطيك العافية تم التحديث بنجاح")
       this.ordersToUpdate = []
       console.log("All orders updated successfully.");
