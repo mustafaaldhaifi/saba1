@@ -200,7 +200,10 @@ export class BranchComponent {
     }
 
     try {
-      const s = { status: '1' }
+      const s = {
+        status: '1',
+        updatedFromUser: serverTimestamp(),
+      };
       batch.update(orderRef, s)
       // Commit the batch (all updates happen in one command)
       await batch.commit();
@@ -841,6 +844,13 @@ export class BranchComponent {
 
   isUpdateEnabled(): boolean {
     // All items must have status !== "0"
+    if (!this.selectedPreOrder.hasOwnProperty('updatedFromUser')) {
+      // الكود هنا سيعمل فقط إذا كان الحقل موجوداً فعلياً
+      // console.log("NO EDITed");
+
+      return true
+    }
+
     if (this.isSelectedTypeAllowed() && this.ordersToUpdate.length > 0) {
       return true
     }
@@ -3107,6 +3117,12 @@ export class BranchComponent {
     }
   }
   isSelectedTypeAllowed(): boolean {
+    if (!this.selectedPreOrder.hasOwnProperty('updatedFromUser')) {
+      // الكود هنا سيعمل فقط إذا كان الحقل موجوداً فعلياً
+      // console.log("NO EDITed");
+
+      return true
+    }
     if (this.allowableEdits) {
       return this.allowableEdits.includes(this.selectedType.id);
     }
