@@ -389,7 +389,7 @@ export class BranchComponent {
     }));
 
     if (environment.enabledDaily && environment.production == false) {
-      this.types = [{ id: '5', name: "الجرد اليومي", name_en: 'Daily' }, ...this.types];
+      // this.types = [{ id: '5', name: "الجرد اليومي", name_en: 'Daily' }, ...this.types];
       // this.types.push({ id: '5', name: "الجرد اليومي", name_en: 'Daily' })
 
     }
@@ -1287,6 +1287,9 @@ export class BranchComponent {
         productId: product.id,
         productName: product.name,
         productUnit: product.unit,
+        isSales: product.isSales,
+        deductFromProduct: product.deductFromProduct,
+        deductAmount: product.deductAmount,
         parentProduct: product.parentProduct,
         openingStockId: this.isReadDailyMode ? (report?.openingStockId ?? 1) : (openingStock?.id ?? -1),
         openingStockQnt: this.isReadDailyMode ? (report?.openingStockQnt ?? '') : (openingStock?.openingStockQnt ?? ''),
@@ -1651,6 +1654,23 @@ export class BranchComponent {
   onQuantityChange(field: string, item: any, i: number, subProduct: any = null): void {
 
     if (this.isModalOpen == true) {
+      return
+    }
+    if (item.isSales === true) {
+      this.combinedData[i][field] = item[field] ?? '';
+      const productIndex = this.combinedData.findIndex(p => p.productId === item.deductFromProduct);
+      if (productIndex === -1) {
+        return
+      }
+      this.combinedData[productIndex]['transfer'] = item[field] ?? '';
+
+      const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+
+      this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+        this.combinedData[productIndex],
+        undefined,
+        productUnit
+      );
       return
     }
     const productUnit = item.productUnit ?? 1;
@@ -2790,7 +2810,7 @@ export class BranchComponent {
     let finalData: { date: string, data: any, }[] = [];
 
     for (const element of dates) {
-      
+
       // this.dateToAddInDaily = element;
       const dailyReportUpdates = await this.dailyReportService.getLastupdate(
         this.branch.id,
@@ -3057,6 +3077,9 @@ export class BranchComponent {
           products.push([
             element.productName,
             element.add,
+            element.isSales ?? false,
+            element.deductFromProduct,
+            element.deductAmount,
             element.sales,
             element.staffMeal,
             element.dameged,
@@ -3066,6 +3089,9 @@ export class BranchComponent {
           item.productName,
           item.openingStockQnt,
           item.recieved,
+          item.isSales ?? false,
+          item.deductAmount,
+          item.deductFromProduct,
           products,
           item.transfer,
           item.closeStock
@@ -3075,6 +3101,9 @@ export class BranchComponent {
           item.productName,
           item.openingStockQnt,
           item.recieved,
+          item.isSales ?? false,
+          item.deductAmount,
+          item.deductFromProduct,
           item.add,
           item.sales,
           item.staffMeal,
@@ -3694,22 +3723,54 @@ export class BranchComponent {
   }
 
 
-  isDisabledDailyField() {
-    // isReadDailyMode === true && isAdmin==false
-    if (this.isAdmin == false) {
-      if (this.isReadDailyMode == false) {
-        return false;
-      }
+  // isDisabledDailyField() {
+  //   // isReadDailyMode === true && isAdmin==false
+  //   if (this.isAdmin == false) {
+  //     if (day is sunday ) {
+  //       return true
+  //     }
+  //     if (this.isReadDailyMode == false) {
+  //       return false;
+  //     }
 
-      if (this.allowableEdits.includes('5')) {
-        return false;
-      }
-      return true;
-    } else {
+  //     if (this.allowableEdits.includes('5')) {
+  //       return false;
+  //     }
+  //     return true;
+  //   } else {
 
+  //     return false;
+  //   }
+  // }
+
+  isSundy() {
+    const today = new Date();
+    // إذا كان اليوم أحد → معطّل
+    return today.getDay() === 0; // 0 = Sunday
+
+  }
+  isDisabledDailyField(): boolean {
+    // إذا كان أدمن → الحقل دائمًا مفعّل
+    if (this.isAdmin) {
       return false;
     }
+
+
+
+    // إذا لم يكن وضع القراءة اليومية
+    if (this.isReadDailyMode == false) {
+      return false;
+    }
+
+    // إذا مسموح بالتعديل
+    if (this.allowableEdits?.includes('5')) {
+      return false;
+    }
+
+    // غير ذلك → معطّل
+    return true;
   }
+
 
   onCashToggle(i: number, item: any) {
     // لما يلغي التفعيل نصفر القيمة

@@ -158,6 +158,9 @@ export class ProductsService {
       const products = snapshot.docs.map(doc => ({
         id: doc.id,
         name: doc.data()['name'],
+        isSales: doc.data()['isSales'] ?? false,
+        deductAmount: doc.data()['deductAmount'] ?? 0,
+        deductFromProduct: doc.data()['deductFromProduct'] ?? '',
         parentProduct: doc.data()['parentProduct'],
         unit: doc.data()['unit'],
         unitF: doc.data()['unitF'],
