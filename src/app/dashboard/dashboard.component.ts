@@ -1085,7 +1085,7 @@ export class DashboardComponent implements OnInit {
     //   this.selectedType = this.types[0]
     // }
     if (environment.enabledDaily && environment.production == false) {
-      this.types = [{ id: '5', name: "الجرد اليومي", name_en: 'Daily' }, ...this.types];
+      // this.types = [{ id: '5', name: "الجرد اليومي", name_en: 'Daily' }, ...this.types];
     }
     this.selectedType = this.types[0]
     // this.types.unshift({ id: 5, name: "الجرد اليومي", name_en: 'Daily' })

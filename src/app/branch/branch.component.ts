@@ -2790,8 +2790,8 @@ export class BranchComponent {
     let finalData: { date: string, data: any, }[] = [];
 
     for (const element of dates) {
+      
       // this.dateToAddInDaily = element;
-
       const dailyReportUpdates = await this.dailyReportService.getLastupdate(
         this.branch.id,
         Timestamp.fromDate(this.normalizeDate(element)),
