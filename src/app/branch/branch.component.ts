@@ -1656,6 +1656,45 @@ export class BranchComponent {
       this.isModalOpen = true
     }
   }
+  processDirectTransfer() {
+    // 1. تصفير القيم لجميع المنتجات قبل الحساب
+    this.combinedData.forEach(p => p.directTransfer = "");
+
+    this.combinedData.forEach((item) => {
+      // 2. تحديد الأهداف (الفرعية أو العنصر نفسه)
+      const hasSubProducts = item.products?.length > 0;
+      const targets = hasSubProducts ? item.products : [item];
+
+      targets.forEach((target: any) => {
+        const targetId = target.deductFromProduct;
+
+        if (targetId) {
+          const productIndex = this.combinedData.findIndex(p => p.productId === targetId);
+
+          if (productIndex !== -1) {
+            // --- التعديل الجوهري هنا ---
+            const amount = target.deductAmount || 0;
+
+            // نبحث عن المبيعات في الفرعي أولاً، إذا لم توجد نأخذ مبيعات الأب
+            const salesValue = target.sales ?? item.sales ?? 0;
+
+            const currentVal = this.combinedData[productIndex].directTransfer === "" ? 0 : this.combinedData[productIndex].directTransfer;
+
+            // الحساب: القيمة السابقة + (كمية الخصم * المبيعات)
+            this.combinedData[productIndex].directTransfer = currentVal + (amount * salesValue);
+
+            // تحديث المخزون
+            const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+            this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+              this.combinedData[productIndex],
+              undefined,
+              productUnit
+            );
+          }
+        }
+      });
+    });
+  }
 
   onQuantityChange(field: string, item: any, i: number, subProduct: any = null): void {
 
@@ -1663,20 +1702,27 @@ export class BranchComponent {
       return
     }
     console.log("dddu2", item);
-    const productIndex = this.combinedData.findIndex(p => p.productId === item.deductFromProduct);
-    if (productIndex !== -1) {
-      let value = item[field] ?? 0
-      value = value * item.deductAmount
-      this.combinedData[productIndex]['directTransfer'] = value;
 
-      const productUnit = this.combinedData[productIndex].productUnit ?? 1;
-
-      this.combinedData[productIndex].closeStock = this.calculateClosingStock(
-        this.combinedData[productIndex],
-        undefined,
-        productUnit
-      );
+    let deductFromProduct
+    if (subProduct !== null) {
+      deductFromProduct = subProduct.deductFromProduct
+    } else {
+      deductFromProduct = item.deductFromProduct
     }
+    const productIndex = this.combinedData.findIndex(p => p.productId === deductFromProduct);
+    // if (productIndex !== -1) {
+    //   let value = item[field] ?? 0
+    //   value = value * item.deductAmount
+    //   this.combinedData[productIndex]['directTransfer'] = value;
+
+    //   const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+
+    //   this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+    //     this.combinedData[productIndex],
+    //     undefined,
+    //     productUnit
+    //   );
+    // }
 
     if (item.isSales === true) {
       this.combinedData[i][field] = item[field] ?? '';
@@ -1950,47 +1996,53 @@ export class BranchComponent {
     }
 
 
-    console.log("proccesed", this.combinedData[i]);
-    var meatId = "m1srRxKTFohPt84R9LIA";
-    var boxId = "DPQc6kiIuafANKf5G4Ra";
-    var cupId = "UTnRc0oWxnF8ndBPrcCW";
-    if (this.branch.data.city !== 'ryad') {
-      meatId = "WMIfaxRKFwUZwI3o3CHk";
-      boxId = "jmGKKo2k53rhgFzWbEkv"
-      cupId = "H4g2FAvT5J32lBJFIGf4"
-    }
+    //////////++++
+
+    // console.log("proccesed", this.combinedData[i]);
+    // var meatId = "m1srRxKTFohPt84R9LIA";
+    // var boxId = "DPQc6kiIuafANKf5G4Ra";
+    // var cupId = "UTnRc0oWxnF8ndBPrcCW";
+    // if (this.branch.data.city !== 'ryad') {
+    //   meatId = "WMIfaxRKFwUZwI3o3CHk";
+    //   boxId = "jmGKKo2k53rhgFzWbEkv"
+    //   cupId = "H4g2FAvT5J32lBJFIGf4"
+    // }
 
 
 
-    console.log("dddu5", subProduct);
-    // فقط إذا تم تعديل المبيعات للحم أو البوكس
-    if (field === 'sales' && (subProduct.productId === meatId || subProduct.productId === boxId)) {
+    // console.log("dddu5", subProduct);
+    // // فقط إذا تم تعديل المبيعات للحم أو البوكس
+    // if (field === 'sales' && (subProduct.productId === meatId || subProduct.productId === boxId)) {
 
-      const meatIndex = this.combinedData.findIndex(p => p.productId === meatId);
-      const boxIndex = this.combinedData.findIndex(p => p.productId === boxId);
-      const cupIndex = this.combinedData.findIndex(p => p.productId === cupId);
-      console.log("ddduM", meatIndex);
-      console.log("ddduB", boxIndex);
-      console.log("ddduC", cupIndex);
-      if (meatIndex !== -1 && boxIndex !== -1 && cupIndex !== -1) {
-        const meatSales = Number(this.combinedData[meatIndex].sales) || 0;
-        const boxSales = Number(this.combinedData[boxIndex].sales) || 0;
+    //   const meatIndex = this.combinedData.findIndex(p => p.productId === meatId);
+    //   const boxIndex = this.combinedData.findIndex(p => p.productId === boxId);
+    //   const cupIndex = this.combinedData.findIndex(p => p.productId === cupId);
+    //   console.log("ddduM", meatIndex);
+    //   console.log("ddduB", boxIndex);
+    //   console.log("ddduC", cupIndex);
+    //   if (meatIndex !== -1 && boxIndex !== -1 && cupIndex !== -1) {
+    //     const meatSales = Number(this.combinedData[meatIndex].sales) || 0;
+    //     const boxSales = Number(this.combinedData[boxIndex].sales) || 0;
 
-        // 2 * مبيعات اللحم + 4 * مبيعات البوكس
-        const calculatedStaffMeal = (meatSales * 2) + (boxSales * 4);
+    //     // 2 * مبيعات اللحم + 4 * مبيعات البوكس
+    //     const calculatedStaffMeal = (meatSales * 2) + (boxSales * 4);
 
-        // حفظ القيمة في الكاسات
-        this.combinedData[cupIndex].staffMeal = calculatedStaffMeal;
+    //     // حفظ القيمة في الكاسات
+    //     this.combinedData[cupIndex].staffMeal = calculatedStaffMeal;
 
-        // تحديث المخزون الختامي للكاسات
-        const cupUnit = this.combinedData[cupIndex].productUnit ?? 1;
-        this.combinedData[cupIndex].closeStock = this.calculateClosingStock(
-          this.combinedData[cupIndex],
-          undefined,
-          cupUnit
-        );
-      }
-    }
+    //     // تحديث المخزون الختامي للكاسات
+    //     const cupUnit = this.combinedData[cupIndex].productUnit ?? 1;
+    //     this.combinedData[cupIndex].closeStock = this.calculateClosingStock(
+    //       this.combinedData[cupIndex],
+    //       undefined,
+    //       cupUnit
+    //     );
+    //   }
+    // }
+
+    // //////////++++
+
+    this.processDirectTransfer();
 
 
     // const meatId = "m1srRxKTFohPt84R9LIA"
