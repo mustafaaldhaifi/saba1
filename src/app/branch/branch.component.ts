@@ -1726,6 +1726,7 @@ export class BranchComponent {
 
     if (item.isSales === true) {
       this.combinedData[i][field] = item[field] ?? '';
+       this.processDirectTransfer();
       const productUnit = this.combinedData[productIndex].productUnit ?? 1;
       this.combinedData[productIndex].closeStock = this.calculateClosingStock(
         this.combinedData[productIndex],
