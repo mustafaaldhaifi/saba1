@@ -1656,13 +1656,18 @@ export class BranchComponent {
     if (this.isModalOpen == true) {
       return
     }
+    console.log("dddu2", item);
     if (item.isSales === true) {
+      console.log("dddu", item);
+
       this.combinedData[i][field] = item[field] ?? '';
       const productIndex = this.combinedData.findIndex(p => p.productId === item.deductFromProduct);
       if (productIndex === -1) {
         return
       }
-      this.combinedData[productIndex]['transfer'] = item[field] ?? '';
+      let value = item[field] ?? 0
+      value = value * item.deductAmount
+      this.combinedData[productIndex]['transfer'] = Number(this.combinedData[productIndex]['transfer']) + value;
 
       const productUnit = this.combinedData[productIndex].productUnit ?? 1;
 
