@@ -1297,6 +1297,7 @@ export class BranchComponent {
         add: report?.add ?? '',
         staffMeal: report?.staffMeal ?? '',
         transfer: report?.transfer ?? '',
+        directTransfer: report?.directTransfer ?? '',
         dameged: report?.dameged ?? '',
         sales: report?.sales ?? ''
       };
@@ -1520,6 +1521,8 @@ export class BranchComponent {
     let sales: number;
     let staffMeal: number;
     let transfer: number;
+    let directTransfer: number;
+
     let dameged: number;
 
     if (openingStock) {
@@ -1536,6 +1539,7 @@ export class BranchComponent {
         ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
         : Number(reportOrData?.staffMeal ?? 0);
       transfer = Number(reportOrData?.transfer ?? 0);
+      directTransfer = Number(reportOrData?.directTransfer ?? 0);
       dameged = reportOrData?.products
         ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
         : Number(reportOrData?.dameged ?? 0);
@@ -1553,6 +1557,7 @@ export class BranchComponent {
         ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
         : Number(reportOrData?.staffMeal ?? 0);
       transfer = Number(reportOrData?.transfer ?? 0);
+      directTransfer = Number(reportOrData?.directTransfer ?? 0);
       dameged = reportOrData?.products
         ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
         : Number(reportOrData?.dameged ?? 0);
@@ -1565,6 +1570,7 @@ export class BranchComponent {
       sales -
       staffMeal -
       transfer -
+      directTransfer -
       dameged;
 
     return isNaN(total) ? '-' : total
@@ -1657,20 +1663,24 @@ export class BranchComponent {
       return
     }
     console.log("dddu2", item);
-    if (item.isSales === true) {
-      console.log("dddu", item);
-
-      this.combinedData[i][field] = item[field] ?? '';
-      const productIndex = this.combinedData.findIndex(p => p.productId === item.deductFromProduct);
-      if (productIndex === -1) {
-        return
-      }
+    const productIndex = this.combinedData.findIndex(p => p.productId === item.deductFromProduct);
+    if (productIndex !== -1) {
       let value = item[field] ?? 0
       value = value * item.deductAmount
-      this.combinedData[productIndex]['transfer'] = Number(this.combinedData[productIndex]['transfer']) + value;
+      this.combinedData[productIndex]['directTransfer'] = value;
 
       const productUnit = this.combinedData[productIndex].productUnit ?? 1;
 
+      this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+        this.combinedData[productIndex],
+        undefined,
+        productUnit
+      );
+    }
+
+    if (item.isSales === true) {
+      this.combinedData[i][field] = item[field] ?? '';
+      const productUnit = this.combinedData[productIndex].productUnit ?? 1;
       this.combinedData[productIndex].closeStock = this.calculateClosingStock(
         this.combinedData[productIndex],
         undefined,
@@ -1952,12 +1962,16 @@ export class BranchComponent {
 
 
 
+    console.log("dddu5", subProduct);
     // فقط إذا تم تعديل المبيعات للحم أو البوكس
-    if (field === 'sales' && (this.combinedData[i].productId === meatId || this.combinedData[i].productId === boxId)) {
+    if (field === 'sales' && (subProduct.productId === meatId || subProduct.productId === boxId)) {
+
       const meatIndex = this.combinedData.findIndex(p => p.productId === meatId);
       const boxIndex = this.combinedData.findIndex(p => p.productId === boxId);
       const cupIndex = this.combinedData.findIndex(p => p.productId === cupId);
-
+      console.log("ddduM", meatIndex);
+      console.log("ddduB", boxIndex);
+      console.log("ddduC", cupIndex);
       if (meatIndex !== -1 && boxIndex !== -1 && cupIndex !== -1) {
         const meatSales = Number(this.combinedData[meatIndex].sales) || 0;
         const boxSales = Number(this.combinedData[boxIndex].sales) || 0;
@@ -2958,6 +2972,7 @@ export class BranchComponent {
         add: report?.add ?? '',
         staffMeal: report?.staffMeal ?? '',
         transfer: report?.transfer ?? '',
+        directTransfer: report?.directTransfer ?? '',
         dameged: report?.dameged ?? '',
         sales: report?.sales ?? '',
         closeStock: report?.closeStock ?? '',
@@ -3099,6 +3114,7 @@ export class BranchComponent {
           item.deductFromProduct,
           products,
           item.transfer,
+          item.directTransfer,
           item.closeStock
         ]);
       } else {
@@ -3113,6 +3129,7 @@ export class BranchComponent {
           item.sales,
           item.staffMeal,
           item.transfer,
+          item.directTransfer,
           item.dameged,
           item.closeStock
         ]);
@@ -3359,6 +3376,7 @@ export class BranchComponent {
             sales: data["sales"],
             staffMeal: data["staffMeal"],
             transfer: data["transfer"],
+            directTransfer: data["directTransfer"],
             dameged: data["dameged"],
             closeStock: data["closeStock"]
           };
