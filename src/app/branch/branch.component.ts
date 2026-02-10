@@ -449,21 +449,22 @@ export class BranchComponent {
     const productUpdates = await this.productsServices.getLastupdate(city, typeId, this.apiService);
 
     // جلب البيانات بالكامل من الخدمة
-    // const allProducts = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService);
+    // جلب البيانات بالكامل من الخدمة
+    const allProducts = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService);
 
-    // // تطبيق شرط العرض (showOn) هنا
-    // this.data = allProducts.filter(product => {
-    //   // إذا كان showOn يساوي * اعرضه للكل
-    //   if (product.showOn === '*') {
-    //     return true;
-    //   }
+    // تطبيق شرط العرض مع مراعاة عدم وجود الحقل
+    this.data = allProducts.filter(product => {
+      // 1. إذا كان الحقل غير موجود أصلاً (undefined)
+      // 2. أو إذا كان يساوي '*'
+      if (!product.showOn || product.showOn === '*') {
+        return true;
+      }
 
-    //   // إذا كان showOn يحتوي على معرف الفرع الحالي
-    //   // ملاحظة: تأكد أن this.branch.id يحتوي على القيمة الصحيحة في هذا المكون
-    //   return product.showOn && product.showOn.includes(this.branch.id);
-    // });
+      // 3. إذا كان الحقل موجوداً، نتحقق من وجود معرف الفرع بداخله
+      return product.showOn.includes(this.branch.id);
+    });
 
-    this.data = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService)
+    // this.data = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService)
 
     // const productsInfo = this.productsServices.getProductsFromLocal(city, typeId);
 
