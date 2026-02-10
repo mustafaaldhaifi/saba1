@@ -449,21 +449,21 @@ export class BranchComponent {
     const productUpdates = await this.productsServices.getLastupdate(city, typeId, this.apiService);
 
     // جلب البيانات بالكامل من الخدمة
-    const allProducts = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService);
+    // const allProducts = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService);
 
-    // تطبيق شرط العرض (showOn) هنا
-    this.data = allProducts.filter(product => {
-      // إذا كان showOn يساوي * اعرضه للكل
-      if (product.showOn === '*') {
-        return true;
-      }
+    // // تطبيق شرط العرض (showOn) هنا
+    // this.data = allProducts.filter(product => {
+    //   // إذا كان showOn يساوي * اعرضه للكل
+    //   if (product.showOn === '*') {
+    //     return true;
+    //   }
 
-      // إذا كان showOn يحتوي على معرف الفرع الحالي
-      // ملاحظة: تأكد أن this.branch.id يحتوي على القيمة الصحيحة في هذا المكون
-      return product.showOn && product.showOn.includes(this.branch.id);
-    });
+    //   // إذا كان showOn يحتوي على معرف الفرع الحالي
+    //   // ملاحظة: تأكد أن this.branch.id يحتوي على القيمة الصحيحة في هذا المكون
+    //   return product.showOn && product.showOn.includes(this.branch.id);
+    // });
 
-    // this.data = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService)
+    this.data = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService)
 
     // const productsInfo = this.productsServices.getProductsFromLocal(city, typeId);
 
