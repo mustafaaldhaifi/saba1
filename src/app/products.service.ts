@@ -163,6 +163,7 @@ export class ProductsService {
         deductFromProduct: doc.data()['deductFromProduct'] ?? '',
         parentProduct: doc.data()['parentProduct'],
         unit: doc.data()['unit'],
+        showOn: doc.data()['showOn'] ?? '*',
         unitF: doc.data()['unitF'],
         createdAt: doc.data()['createdAt'],
       }));

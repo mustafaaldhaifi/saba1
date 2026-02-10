@@ -442,11 +442,28 @@ export class BranchComponent {
     const typeId = this.selectedType.id;
 
 
+    console.log("citytt", this.branch.id);
+
     // const productsInfo = this.productService.getProductsFromLocal(city, typeId);
 
     const productUpdates = await this.productsServices.getLastupdate(city, typeId, this.apiService);
 
-    this.data = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService)
+    // جلب البيانات بالكامل من الخدمة
+    const allProducts = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService);
+
+    // تطبيق شرط العرض (showOn) هنا
+    this.data = allProducts.filter(product => {
+      // إذا كان showOn يساوي * اعرضه للكل
+      if (product.showOn === '*') {
+        return true;
+      }
+
+      // إذا كان showOn يحتوي على معرف الفرع الحالي
+      // ملاحظة: تأكد أن this.branch.id يحتوي على القيمة الصحيحة في هذا المكون
+      return product.showOn && product.showOn.includes(this.branch.id);
+    });
+
+    // this.data = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService)
 
     // const productsInfo = this.productsServices.getProductsFromLocal(city, typeId);
 
@@ -1726,7 +1743,7 @@ export class BranchComponent {
 
     if (item.isSales === true) {
       this.combinedData[i][field] = item[field] ?? '';
-       this.processDirectTransfer();
+      this.processDirectTransfer();
       const productUnit = this.combinedData[productIndex].productUnit ?? 1;
       this.combinedData[productIndex].closeStock = this.calculateClosingStock(
         this.combinedData[productIndex],
