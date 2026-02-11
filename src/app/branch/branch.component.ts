@@ -1309,12 +1309,44 @@ export class BranchComponent {
 
 
   ifThereisEmptyValue(): boolean {
-    return this.combinedData.some(item =>
-      item.openingStockQnt === null ||
-      item.openingStockQnt === undefined ||
-      item.openingStockQnt === ''
-    );
+    return this.combinedData.some(item => {
+      // إذا كان المنتج مبيعات، نعتبره "غير فارغ" دائماً (نرجح false للـ some)
+      if (item.isSales === true) {
+        return false;
+      }
+
+      // للمنتجات الأخرى، نتحقق من الفراغ
+      const isEmpty = item.openingStockQnt === null ||
+        item.openingStockQnt === undefined ||
+        item.openingStockQnt === '';
+
+      if (isEmpty) {
+        console.warn(`المنتج "${item.name}" يفتقد لقيمة مخزون أول المدة.`);
+      }
+
+      return isEmpty;
+    });
   }
+  // ifThereisEmptyValue(): boolean {
+  //   // 1. فلترة العناصر الفارغة وتخزينها في متغير
+  //   const emptyItems = this.combinedData.filter(item =>
+  //     item.openingStockQnt === null ||
+  //     item.openingStockQnt === undefined ||
+  //     item.openingStockQnt === ''
+  //   );
+
+  //   // 2. إذا وجدنا عناصر فارغة، نقوم بطباعتها فوراً
+  //   if (emptyItems.length > 0) {
+  //     console.warn("⚠️ تم العثور على حقول فارغة في المنتجات التالية:");
+  //     console.table(emptyItems.map(item => ({
+  //       المنتج: item.name || item.productId,
+  //       الحالة: 'مخزون أول المدة فارغ'
+  //     })));
+  //   }
+
+  //   // 3. إرجاع true إذا كانت القائمة تحتوي على أي عنصر فارغ (لتعطيل الزر)
+  //   return emptyItems.length > 0;
+  // }
 
   combineDataWithReports() {
     // 1. توليد البيانات الأساسية فقط (بدون حساب closeStock)
@@ -1549,59 +1581,106 @@ export class BranchComponent {
   //   console.log('productsHaveSubProducts', productsHaveSubProducts);
   // }
 
+  // calculateClosingStock(
+  //   reportOrData: any,
+  //   openingStock?: any,
+  //   unit: number = 1 // default to 1 if not passed
+  // ): number | string {
+  //   let openingStockQnt: number;
+  //   let recieved: number;
+  //   let add: number;
+  //   let sales: number;
+  //   let staffMeal: number;
+  //   let transfer: number;
+  //   let directTransfer: number;
+
+  //   let dameged: number;
+
+  //   if (openingStock) {
+  //     // Two-argument version
+  //     openingStockQnt = Number(openingStock?.openingStockQnt ?? 0);
+  //     recieved = Number(reportOrData?.recieved ?? 0);
+  //     add = reportOrData?.products
+  //       ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.add || 0), 0)
+  //       : Number(reportOrData?.add ?? 0);
+  //     sales = reportOrData?.products
+  //       ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.sales || 0), 0)
+  //       : Number(reportOrData?.sales ?? 0);
+  //     staffMeal = reportOrData?.products
+  //       ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
+  //       : Number(reportOrData?.staffMeal ?? 0);
+  //     transfer = Number(reportOrData?.transfer ?? 0);
+  //     directTransfer = Number(reportOrData?.directTransfer ?? 0);
+  //     dameged = reportOrData?.products
+  //       ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
+  //       : Number(reportOrData?.dameged ?? 0);
+  //   } else {
+  //     // One-object version
+  //     openingStockQnt = Number(reportOrData?.openingStockQnt ?? 0);
+  //     recieved = Number(reportOrData?.recieved ?? 0);
+  //     add = reportOrData?.products
+  //       ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.add || 0), 0)
+  //       : Number(reportOrData?.add ?? 0);
+  //     sales = reportOrData?.products
+  //       ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.sales || 0), 0)
+  //       : Number(reportOrData?.sales ?? 0);
+  //     staffMeal = reportOrData?.products
+  //       ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
+  //       : Number(reportOrData?.staffMeal ?? 0);
+  //     transfer = Number(reportOrData?.transfer ?? 0);
+  //     directTransfer = Number(reportOrData?.directTransfer ?? 0);
+  //     dameged = reportOrData?.products
+  //       ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
+  //       : Number(reportOrData?.dameged ?? 0);
+  //   }
+
+  //   const total =
+  //     openingStockQnt +
+  //     (recieved * unit) +
+  //     add -
+  //     sales -
+  //     staffMeal -
+  //     transfer -
+  //     directTransfer -
+  //     dameged;
+
+  //   return isNaN(total) ? '-' : total
+  // }
+
+
   calculateClosingStock(
     reportOrData: any,
     openingStock?: any,
-    unit: number = 1 // default to 1 if not passed
+    unit: number = 1
   ): number | string {
-    let openingStockQnt: number;
-    let recieved: number;
-    let add: number;
-    let sales: number;
-    let staffMeal: number;
-    let transfer: number;
-    let directTransfer: number;
 
-    let dameged: number;
+    // 1. تحديد مصدر مخزون أول المدة
+    const source = openingStock ? openingStock : reportOrData;
+    const openingStockQnt = Number(source?.openingStockQnt ?? 0);
 
-    if (openingStock) {
-      // Two-argument version
-      openingStockQnt = Number(openingStock?.openingStockQnt ?? 0);
-      recieved = Number(reportOrData?.recieved ?? 0);
-      add = reportOrData?.products
-        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.add || 0), 0)
-        : Number(reportOrData?.add ?? 0);
-      sales = reportOrData?.products
-        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.sales || 0), 0)
-        : Number(reportOrData?.sales ?? 0);
-      staffMeal = reportOrData?.products
-        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
-        : Number(reportOrData?.staffMeal ?? 0);
-      transfer = Number(reportOrData?.transfer ?? 0);
-      directTransfer = Number(reportOrData?.directTransfer ?? 0);
-      dameged = reportOrData?.products
-        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
-        : Number(reportOrData?.dameged ?? 0);
+    // 2. استخراج القيم الأساسية
+    const recieved = Number(reportOrData?.recieved ?? 0);
+    const transfer = Number(reportOrData?.transfer ?? 0);
+    const directTransfer = Number(reportOrData?.directTransfer ?? 0);
+
+    // 3. حساب القيم التراكمية
+    let add = 0, sales = 0, staffMeal = 0, dameged = 0;
+
+    if (reportOrData?.products && Array.isArray(reportOrData.products)) {
+      reportOrData.products.forEach((p: any) => {
+        add += Number(p.add ?? 0);
+        sales += Number(p.sales ?? 0);
+        staffMeal += Number(p.staffMeal ?? 0);
+        dameged += Number(p.dameged ?? 0);
+      });
     } else {
-      // One-object version
-      openingStockQnt = Number(reportOrData?.openingStockQnt ?? 0);
-      recieved = Number(reportOrData?.recieved ?? 0);
-      add = reportOrData?.products
-        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.add || 0), 0)
-        : Number(reportOrData?.add ?? 0);
-      sales = reportOrData?.products
-        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.sales || 0), 0)
-        : Number(reportOrData?.sales ?? 0);
-      staffMeal = reportOrData?.products
-        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.staffMeal || 0), 0)
-        : Number(reportOrData?.staffMeal ?? 0);
-      transfer = Number(reportOrData?.transfer ?? 0);
-      directTransfer = Number(reportOrData?.directTransfer ?? 0);
-      dameged = reportOrData?.products
-        ? reportOrData.products.reduce((total: number, p: any) => total + Number(p.dameged || 0), 0)
-        : Number(reportOrData?.dameged ?? 0);
+      add = Number(reportOrData?.add ?? 0);
+      sales = Number(reportOrData?.sales ?? 0);
+      staffMeal = Number(reportOrData?.staffMeal ?? 0);
+      dameged = Number(reportOrData?.dameged ?? 0);
     }
 
+    // 4. المعادلة النهائية
     const total =
       openingStockQnt +
       (recieved * unit) +
@@ -1612,10 +1691,24 @@ export class BranchComponent {
       directTransfer -
       dameged;
 
-    return isNaN(total) ? '-' : total
+    // --- طباعة القيم في الـ Console ---
+    console.log(`--- Calculation for Product: ${reportOrData?.name || 'Unknown'} ---`);
+    console.table({
+      "Opening Stock": openingStockQnt,
+      "Recieved (Raw)": recieved,
+      "Unit": unit,
+      "Recieved * Unit": recieved * unit,
+      "Additions (+)": add,
+      "Sales (-)": sales,
+      "Staff Meal (-)": staffMeal,
+      "Transfer (-)": transfer,
+      "Direct Transfer (-)": directTransfer,
+      "Damaged (-)": dameged,
+      "Final Total": total
+    });
+
+    return isNaN(total) ? '-' : total;
   }
-
-
 
   isModalOpen = false;
 
@@ -1802,13 +1895,13 @@ export class BranchComponent {
     // if (item.isSales === true) {
     //   this.combinedData[i][field] = item[field] ?? '';
     //   this.processDirectTransfer();
-      // const productUnit = this.combinedData[productIndex].productUnit ?? 1;
-      // this.combinedData[productIndex].closeStock = this.calculateClosingStock(
-      //   this.combinedData[productIndex],
-      //   undefined,
-      //   productUnit
-      // );
-      // return
+    // const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+    // this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+    //   this.combinedData[productIndex],
+    //   undefined,
+    //   productUnit
+    // );
+    // return
     // }
 
     if (subProduct !== null) {
