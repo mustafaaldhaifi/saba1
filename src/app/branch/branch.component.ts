@@ -452,17 +452,39 @@ export class BranchComponent {
     // جلب البيانات بالكامل من الخدمة
     const allProducts = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService);
 
-    // تطبيق شرط العرض مع مراعاة عدم وجود الحقل
+    console.log("all products", allProducts);
+
+
     this.data = allProducts.filter(product => {
-      // 1. إذا كان الحقل غير موجود أصلاً (undefined)
-      // 2. أو إذا كان يساوي '*'
-      if (!product.showOn || product.showOn === '*') {
+      // 1. التأكد من أن الحقل موجود وأنه مصفوفة
+      const showOn = product.showOn;
+
+      // 2. إذا كان الحقل غير موجود أو المصفوفة فارغة، اعرض المنتج (حسب رغبتك)
+      if (!showOn || (Array.isArray(showOn) && showOn.length === 0)) {
         return true;
       }
 
-      // 3. إذا كان الحقل موجوداً، نتحقق من وجود معرف الفرع بداخله
-      return product.showOn.includes(this.branch.id);
+      // 3. إذا كان الحقل عبارة عن مصفوفة، نتحقق من القيم داخلها
+      if (Array.isArray(showOn)) {
+        // التحقق إذا كانت تحتوي على '*' أو تحتوي على معرف الفرع الحالي
+        return showOn.includes('*') || showOn.includes(this.branch.id);
+      }
+
+      // 4. حالة احتياطية: إذا كان showOn نصاً عادياً وليس مصفوفة (للتوافق مع البيانات القديمة)
+      return showOn === '*' || showOn === this.branch.id;
     });
+
+    // تطبيق شرط العرض مع مراعاة عدم وجود الحقل
+    // this.data = allProducts.filter(product => {
+    //   // 1. إذا كان الحقل غير موجود أصلاً (undefined)
+    //   // 2. أو إذا كان يساوي '*'
+    //   if (!product.showOn || product.showOn === '*') {
+    //     return true;
+    //   }
+
+    //   // 3. إذا كان الحقل موجوداً، نتحقق من وجود معرف الفرع بداخله
+    //   return product.showOn.includes(this.branch.id);
+    // });
 
     // this.data = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService)
 
@@ -1306,8 +1328,7 @@ export class BranchComponent {
         productName: product.name,
         productUnit: product.unit,
         isSales: product.isSales,
-        deductFromProduct: product.deductFromProduct,
-        deductAmount: product.deductAmount,
+        deductions: product.deductions,
         parentProduct: product.parentProduct,
         openingStockId: this.isReadDailyMode ? (report?.openingStockId ?? 1) : (openingStock?.id ?? -1),
         openingStockQnt: this.isReadDailyMode ? (report?.openingStockQnt ?? '') : (openingStock?.openingStockQnt ?? ''),
@@ -1674,6 +1695,47 @@ export class BranchComponent {
       this.isModalOpen = true
     }
   }
+
+  // processDirectTransfer() {
+  //   // 1. تصفير القيم لجميع المنتجات قبل الحساب
+  //   this.combinedData.forEach(p => p.directTransfer = "");
+
+  //   this.combinedData.forEach((item) => {
+  //     // 2. تحديد الأهداف (الفرعية أو العنصر نفسه)
+  //     const hasSubProducts = item.products?.length > 0;
+  //     const targets = hasSubProducts ? item.products : [item];
+
+  //     targets.forEach((target: any) => {
+  //       const targetId = target.deductFromProduct;
+
+  //       if (targetId) {
+  //         const productIndex = this.combinedData.findIndex(p => p.productId === targetId);
+
+  //         if (productIndex !== -1) {
+  //           // --- التعديل الجوهري هنا ---
+  //           const amount = target.deductAmount || 0;
+
+  //           // نبحث عن المبيعات في الفرعي أولاً، إذا لم توجد نأخذ مبيعات الأب
+  //           const salesValue = target.sales ?? item.sales ?? 0;
+
+  //           const currentVal = this.combinedData[productIndex].directTransfer === "" ? 0 : this.combinedData[productIndex].directTransfer;
+
+  //           // الحساب: القيمة السابقة + (كمية الخصم * المبيعات)
+  //           this.combinedData[productIndex].directTransfer = currentVal + (amount * salesValue);
+
+  //           // تحديث المخزون
+  //           const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+  //           this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+  //             this.combinedData[productIndex],
+  //             undefined,
+  //             productUnit
+  //           );
+  //         }
+  //       }
+  //     });
+  //   });
+  // }
+
   processDirectTransfer() {
     // 1. تصفير القيم لجميع المنتجات قبل الحساب
     this.combinedData.forEach(p => p.directTransfer = "");
@@ -1684,31 +1746,38 @@ export class BranchComponent {
       const targets = hasSubProducts ? item.products : [item];
 
       targets.forEach((target: any) => {
-        const targetId = target.deductFromProduct;
+        // التحقق من وجود مصفوفة الخصومات
+        if (target.deductions && Array.isArray(target.deductions)) {
 
-        if (targetId) {
-          const productIndex = this.combinedData.findIndex(p => p.productId === targetId);
+          // --- التعديل الجوهري هنا: التعامل مع المصفوفة ---
+          target.deductions.forEach((deduction: any) => {
+            // نفترض أن شكل العنصر داخل المصفوفة هو { productId: "...", amount: 10 }
+            // أو حسب ما ذكرت [productId, amount] إذا كانت مصفوفة بسيطة
+            const targetId = deduction.productId;
+            const amount = deduction.amount || 0;
 
-          if (productIndex !== -1) {
-            // --- التعديل الجوهري هنا ---
-            const amount = target.deductAmount || 0;
+            if (targetId) {
+              const productIndex = this.combinedData.findIndex(p => p.productId === targetId);
 
-            // نبحث عن المبيعات في الفرعي أولاً، إذا لم توجد نأخذ مبيعات الأب
-            const salesValue = target.sales ?? item.sales ?? 0;
+              if (productIndex !== -1) {
+                // نبحث عن المبيعات في الفرعي أولاً، إذا لم توجد نأخذ مبيعات الأب
+                const salesValue = target.sales ?? item.sales ?? 0;
 
-            const currentVal = this.combinedData[productIndex].directTransfer === "" ? 0 : this.combinedData[productIndex].directTransfer;
+                const currentVal = this.combinedData[productIndex].directTransfer === "" ? 0 : this.combinedData[productIndex].directTransfer;
 
-            // الحساب: القيمة السابقة + (كمية الخصم * المبيعات)
-            this.combinedData[productIndex].directTransfer = currentVal + (amount * salesValue);
+                // الحساب التراكمي: القيمة السابقة + (كمية الخصم من المصفوفة * المبيعات)
+                this.combinedData[productIndex].directTransfer = currentVal + (amount * salesValue);
 
-            // تحديث المخزون
-            const productUnit = this.combinedData[productIndex].productUnit ?? 1;
-            this.combinedData[productIndex].closeStock = this.calculateClosingStock(
-              this.combinedData[productIndex],
-              undefined,
-              productUnit
-            );
-          }
+                // تحديث المخزون للمنتج المتأثر بالخصم
+                const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+                this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+                  this.combinedData[productIndex],
+                  undefined,
+                  productUnit
+                );
+              }
+            }
+          });
         }
       });
     });
@@ -1721,37 +1790,53 @@ export class BranchComponent {
     }
     console.log("dddu2", item);
 
-    let deductFromProduct
-    if (subProduct !== null) {
-      deductFromProduct = subProduct.deductFromProduct
-    } else {
-      deductFromProduct = item.deductFromProduct
-    }
-    const productIndex = this.combinedData.findIndex(p => p.productId === deductFromProduct);
-    // if (productIndex !== -1) {
-    //   let value = item[field] ?? 0
-    //   value = value * item.deductAmount
-    //   this.combinedData[productIndex]['directTransfer'] = value;
+    // let deductFromProduct
+    // if (subProduct !== null) {
+    //   deductFromProduct = subProduct.deductFromProduct
+    // } else {
+    //   deductFromProduct = item.deductFromProduct
+    // }
+    // const productIndex = this.combinedData.findIndex(p => p.productId === deductFromProduct);
 
-    //   const productUnit = this.combinedData[productIndex].productUnit ?? 1;
 
-    //   this.combinedData[productIndex].closeStock = this.calculateClosingStock(
-    //     this.combinedData[productIndex],
-    //     undefined,
-    //     productUnit
-    //   );
+    // if (item.isSales === true) {
+    //   this.combinedData[i][field] = item[field] ?? '';
+    //   this.processDirectTransfer();
+      // const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+      // this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+      //   this.combinedData[productIndex],
+      //   undefined,
+      //   productUnit
+      // );
+      // return
     // }
 
-    if (item.isSales === true) {
+    if (subProduct !== null) {
+      subProduct[field] = subProduct[field] ?? '';
+    } else {
       this.combinedData[i][field] = item[field] ?? '';
+    }
+
+    // 2. التحقق مما إذا كان المنتج "مبيعات" ويحتوي على مصفوفة خصومات
+    // نستخدم الاختيار الشرطي (Optional Chaining) للوصول للخصومات بأمان
+    const target = subProduct ?? item;
+    const hasDeductions = target.deductions && Array.isArray(target.deductions) && target.deductions.length > 0;
+
+    if (item.isSales === true) {
+
+      // 3. استدعاء المحرك الرئيسي لمعالجة كل الانتقالات المباشرة بناءً على المصفوفة
       this.processDirectTransfer();
-      const productUnit = this.combinedData[productIndex].productUnit ?? 1;
-      this.combinedData[productIndex].closeStock = this.calculateClosingStock(
-        this.combinedData[productIndex],
-        undefined,
-        productUnit
-      );
+
+      //  const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+      // this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+      //   this.combinedData[productIndex],
+      //   undefined,
+      //   productUnit
+      // );
       return
+      // 4. تحديث المخزون النهائي للمنتجات المتأثرة
+      // ملاحظة: بما أن processDirectTransfer تقوم بتحديث المخزون داخلياً لكل منتج متأثر،
+      // فلا حاجة لتكرار الكود هنا لكل منتج على حدة.
     }
     const productUnit = item.productUnit ?? 1;
 
@@ -3169,8 +3254,7 @@ export class BranchComponent {
             element.productName,
             element.add,
             element.isSales ?? false,
-            element.deductFromProduct,
-            element.deductAmount,
+            element.deductions,
             element.sales,
             element.staffMeal,
             element.dameged,
@@ -3181,8 +3265,7 @@ export class BranchComponent {
           item.openingStockQnt,
           item.recieved,
           item.isSales ?? false,
-          item.deductAmount,
-          item.deductFromProduct,
+          item.deductions,
           products,
           item.transfer,
           item.directTransfer,
@@ -3194,8 +3277,7 @@ export class BranchComponent {
           item.openingStockQnt,
           item.recieved,
           item.isSales ?? false,
-          item.deductAmount,
-          item.deductFromProduct,
+          item.deductions,
           item.add,
           item.sales,
           item.staffMeal,
