@@ -4016,7 +4016,7 @@ export class BranchComponent {
 
   isSundy() {
     if (this.isAdmin) {
-      return false;
+      return true;
     }
 
     const today = new Date();
@@ -4027,7 +4027,7 @@ export class BranchComponent {
   isDisabledDailyField(): boolean {
     // إذا كان أدمن → الحقل دائمًا مفعّل
     if (this.isAdmin) {
-      return true;
+      return false;
     }
 
 
