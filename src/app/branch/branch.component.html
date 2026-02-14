@@ -470,7 +470,7 @@
                             </ng-template>
 
                         </td>
-                        <td>
+                        <td *ngIf="!item.isSales">
                             <!-- {{calculateClosingStock(combinedData[i])}} -->
                             {{ combinedData[i].closeStock}}
                         </td>

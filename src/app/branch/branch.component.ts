@@ -1915,22 +1915,22 @@ export class BranchComponent {
     const target = subProduct ?? item;
     const hasDeductions = target.deductions && Array.isArray(target.deductions) && target.deductions.length > 0;
 
-    if (item.isSales === true) {
+    // if (item.isSales === true) {
 
-      // 3. استدعاء المحرك الرئيسي لمعالجة كل الانتقالات المباشرة بناءً على المصفوفة
-      this.processDirectTransfer();
+    //   // 3. استدعاء المحرك الرئيسي لمعالجة كل الانتقالات المباشرة بناءً على المصفوفة
+    //   this.processDirectTransfer();
 
-      //  const productUnit = this.combinedData[productIndex].productUnit ?? 1;
-      // this.combinedData[productIndex].closeStock = this.calculateClosingStock(
-      //   this.combinedData[productIndex],
-      //   undefined,
-      //   productUnit
-      // );
-      return
-      // 4. تحديث المخزون النهائي للمنتجات المتأثرة
-      // ملاحظة: بما أن processDirectTransfer تقوم بتحديث المخزون داخلياً لكل منتج متأثر،
-      // فلا حاجة لتكرار الكود هنا لكل منتج على حدة.
-    }
+    //   //  const productUnit = this.combinedData[productIndex].productUnit ?? 1;
+    //   // this.combinedData[productIndex].closeStock = this.calculateClosingStock(
+    //   //   this.combinedData[productIndex],
+    //   //   undefined,
+    //   //   productUnit
+    //   // );
+    //   return
+    //   // 4. تحديث المخزون النهائي للمنتجات المتأثرة
+    //   // ملاحظة: بما أن processDirectTransfer تقوم بتحديث المخزون داخلياً لكل منتج متأثر،
+    //   // فلا حاجة لتكرار الكود هنا لكل منتج على حدة.
+    // }
     const productUnit = item.productUnit ?? 1;
 
     // if (field === 'recieved') {
@@ -2008,7 +2008,9 @@ export class BranchComponent {
     // Recalculate closeStock using productUnit
     const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
     this.combinedData[i].closeStock = updatedCloseStock;
-    if (this.combinedData[i].closeStock < 0) {
+
+    if (this.combinedData[i].closeStock < 0 && this.combinedData[i].isSales !== true) {
+
       const modalRef = this.modalService.open(AlertDialogComponent, {
         text: "يتم عمل جرد ميداني للصنف للتأكد من الكمية"
       });
