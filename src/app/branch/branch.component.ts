@@ -4015,6 +4015,10 @@ export class BranchComponent {
   // }
 
   isSundy() {
+    if (this.isAdmin) {
+      return false;
+    }
+
     const today = new Date();
     // إذا كان اليوم أحد → معطّل
     return today.getDay() === 0; // 0 = Sunday
