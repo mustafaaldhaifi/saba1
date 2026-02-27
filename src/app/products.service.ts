@@ -150,6 +150,7 @@ export class ProductsService {
         collection(apiService.db, "products"),
         where("city", '==', city),
         where("typeId", "==", typeId),
+        // orderBy("sortOrder", "asc"),
         orderBy("createdAt", "asc")
       );
 
@@ -159,15 +160,31 @@ export class ProductsService {
         id: doc.id,
         name: doc.data()['name'],
         isSales: doc.data()['isSales'] ?? false,
-        deductions:doc.data()['deductions'] ?? [],
+        deductions: doc.data()['deductions'] ?? [],
         // deductAmount: doc.data()['deductAmount'] ?? 0,
         // deductFromProduct: doc.data()['deductFromProduct'] ?? '',
+        sortOrder: doc.data()['sortOrder'] ?? 0, // القيمة الافتراضية 0
         parentProduct: doc.data()['parentProduct'],
         unit: doc.data()['unit'],
         showOn: doc.data()['showOn'] ?? ['*'],
         unitF: doc.data()['unitF'],
-        createdAt: doc.data()['createdAt'],
+        createdAt: doc.data()['createdAt']?.toDate()
       }));
+
+      products.sort((a, b) => {
+        // 1. إذا كان كلاهما يملك sortOrder أكبر من 0
+        if (a.sortOrder > 0 && b.sortOrder > 0) {
+          return a.sortOrder - b.sortOrder;
+        }
+
+        // 2. إذا كان أحدهما فقط يملك sortOrder (اجعله في المقدمة)
+        if (a.sortOrder > 0 && b.sortOrder === 0) return -1;
+        if (a.sortOrder === 0 && b.sortOrder > 0) return 1;
+
+        // 3. إذا كان كلاهما صفر، رتب حسب التاريخ (الأقدم أولاً أو الأحدث حسب رغبتك)
+        // هنا الترتيب من الأقدم للأحدث ليحافظ على تسلسل "المنتجات السابقة"
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
 
       this.updateProductInLocal(products, city, typeId);
       console.log("products get from server");
