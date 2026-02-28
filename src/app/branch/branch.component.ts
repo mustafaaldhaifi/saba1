@@ -460,8 +460,11 @@ export class BranchComponent {
       const showOn = product.showOn;
 
       // 2. إذا كان الحقل غير موجود أو المصفوفة فارغة، اعرض المنتج (حسب رغبتك)
-      if (!showOn || (Array.isArray(showOn) && showOn.length === 0)) {
+      if (!showOn) {
         return true;
+      }
+      if ((Array.isArray(showOn) && showOn.length === 0)) {
+        return false;
       }
 
       // 3. إذا كان الحقل عبارة عن مصفوفة، نتحقق من القيم داخلها
