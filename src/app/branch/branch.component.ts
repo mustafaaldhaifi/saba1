@@ -1668,7 +1668,7 @@ export class BranchComponent {
 
 
     // 3. حساب القيم التراكمية
-    let add = 0, sales = 0, staffMeal = 0, dameged = 0,freeIncrease=0;
+    let add = 0, sales = 0, staffMeal = 0, dameged = 0, freeIncrease = 0;
 
     if (reportOrData?.products && Array.isArray(reportOrData.products)) {
       reportOrData.products.forEach((p: any) => {
@@ -2047,7 +2047,7 @@ export class BranchComponent {
     // this.openModal(field, item, i, subProduct)
 
 
-    if (field === 'add' || field === 'transfer' || field === 'dameged' || field === 'recieved') {
+    if (field === 'add' || field === 'transfer' || field === 'dameged' || field === 'recieved' || field === 'freeIncrease') {
       // console.log("this.handleDilogReson", this.handleDilogReson);
       console.log("eeee1", field);
       console.log('eeee1', Number(item[field] ?? 0));
@@ -2067,7 +2067,18 @@ export class BranchComponent {
               // this.showReasonDialog = true
               this.openModal(field, item, i, subProduct)
 
+            }
+          }
+        }
 
+        if (field === 'freeIncrease') {
+          if (subProduct) {
+            if (Number(item.products[subProduct.i][field] ?? 0) !== 0) {
+              this.openModal(field, item, i, subProduct)
+            }
+          } else {
+            if (Number(item[field] ?? 0) !== 0) {
+              this.openModal(field, item, i, subProduct)
             }
           }
         }
@@ -3902,23 +3913,26 @@ export class BranchComponent {
           const isRecieved = Number(item.recieved) !== 0;
 
           const isDamagedPositive = Number(subitem?.dameged ?? 0) > 0;
+          const isFreeIncreasePositive = Number(subitem?.freeIncrease ?? 0) > 0;
 
-          return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved;
+          return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved || isFreeIncreasePositive;
         });
       } else {
         const isAddNegative = Number(item.add) !== 0;
         const isTransferNonZero = Number(item.transfer) !== 0;
         const isDamagedPositive = Number(item.dameged) > 0;
         const isRecieved = Number(item.recieved) !== 0;
+        const isFreeIncreasePositive = Number(item.freeIncrease) > 0;
 
         console.log('isAddNegative', isAddNegative);
         console.log('isTransferNonZero', isTransferNonZero);
         console.log('isDamagedPositive', isDamagedPositive);
         console.log('isREcievesPositive', isRecieved);
+        console.log('isFreeIncreasePositive', isFreeIncreasePositive);
 
 
 
-        return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved;
+        return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved || isFreeIncreasePositive;
       }
 
     });
