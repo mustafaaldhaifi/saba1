@@ -467,7 +467,7 @@ export class PdfService {
           // 2. openingStockQnt (خلية مدمجة rowspan فقط لأول صف)
           if (i === 0) {
             row.push({
-              content: item.openingStockQnt,
+              content: item.isSales ? '' : item.openingStockQnt,
               rowSpan: productCount,
               styles: { halign: 'center', valign: 'middle', ineWidth: 0, },
             });
@@ -479,7 +479,7 @@ export class PdfService {
           // 3. recieved (نفس الطريقة)
           if (i === 0) {
             row.push({
-              content: item.recieved,
+              content: item.isSales ? '' : item.recieved,
               rowSpan: productCount,
               styles: { halign: 'center', valign: 'middle' },
             });
@@ -489,26 +489,24 @@ export class PdfService {
           // }
 
           // 4. add
-          console.log("addd", sub.add);
-
-          row.push({ content: sub.add ?? '' });
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.add ?? '') });
 
           // 5. sales
           // لو sub.sales قيمته صفر أو أي قيمة أخرى، نعرضها مباشرة
           row.push({ content: sub.sales != null ? sub.sales : '--' });
 
           // 6. staffMeal
-          row.push({ content: sub.staffMeal ?? '' });
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.staffMeal ?? '') });
 
           // 7. freeIncrease (تعويض زبون) - غير مدمج لأن كل صنف فرعي له كميته
-          row.push({ content: sub.freeIncrease ?? '' });
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.freeIncrease ?? '') });
 
           // 8. canceled (مكنسل)
-          row.push({ content: sub.canceled ?? '' });
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.canceled ?? '') });
 
           if (i === 0) {
             row.push({
-              content: item.directTransfer ?? item.directTransfere ?? '',
+              content: item.isSales ? '' : (item.directTransfer ?? item.directTransfere ?? ''),
               rowSpan: productCount,
               styles: { halign: 'center', valign: 'middle' },
             });
@@ -517,7 +515,7 @@ export class PdfService {
           // 7. transfer (خلية مدمجة مثل السابق)
           if (i === 0) {
             row.push({
-              content: item.transfer ?? '',
+              content: item.isSales ? '' : (item.transfer ?? ''),
               rowSpan: productCount,
               styles: { halign: 'center', valign: 'middle' },
             });
@@ -527,12 +525,12 @@ export class PdfService {
           // }
 
           // 8. dameged
-          row.push({ content: sub.dameged ?? '' });
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.dameged ?? '') });
 
           // 9. closeStock (خلية مدمجة)
           if (i === 0) {
             row.push({
-              content: item.closeStock ?? '',
+              content: item.isSales ? '' : (item.closeStock ?? ''),
               rowSpan: productCount,
               styles: { halign: 'center', valign: 'middle' },
             });
@@ -554,17 +552,17 @@ export class PdfService {
         // منتجات بدون منتجات فرعية
         rows.push([
           { content: item.productName },
-          { content: item.openingStockQnt },
-          { content: item.recieved },
-          { content: item.add },
+          { content: item.isSales ? '' : item.openingStockQnt },
+          { content: item.isSales ? '' : item.recieved },
+          { content: item.isSales ? '' : item.add },
           { content: item.sales },
-          { content: item.staffMeal },
-          { content: item.freeIncrease ?? '' },
-          { content: item.canceled ?? '' },
-          { content: item.directTransfer },
-          { content: item.transfer },
-          { content: item.dameged },
-          { content: item.closeStock },
+          { content: item.isSales ? '' : item.staffMeal },
+          { content: item.isSales ? '' : (item.freeIncrease ?? '') },
+          { content: item.isSales ? '' : (item.canceled ?? '') },
+          { content: item.isSales ? '' : item.directTransfer },
+          { content: item.isSales ? '' : item.transfer },
+          { content: item.isSales ? '' : item.dameged },
+          { content: item.isSales ? '' : item.closeStock },
         ]);
       }
     }
