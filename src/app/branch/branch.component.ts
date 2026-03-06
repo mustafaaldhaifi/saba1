@@ -1372,6 +1372,7 @@ export class BranchComponent {
         staffMeal: report?.staffMeal ?? '',
         transfer: report?.transfer ?? '',
         directTransfer: report?.directTransfer ?? '',
+        canceled: report?.canceled ?? '',
         dameged: report?.dameged ?? '',
         sales: report?.sales ?? ''
       };
@@ -1668,7 +1669,7 @@ export class BranchComponent {
 
 
     // 3. حساب القيم التراكمية
-    let add = 0, sales = 0, staffMeal = 0, dameged = 0, freeIncrease = 0;
+    let add = 0, sales = 0, staffMeal = 0, dameged = 0, freeIncrease = 0, canceled = 0;
 
     if (reportOrData?.products && Array.isArray(reportOrData.products)) {
       reportOrData.products.forEach((p: any) => {
@@ -1677,20 +1678,22 @@ export class BranchComponent {
         staffMeal += Number(p.staffMeal ?? 0);
         dameged += Number(p.dameged ?? 0);
         freeIncrease += Number(p.freeIncrease ?? 0);
-
+        canceled += Number(p.canceled ?? 0);
       });
     } else {
       add = Number(reportOrData?.add ?? 0);
       sales = Number(reportOrData?.sales ?? 0);
       staffMeal = Number(reportOrData?.staffMeal ?? 0);
       freeIncrease = Number(reportOrData?.freeIncrease ?? 0);
+      canceled = Number(reportOrData?.canceled ?? 0);
     }
 
     // 4. المعادلة النهائية
     const total =
       openingStockQnt +
       (recieved * unit) +
-      add -
+      add +
+      canceled -
       sales -
       staffMeal -
       transfer -
@@ -1706,6 +1709,7 @@ export class BranchComponent {
       "Unit": unit,
       "Recieved * Unit": recieved * unit,
       "Additions (+)": add,
+      "Canceled (+)": canceled,
       "Sales (-)": sales,
       "Staff Meal (-)": staffMeal,
       "Transfer (-)": transfer,
@@ -1751,18 +1755,28 @@ export class BranchComponent {
           return;
         }
 
+        const fieldMap: any = {
+          'add': 'الجرد',
+          'dameged': 'التالف',
+          'transfer': 'التحويل',
+          'recieved': 'المستلم',
+          'freeIncrease': 'تعويض زبون',
+          'canceled': 'مكنسل'
+        };
+        const fieldNameAr = fieldMap[field] || field;
+        const formattedReason = `(${fieldNameAr}: ${result})`;
+
         if (field == 'transfer') {
-          this.combinedData[i].note = result
+          const old = this.combinedData[i].note;
+          this.combinedData[i].note = old ? old + " | " + formattedReason : formattedReason;
         } else {
           if (subProduct) {
-            this.combinedData[i].products[subProduct.i].note = result
-            // this.combinedData[i].products[subProduct.i][field] = ""
-
+            const old = this.combinedData[i].products[subProduct.i].note;
+            this.combinedData[i].products[subProduct.i].note = old ? old + " | " + formattedReason : formattedReason;
           } else {
-            // this.combinedData[i][field] = ""
-            this.combinedData[i].note = result
+            const old = this.combinedData[i].note;
+            this.combinedData[i].note = old ? old + " | " + formattedReason : formattedReason;
           }
-
         }
 
         // const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
@@ -2047,7 +2061,7 @@ export class BranchComponent {
     // this.openModal(field, item, i, subProduct)
 
 
-    if (field === 'add' || field === 'transfer' || field === 'dameged' || field === 'recieved' || field === 'freeIncrease') {
+    if (field === 'add' || field === 'transfer' || field === 'dameged' || field === 'recieved' || field === 'freeIncrease' || field === 'canceled') {
       // console.log("this.handleDilogReson", this.handleDilogReson);
       console.log("eeee1", field);
       console.log('eeee1', Number(item[field] ?? 0));
@@ -2072,6 +2086,18 @@ export class BranchComponent {
         }
 
         if (field === 'freeIncrease') {
+          if (subProduct) {
+            if (Number(item.products[subProduct.i][field] ?? 0) !== 0) {
+              this.openModal(field, item, i, subProduct)
+            }
+          } else {
+            if (Number(item[field] ?? 0) !== 0) {
+              this.openModal(field, item, i, subProduct)
+            }
+          }
+        }
+
+        if (field === 'canceled') {
           if (subProduct) {
             if (Number(item.products[subProduct.i][field] ?? 0) !== 0) {
               this.openModal(field, item, i, subProduct)
@@ -3914,8 +3940,9 @@ export class BranchComponent {
 
           const isDamagedPositive = Number(subitem?.dameged ?? 0) > 0;
           const isFreeIncreasePositive = Number(subitem?.freeIncrease ?? 0) > 0;
+          const isCanceledPositive = Number(subitem?.canceled ?? 0) > 0;
 
-          return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved || isFreeIncreasePositive;
+          return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved || isFreeIncreasePositive || isCanceledPositive;
         });
       } else {
         const isAddNegative = Number(item.add) !== 0;
@@ -3923,16 +3950,18 @@ export class BranchComponent {
         const isDamagedPositive = Number(item.dameged) > 0;
         const isRecieved = Number(item.recieved) !== 0;
         const isFreeIncreasePositive = Number(item.freeIncrease) > 0;
+        const isCanceledPositive = Number(item.canceled) > 0;
 
         console.log('isAddNegative', isAddNegative);
         console.log('isTransferNonZero', isTransferNonZero);
         console.log('isDamagedPositive', isDamagedPositive);
         console.log('isREcievesPositive', isRecieved);
         console.log('isFreeIncreasePositive', isFreeIncreasePositive);
+        console.log('isCanceledPositive', isCanceledPositive);
 
 
 
-        return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved || isFreeIncreasePositive;
+        return isAddNegative || isTransferNonZero || isDamagedPositive || isRecieved || isFreeIncreasePositive || isCanceledPositive;
       }
 
     });

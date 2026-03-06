@@ -289,6 +289,7 @@
                         <th>مبيعات</th>
                         <th>وجبة موظف</th>
                         <th>تعويض زبون</th>
+                        <th>مكنسل</th>
                         <th>تحويل مباشر</th>
                         <th>تحويل % </th>
                         <th>التالف</th>
@@ -453,6 +454,27 @@
                                     *ngIf="!item.isSales" step="any" [disabled]="isDisabledDailyField()"
                                     (blur)="onQuantityChange('freeIncrease', item, i)"
                                     [(ngModel)]="combinedData[i].freeIncrease" type="number" required />
+                            </ng-template>
+                        </td>
+
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct42">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5600 + i"
+                                            *ngIf="!subProduct.isSales" min="0" step="any"
+                                            [disabled]="isDisabledDailyField()"
+                                            (blur)="onQuantityChange('canceled', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="combinedData[i].products[s].canceled" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct42>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5600 + i" min="0"
+                                    *ngIf="!item.isSales" step="any" [disabled]="isDisabledDailyField()"
+                                    (blur)="onQuantityChange('canceled', item, i)"
+                                    [(ngModel)]="combinedData[i].canceled" type="number" required />
                             </ng-template>
                         </td>
 

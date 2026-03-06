@@ -503,6 +503,9 @@ export class PdfService {
           // 7. freeIncrease (تعويض زبون) - غير مدمج لأن كل صنف فرعي له كميته
           row.push({ content: sub.freeIncrease ?? '' });
 
+          // 8. canceled (مكنسل)
+          row.push({ content: sub.canceled ?? '' });
+
           if (i === 0) {
             row.push({
               content: item.directTransfer ?? item.directTransfere ?? '',
@@ -557,6 +560,7 @@ export class PdfService {
           { content: item.sales },
           { content: item.staffMeal },
           { content: item.freeIncrease ?? '' },
+          { content: item.canceled ?? '' },
           { content: item.directTransfer },
           { content: item.transfer },
           { content: item.dameged },
@@ -580,7 +584,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: 4, // دمج العمودين الأول والثاني في هذا السطر
+          colSpan: 5, // دمج العمودين الأول والثاني في هذا السطر
         },
         {
           content: ` ${date} : التاريخ`,
@@ -616,6 +620,7 @@ export class PdfService {
     headerRow.push(this.items({ name: 'مبيعات' }));
     headerRow.push(this.items({ name: 'وجبة موظف' }));
     headerRow.push(this.items({ name: 'تعويض زبون' }));
+    headerRow.push(this.items({ name: 'مكنسل' }));
     headerRow.push(this.items({ name: 'تحويل مباشر' }));
     headerRow.push(this.items({ name: 'تحويل' }));
     headerRow.push(this.items({ name: 'التالف' }));
@@ -658,26 +663,16 @@ export class PdfService {
             element.products.forEach((sub: any) => {
               if (sub.note) {
 
-                var filed = ""
-                var colmn = ""
-                if (Number(sub?.add ?? 0) !== 0) {
-                  colmn = "الجرد"
-                  filed = "add"
-                } else if (Number(sub?.dameged ?? 0) > 0) {
-                  colmn = "التالف"
-                  filed = "dameged"
+                let cols = [];
+                if (Number(sub?.add ?? 0) !== 0) cols.push("الجرد");
+                if (Number(sub?.dameged ?? 0) > 0) cols.push("التالف");
+                if (Number(sub?.transfer ?? 0) !== 0) cols.push("التحويل");
+                if (Number(sub?.recieved ?? 0) !== 0) cols.push("المستلم");
+                if (Number(sub?.freeIncrease ?? 0) !== 0) cols.push("تعويض زبون");
+                if (Number(sub?.canceled ?? 0) !== 0) cols.push("مكنسل");
 
-                }
-                else if (Number(sub?.transfer ?? 0) !== 0) {
-                  colmn = " التحويل"
-                  filed = "transfer"
-                }
-                else if (Number(sub?.recieved ?? 0) !== 0) {
-                  colmn = " المستلم"
-                  filed = "recieved"
-                }
-                if (colmn.length > 0) {
-                  notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
+                if (cols.length > 0) {
+                  notes.push(`ملاحظات الصنف : ${sub.productName}  للأعمدة [ ${cols.join(' ، ')} ] : ${sub.note} `);
                 }
 
               }
@@ -685,28 +680,16 @@ export class PdfService {
           }
           if (element.note) {
 
-            var filed = ""
-            var colmn = ""
-            if (Number(element?.add ?? 0) !== 0) {
-              colmn = "الجرد"
-              filed = "add"
-            } else if (Number(element?.dameged ?? 0) > 0) {
-              colmn = "التالف"
-              filed = "dameged"
+            let cols = [];
+            if (Number(element?.add ?? 0) !== 0) cols.push("الجرد");
+            if (Number(element?.dameged ?? 0) > 0) cols.push("التالف");
+            if (Number(element?.transfer ?? 0) !== 0) cols.push("التحويل");
+            if (Number(element?.recieved ?? 0) !== 0) cols.push("المستلم");
+            if (Number(element?.freeIncrease ?? 0) !== 0) cols.push("تعويض زبون");
+            if (Number(element?.canceled ?? 0) !== 0) cols.push("مكنسل");
 
-            }
-            else if (Number(element?.transfer ?? 0) !== 0) {
-              colmn = " التحويل"
-              filed = "transfer"
-
-            }
-            else if (Number(element?.recieved ?? 0) !== 0) {
-              colmn = " المستلم"
-              filed = "recieved"
-
-            }
-            if (colmn.length > 0) {
-              notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note} `);
+            if (cols.length > 0) {
+              notes.push(`ملاحظات الصنف (${element.productName}) للأعمدة ]${cols.join(' ، ')}[ : ${element.note} `);
             }
           }
         });
