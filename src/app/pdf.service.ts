@@ -582,7 +582,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: 5, // دمج العمودين الأول والثاني في هذا السطر
+          colSpan: 6, // دمج العمودين الأول والثاني في هذا السطر
         },
         {
           content: ` ${date} : التاريخ`,
