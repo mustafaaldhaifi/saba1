@@ -500,16 +500,12 @@ export class PdfService {
           // 6. staffMeal
           row.push({ content: sub.staffMeal ?? '' });
 
+          // 7. freeIncrease (تعويض زبون) - غير مدمج لأن كل صنف فرعي له كميته
+          row.push({ content: sub.freeIncrease ?? '' });
+
           if (i === 0) {
             row.push({
-              content: item.directTransfere ?? '',
-              rowSpan: productCount,
-              styles: { halign: 'center', valign: 'middle' },
-            });
-          }
-          if (i === 0) {
-            row.push({
-              content: item.freeIncrease ?? '',
+              content: item.directTransfer ?? item.directTransfere ?? '',
               rowSpan: productCount,
               styles: { halign: 'center', valign: 'middle' },
             });
@@ -560,7 +556,7 @@ export class PdfService {
           { content: item.add },
           { content: item.sales },
           { content: item.staffMeal },
-          { content: item.freeIncrease },
+          { content: item.freeIncrease ?? '' },
           { content: item.directTransfer },
           { content: item.transfer },
           { content: item.dameged },
@@ -619,7 +615,7 @@ export class PdfService {
     headerRow.push(this.items({ name: 'الجرد' }));
     headerRow.push(this.items({ name: 'مبيعات' }));
     headerRow.push(this.items({ name: 'وجبة موظف' }));
-    headerRow.push(this.items({ name: 'زيادة مجانية' }));
+    headerRow.push(this.items({ name: 'تعويض زبون' }));
     headerRow.push(this.items({ name: 'تحويل مباشر' }));
     headerRow.push(this.items({ name: 'تحويل' }));
     headerRow.push(this.items({ name: 'التالف' }));

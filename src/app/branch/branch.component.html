@@ -423,28 +423,7 @@
                                     </ng-container>
                                 </div>
                             </td>
-
                         </ng-container>
-
-                        <td>
-                            <ng-container *ngIf="item.products?.length; else normalProduct41">
-                                <div class="d-flex flex-column gap-2 w-100">
-                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
-                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
-                                            *ngIf="!subProduct.isSales" min="0" step="any"
-                                            (blur)="onQuantityChange('freeIncrease', item, i,{i:s,subProduct})"
-                                            [(ngModel)]="combinedData[i].products[s].freeIncrease" type="number" required />
-                                    </ng-container>
-                                </div>
-                            </ng-container>
-
-                            <ng-template #normalProduct41>
-                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i" min="0"
-                                    *ngIf="!item.isSales" step="any" (blur)="onQuantityChange('freeIncrease', item, i)"
-                                    [(ngModel)]="combinedData[i].freeIncrease" type="number" required />
-                            </ng-template>
-
-                        </td>
 
                         <ng-template #normalProduct3>
                             <td>
@@ -452,11 +431,30 @@
                                     *ngIf="!item.isSales" [disabled]="isDisabledDailyField()"
                                     (blur)="onQuantityChange('staffMeal', item, i)" min="0" step="any"
                                     [(ngModel)]="combinedData[i].staffMeal" type="number" required />
-
                             </td>
-
-
                         </ng-template>
+
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct41">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5500 + i"
+                                            *ngIf="!subProduct.isSales" min="0" step="any"
+                                            [disabled]="isDisabledDailyField()"
+                                            (blur)="onQuantityChange('freeIncrease', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="combinedData[i].products[s].freeIncrease" type="number"
+                                            required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct41>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5500 + i" min="0"
+                                    *ngIf="!item.isSales" step="any" [disabled]="isDisabledDailyField()"
+                                    (blur)="onQuantityChange('freeIncrease', item, i)"
+                                    [(ngModel)]="combinedData[i].freeIncrease" type="number" required />
+                            </ng-template>
+                        </td>
 
 
                         <td>
