@@ -1666,8 +1666,9 @@ export class BranchComponent {
     const transfer = Number(reportOrData?.transfer ?? 0);
     const directTransfer = Number(reportOrData?.directTransfer ?? 0);
 
+
     // 3. حساب القيم التراكمية
-    let add = 0, sales = 0, staffMeal = 0, dameged = 0;
+    let add = 0, sales = 0, staffMeal = 0, dameged = 0,freeIncrease=0;
 
     if (reportOrData?.products && Array.isArray(reportOrData.products)) {
       reportOrData.products.forEach((p: any) => {
@@ -1675,12 +1676,14 @@ export class BranchComponent {
         sales += Number(p.sales ?? 0);
         staffMeal += Number(p.staffMeal ?? 0);
         dameged += Number(p.dameged ?? 0);
+        freeIncrease += Number(p.freeIncrease ?? 0);
+
       });
     } else {
       add = Number(reportOrData?.add ?? 0);
       sales = Number(reportOrData?.sales ?? 0);
       staffMeal = Number(reportOrData?.staffMeal ?? 0);
-      dameged = Number(reportOrData?.dameged ?? 0);
+      freeIncrease = Number(reportOrData?.freeIncrease ?? 0);
     }
 
     // 4. المعادلة النهائية
@@ -1692,6 +1695,7 @@ export class BranchComponent {
       staffMeal -
       transfer -
       directTransfer -
+      freeIncrease -
       dameged;
 
     // --- طباعة القيم في الـ Console ---

@@ -500,6 +500,21 @@ export class PdfService {
           // 6. staffMeal
           row.push({ content: sub.staffMeal ?? '' });
 
+          if (i === 0) {
+            row.push({
+              content: item.directTransfere ?? '',
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
+            });
+          }
+          if (i === 0) {
+            row.push({
+              content: item.freeIncrease ?? '',
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
+            });
+          }
+
           // 7. transfer (خلية مدمجة مثل السابق)
           if (i === 0) {
             row.push({
@@ -545,6 +560,8 @@ export class PdfService {
           { content: item.add },
           { content: item.sales },
           { content: item.staffMeal },
+          { content: item.freeIncrease },
+          { content: item.directTransfer },
           { content: item.transfer },
           { content: item.dameged },
           { content: item.closeStock },
@@ -567,7 +584,7 @@ export class PdfService {
             lineWidth: 0.2,
             lineColor: [0, 0, 0] as Color,
           },
-          colSpan: 3, // دمج العمودين الأول والثاني في هذا السطر
+          colSpan: 4, // دمج العمودين الأول والثاني في هذا السطر
         },
         {
           content: ` ${date} : التاريخ`,
@@ -602,6 +619,8 @@ export class PdfService {
     headerRow.push(this.items({ name: 'الجرد' }));
     headerRow.push(this.items({ name: 'مبيعات' }));
     headerRow.push(this.items({ name: 'وجبة موظف' }));
+    headerRow.push(this.items({ name: 'زيادة مجانية' }));
+    headerRow.push(this.items({ name: 'تحويل مباشر' }));
     headerRow.push(this.items({ name: 'تحويل' }));
     headerRow.push(this.items({ name: 'التالف' }));
     headerRow.push(this.items({ name: 'المتبقي' }));
@@ -642,27 +661,7 @@ export class PdfService {
           if (Array.isArray(element.products)) {
             element.products.forEach((sub: any) => {
               if (sub.note) {
-                // var filed = ""
-                // var colmn = ""
-                // if (Number(sub?.add ?? 0) !== 0) {
-                //   colmn = "الجرد"
-                //   filed = "add"
-                // } else if (Number(sub?.dameged ?? 0) > 0) {
-                //   colmn = "التالف"
-                //   filed = "dameged"
 
-                // }
-                // else if (Number(sub?.transfer ?? 0) !== 0) {
-                //   colmn = " التحويل"
-                //   filed = "transfer"
-                // }
-                // else if (Number(sub?.recieved ?? 0) !== 0) {
-                //   colmn = " المستلم"
-                //   filed = "recieved"
-                // }
-                // if (colmn.length > 0) {
-                //   notes.push(`ملاحظة في عمود ${colmn} ${sub.productName} ${sub[filed]} : ${sub.note} `);
-                // }
                 var filed = ""
                 var colmn = ""
                 if (Number(sub?.add ?? 0) !== 0) {
@@ -689,29 +688,7 @@ export class PdfService {
             });
           }
           if (element.note) {
-            // var filed = ""
-            // var colmn = ""
-            // if (Number(element?.add ?? 0) !== 0) {
-            //   colmn = "الجرد"
-            //   filed = "add"
-            // } else if (Number(element?.dameged ?? 0) > 0) {
-            //   colmn = "التالف"
-            //   filed = "dameged"
 
-            // }
-            // else if (Number(element?.transfer ?? 0) !== 0) {
-            //   colmn = " التحويل"
-            //   filed = "transfer"
-
-            // }
-            // else if (Number(element?.recieved ?? 0) !== 0) {
-            //   colmn = " المستلم"
-            //   filed = "recieved"
-
-            // }
-            // if (colmn.length > 0) {
-            //   notes.push(`ملاحظة في عمود ${colmn} ${element.productName} ${element[filed]} : ${element.note} `);
-            // }
             var filed = ""
             var colmn = ""
             if (Number(element?.add ?? 0) !== 0) {
