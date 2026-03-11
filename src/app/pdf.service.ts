@@ -8,7 +8,15 @@ import autoTable, { Color, FontStyle, HAlignType } from 'jspdf-autotable';
 })
 export class PdfService {
 
-  export(data: any, isBranch: boolean = false, date: string, branchName: string, typeName: string, isMonthly: boolean) {
+  export(data: any[], isBranch: boolean = false, date: string, branchName: string, typeName: string, isMonthly: boolean) {
+    if (!isMonthly) {
+      data = data.filter(row => {
+        // For non-monthly reports, "المطلوب" is typically at index 3
+        const requiredQty = row[3];
+        return requiredQty !== null && requiredQty !== undefined && requiredQty !== '' && Number(requiredQty) !== 0;
+      });
+    }
+
     const doc = new jsPDF();
     doc.setFont('ARIAL', 'normal');
     doc.setFontSize(12);
