@@ -370,7 +370,7 @@
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
                                             *ngIf="!subProduct.isSales"
-                                            [disabled]="isSundy() === false || isDisabledDailyField()"
+                                            [disabled]="isDisabledDailyField()"
                                             (blur)="onQuantityChange('add', item, i,{i:s,subProduct})"
                                             [(ngModel)]="combinedData[i].products[s].add" type="number" required />
                                     </ng-container>
@@ -379,7 +379,7 @@
 
                             <ng-template #normalProduct1>
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
-                                    *ngIf="!item.isSales" [disabled]="isSundy() === false  ||isDisabledDailyField()"
+                                    *ngIf="!item.isSales" [disabled]="isDisabledDailyField()"
                                     (blur)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
                                     type="number" required />
                             </ng-template>
