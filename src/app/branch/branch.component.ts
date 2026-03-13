@@ -2371,6 +2371,35 @@ export class BranchComponent {
 
 
 
+  async syncMonthlySummaries(batch: any, items: any[], date: Date) {
+    if (!date || !items || items.length === 0) return;
+
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const dayKey = String(date.getDate()).padStart(2, '0');
+
+    items.forEach((item: any) => {
+      const productMonthlyRef = doc(this.apiService.db, "product_monthly_summaries", `${this.branch.id}_${monthKey}_${item.productId}`);
+
+      batch.set(productMonthlyRef, {
+        branchId: this.branch.id,
+        productId: item.productId,
+        month: monthKey,
+        [`days.${dayKey}`]: {
+          openingStock: Number(item.openingStockQnt || 0),
+          received: Number(item.recieved || 0),
+          add: Number(item.add || 0),
+          sales: Number(item.sales || 0),
+          staffMeal: Number(item.staffMeal || 0),
+          transfer: Number(item.transfer || 0),
+          directTransfer: Number(item.directTransfer || item.directTransfere || 0),
+          damaged: Number(item.dameged || 0),
+          canceled: Number(item.canceled || 0),
+          freeIncrease: Number(item.freeIncrease || 0)
+        }
+      }, { merge: true });
+    });
+  }
+
   async saveDaily() {
 
     const confirmed = confirm(`هل انت متأكد من تسجيل جميع الاستلامات`);
@@ -2439,6 +2468,7 @@ export class BranchComponent {
       const firestoreTimestamp = this.dateToAddInDaily
         ? Timestamp.fromDate(this.dateToAddInDaily)
         : undefined;
+
       const summaryRef = doc(collection(this.apiService.db, collectionNames.dailyReportsDates));
       batch.set(summaryRef, {
         branchId: this.branch.id,
@@ -2466,6 +2496,8 @@ export class BranchComponent {
 
         batch.set(summaryRef, itemWithTimestamp);
       });
+
+      await this.syncMonthlySummaries(batch, newCombinedData, this.dateToAddInDaily || new Date());
 
       ///
       this.dailyReportUpdates = await this.dailyReportService.getLastupdate(this.branch.id, Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!!)), this.apiService)
@@ -3397,6 +3429,7 @@ export class BranchComponent {
             element.sales,
             element.staffMeal,
             element.dameged,
+            element.canceled,
           ])
         });
         result.push([
@@ -3423,6 +3456,7 @@ export class BranchComponent {
           item.transfer,
           item.directTransfer,
           item.dameged,
+          item.canceled,
           item.closeStock
         ]);
       }
@@ -3532,26 +3566,8 @@ export class BranchComponent {
   async saveChangesDaily() {
     if (this.orderDailyToUpdate.length === 0) return;
 
-    // this.orderDailyToUpdate = this.orderDailyToUpdate.map((item: any) => {
-    //   // إذا كانت المنتجات الفرعية موجودة
-    //   if (item.products && Array.isArray(item.products)) {
-    //     item.products = item.products.map((sub: any) => {
-    //       if (sub.note === undefined) {
-    //         delete sub.note;
-    //       }
-    //       return sub;
-    //     });
-    //   }
-
-    //   // للمنتج الرئيسي نفسه
-    //   if (item.note === undefined) {
-    //     delete item.note;
-    //   }
-
-    //   return item;
-    // });
-
     this.isLoading = true;
+
     const batch1 = writeBatch(this.apiService.db);
 
     const batch = writeBatch(this.apiService.db);
@@ -3588,15 +3604,6 @@ export class BranchComponent {
               });
             }
 
-            // const docRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
-            // batch1.update(docRef, updatedSubProduct);
-            // if (dailyReportId) {
-
-            // }
-            // else {
-            //   add
-            // }
-
           }
         }
 
@@ -3631,7 +3638,6 @@ export class BranchComponent {
 
         batch1.update(parentDocRef, updatedParentProduct);
 
-
         const parentDocSnap1 = await getDoc(parentDocRef);
 
         if (parentDocSnap.exists()) {
@@ -3639,10 +3645,20 @@ export class BranchComponent {
         } else {
           console.log("❌ 2المستند غير موجود");
         }
-
-
-
       }
+
+      // تحديث ملخص المنتجات (الرئيسية والفرعية معاً)
+      // نجهز مصفوفة مسطحة لتمريرها للدالة
+      let allItemsToSync: any[] = [];
+      this.orderDailyToUpdate.forEach((element: any) => {
+        allItemsToSync.push(element);
+        if (element.products) {
+          allItemsToSync.push(...element.products);
+        }
+      });
+
+      await this.syncMonthlySummaries(batch1, allItemsToSync, this.dateToAddInDaily || new Date());
+
       await batch1.commit();
 
 
