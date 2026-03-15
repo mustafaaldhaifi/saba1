@@ -1686,6 +1686,7 @@ export class BranchComponent {
       staffMeal = Number(reportOrData?.staffMeal ?? 0);
       freeIncrease = Number(reportOrData?.freeIncrease ?? 0);
       canceled = Number(reportOrData?.canceled ?? 0);
+      dameged = Number(reportOrData?.dameged ?? 0);
     }
 
     // 4. المعادلة النهائية
