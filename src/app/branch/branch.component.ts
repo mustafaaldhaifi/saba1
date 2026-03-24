@@ -1890,6 +1890,17 @@ export class BranchComponent {
                   undefined,
                   productUnit
                 );
+                
+                // إضافة العنصر إلى قائمة التحديثات إذا كنا في وضع القراءة
+                if (this.isReadDailyMode) {
+                  const targetItem = this.combinedData[productIndex];
+                  const existingIndex = this.orderDailyToUpdate.findIndex((data: any) => targetItem.productId == data.productId);
+                  if (existingIndex == -1) {
+                    this.orderDailyToUpdate.push(targetItem);
+                  } else {
+                    this.orderDailyToUpdate[existingIndex] = targetItem;
+                  }
+                }
               }
             }
           });
@@ -3687,6 +3698,8 @@ export class BranchComponent {
             transfer: data["transfer"],
             directTransfer: data["directTransfer"],
             dameged: data["dameged"],
+            canceled: data["canceled"],
+            freeIncrease: data["freeIncrease"],
             closeStock: data["closeStock"]
           };
         });
@@ -3716,10 +3729,13 @@ export class BranchComponent {
           const closeStock =
             Number(item.openingStockQnt || 0) +
             Number((item.recieved * element.productUnit) || 0) +
-            add -
+            add +
+            Number(item.canceled || 0) -
             sales -
             staffMeal -
             Number(item.transfer || 0) -
+            Number(item.directTransfer || 0) -
+            Number(item.freeIncrease || 0) -
             dameged;
 
           const updateData: any = {
