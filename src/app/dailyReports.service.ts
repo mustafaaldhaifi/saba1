@@ -196,6 +196,9 @@ export class DailyReportsService {
         transfer: doc.data()['transfer'],
         dameged: doc.data()['dameged'],
         note: doc.data()['note'],
+        directTransfer: doc.data()['directTransfer'] ?? '',
+        canceled: doc.data()['canceled'] ?? '',
+        freeIncrease: doc.data()['freeIncrease'] ?? '',
 
         closeStock: doc.data()['closeStock'],
       }));
