@@ -1890,7 +1890,7 @@ export class BranchComponent {
                   undefined,
                   productUnit
                 );
-                
+
                 // إضافة العنصر إلى قائمة التحديثات إذا كنا في وضع القراءة
                 if (this.isReadDailyMode) {
                   const targetItem = this.combinedData[productIndex];
@@ -3729,7 +3729,7 @@ export class BranchComponent {
           const closeStock =
             Number(item.openingStockQnt || 0) +
             Number((item.recieved * element.productUnit) || 0) +
-            add +
+            add -
             Number(item.canceled || 0) -
             sales -
             staffMeal -
@@ -3749,6 +3749,9 @@ export class BranchComponent {
             updateData.staffMeal = staffMeal;
             updateData.dameged = dameged;
             updateData.add = add;
+            if (item.id === element.dailyReportId) {
+              updateData.directTransfer = element.directTransfer;
+            }
           }
 
           console.log("item to update", item);
