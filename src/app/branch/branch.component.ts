@@ -2395,7 +2395,8 @@ export class BranchComponent {
           directTransfer: Number(item.directTransfer || item.directTransfere || 0),
           damaged: Number(item.dameged || 0),
           canceled: Number(item.canceled || 0),
-          freeIncrease: Number(item.freeIncrease || 0)
+          freeIncrease: Number(item.freeIncrease || 0),
+          closeStock: Number(item.closeStock || 0)
         }
       }, { merge: true });
     });
