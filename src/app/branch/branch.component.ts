@@ -1851,7 +1851,8 @@ export class BranchComponent {
   //   });
   // }
 
-  processDirectTransfer() {
+  processDirectTransfer(): boolean {
+    let hasNegative = false;
     // 1. تصفير القيم لجميع المنتجات قبل الحساب
     this.combinedData.forEach(p => p.directTransfer = "");
 
@@ -1890,12 +1891,17 @@ export class BranchComponent {
                   undefined,
                   productUnit
                 );
+
+                if (this.combinedData[productIndex].closeStock < 0) {
+                  hasNegative = true;
+                }
               }
             }
           });
         }
       });
     });
+    return hasNegative;
   }
 
   onQuantityChange(field: string, item: any, i: number, subProduct: any = null): void {
@@ -2284,9 +2290,32 @@ export class BranchComponent {
     //   }
     // }
 
-    // //////////++++
-
-    this.processDirectTransfer();
+    const hasNegativeDirectTransfer = this.processDirectTransfer();
+    
+    if (hasNegativeDirectTransfer) {
+      const modalRef = this.modalService.open(AlertDialogComponent, {
+        text: "يتم عمل جرد ميداني للصنف للتأكد من الكمية"
+      });
+      this.isModalOpen = true;
+      modalRef.result.then(() => {
+        if (subProduct) {
+          this.combinedData[i].products[subProduct.i][field] = "";
+        } else {
+          this.combinedData[i][field] = "";
+        }
+        
+        const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+        this.combinedData[i].closeStock = updatedCloseStock;
+        if (subProduct) {
+          subProduct.closeStock = this.calculateClosingStock(subProduct, undefined, subProduct.productUnit ?? 1);
+        }
+        
+        // إعادة حساب النواقص بعد مسح القيمة التي سببت المشكلة
+        this.processDirectTransfer();
+        this.isModalOpen = false;
+      });
+      return;
+    }
 
 
     // const meatId = "m1srRxKTFohPt84R9LIA"
