@@ -1961,6 +1961,129 @@ export class DashboardComponent implements OnInit {
     XLSX.writeFile(wb, fileName);
   }
 
+  exportOptions = {
+    requested: true,
+    remain: false,
+    status: false,
+    cash: false
+  };
+
+  exportDynamicExcel() {
+    // Prepare data and styling
+    const wsData = [];
+    const merges: any[] = [];
+    const cellStyles: { [key: string]: any } = {};
+
+    // Calculate how many columns each branch will take
+    let colsPerBranch = 0;
+    if (this.exportOptions.requested) colsPerBranch++;
+    if (this.exportOptions.remain) colsPerBranch++;
+    if (this.exportOptions.status) colsPerBranch++;
+    if (this.exportOptions.cash) colsPerBranch++;
+
+    if (colsPerBranch === 0) {
+      alert("Please select at least one column to export.");
+      return;
+    }
+
+    // First header row (branch names)
+    const header1 = ['#', 'Product Name', 'Requested Unit'];
+    if (this.exportOptions.remain) header1.push('Remain Unit');
+
+    this.branches.forEach((branch, index) => {
+      const startCol = header1.length + (index * colsPerBranch);
+      header1.push(branch.name);
+      // Add empty cells for merges
+      for (let i = 1; i < colsPerBranch; i++) {
+        header1.push('');
+      }
+      if (colsPerBranch > 1) {
+        merges.push({
+          s: { r: 0, c: startCol },
+          e: { r: 0, c: startCol + colsPerBranch - 1 }
+        });
+      }
+    });
+    wsData.push(header1);
+
+    // Second header row (column titles)
+    const header2 = ['', '', ''];
+    if (this.exportOptions.remain) header2.push('');
+
+    this.branches.forEach(() => {
+      if (this.exportOptions.requested) header2.push('Requested Qnt');
+      if (this.exportOptions.remain) header2.push('Remain Qnt');
+      if (this.exportOptions.status) header2.push('Status');
+      if (this.exportOptions.cash) header2.push('Cash');
+    });
+    wsData.push(header2);
+
+    // Existing products
+    this.data.forEach((product, rowIndex) => {
+      const row = [rowIndex + 1, product.name, product.unit];
+      if (this.exportOptions.remain) row.push(product.unitF);
+
+      this.branches.forEach((branch, branchIndex) => {
+        const order = this.orders.find(o => o.branchId === branch.id && o.productId === product.id);
+        const status = this.getStatusDisplay(order);
+
+        if (this.exportOptions.requested) row.push(order?.qnt);
+        if (this.exportOptions.remain) row.push(order?.qntF);
+        if (this.exportOptions.status) row.push(status);
+        if (this.exportOptions.cash) row.push(order?.isCashEnabled === true ? order?.cashValue : "");
+
+        // Styling for status cell if included
+        if (this.exportOptions.status) {
+          const statusRelIdx = (this.exportOptions.requested ? 1 : 0) + (this.exportOptions.remain ? 1 : 0);
+          const statusCol = (header1.length - (this.branches.length * colsPerBranch)) + (branchIndex * colsPerBranch) + statusRelIdx;
+          const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 2, c: statusCol });
+          const d = this.statusStyles(status);
+
+          if (status && d) {
+            cellStyles[cellAddress] = this.statusStyles(status);
+          }
+        }
+      });
+
+      wsData.push(row);
+    });
+
+    // Create worksheet
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Apply merges
+    ws['!merges'] = merges;
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 30 },
+      { wch: 15 },
+      ...(this.exportOptions.remain ? [{ wch: 15 }] : []),
+      ...Array(this.branches.length * colsPerBranch).fill({ wch: 15 })
+    ];
+
+    // Apply styles to status cells
+    Object.keys(cellStyles).forEach(cellAddress => {
+      if (ws[cellAddress]) {
+        ws[cellAddress].s = {
+          fill: cellStyles[cellAddress].fill,
+          alignment: { horizontal: 'center', vertical: 'center' },
+          font: { color: { rgb: "000000" } }
+        };
+      }
+    });
+
+    // Create workbook
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Custom Report');
+
+    // Generate filename and save
+    const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
+    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    XLSX.writeFile(wb, `Custom_Export_${city}_${dateStr}.xlsx`);
+  }
+
 
   exportToExcel() {
     // Prepare data and styling
@@ -2226,6 +2349,70 @@ export class DashboardComponent implements OnInit {
     const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
     const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
     XLSX.writeFile(wb, `Orders_${city}_with_notes_${dateStr}.xlsx`);
+  }
+
+  exportToExcel4() {
+    // Prepare data and styling
+    const wsData = [];
+    const merges: any[] = [];
+
+    // First header row (branch names)
+    var header1 = ['#', 'Product Name', 'Remain Unit'];
+    if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
+      header1 = ['#', 'المنتج', 'الوحدة'];
+    }
+    this.branches.forEach((branch) => {
+      header1.push(branch.name);
+    });
+    wsData.push(header1);
+
+    // Second header row (column titles)
+    const header2 = ['', '', ''];
+    if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
+      this.branches.forEach(() => header2.push('الكمية المتبقية'));
+    } else {
+      this.branches.forEach(() => header2.push('Remain Qnt'));
+    }
+    wsData.push(header2);
+
+    // Existing products
+    this.data.forEach((product, rowIndex) => {
+      const row = [rowIndex + 1, product.name, product.unitF];
+
+      this.branches.forEach((branch) => {
+        const order = this.orders.find(o => o.branchId === branch.id && o.productId === product.id);
+        row.push(order?.qntF);
+      });
+
+      wsData.push(row);
+    });
+
+    // Create worksheet
+    const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 15 },
+      ...Array(this.branches.length).fill({ wch: 15 })
+    ];
+
+    // Row heights
+    ws['!rows'] = [
+      { hpx: 30 },
+      { hpx: 25 }
+    ];
+
+    // Create workbook
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Remain Report');
+
+    // Generate filename and save
+    const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
+    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    XLSX.writeFile(wb, `Remain_${city}_${dateStr}.xlsx`);
   }
 
 

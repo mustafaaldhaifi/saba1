@@ -559,3 +559,17 @@ input:checked+.slider:before {
 .save-btn:hover {
   background-color: #21867a;
 }
+.export-icon {
+  margin-right: 5px;
+  margin-left: 5px;
+  cursor: pointer;
+  color: #27ae60; /* Excel green */
+  font-size: 1.1em;
+  transition: all 0.2s ease;
+  vertical-align: middle;
+}
+
+.export-icon:hover {
+  color: #1e8449;
+  transform: scale(1.2);
+}

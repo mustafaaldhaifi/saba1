@@ -233,15 +233,7 @@
       <h2 class="m-0">{{selectedDatey.createdAt.toDate() | date:'fullDate'}}</h2>
     </div>
     <span *ngIf="orders.length > 0">
-      <button class="btn btn-primary logout-btn" (click)="exportToExcel()">
-        <i class="fas fa-file-export me-2"></i> Export All
-      </button>
-      <button class="btn btn-primary logout-btn" (click)="exportToExcel2()">
-        <i class="fas fa-file-export me-2"></i> Export Notes
-      </button>
-      <button class="btn btn-primary logout-btn" (click)="exportToExcel3()">
-        <i class="fas fa-file-export me-2"></i> Export Request
-      </button>
+      <!-- Export icons moved to table headers -->
     </span>
     <div class="myHead d-flex align-items-center justify-content-between" *ngIf="selectedType &&selectedType.id != '5'">
 
@@ -254,7 +246,7 @@
               <th></th>
               <th></th>
               <th *ngIf="selectedType.id != '5'"></th>
-              <th *ngFor="let branch of branches" colspan="3" style="
+              <th *ngFor="let branch of branches" colspan="4" style="
               background-color: #b50000;
               color: white;
               padding: 10px;
@@ -304,7 +296,12 @@
 
             </tr>
             <tr class="s-h">
-              <th>#</th>
+              <th>
+                <button class="btn btn-success btn-sm" (click)="exportDynamicExcel()" title="Export Selected Columns">
+                  <i class="fas fa-file-download"></i>
+                </button>
+                #
+              </th>
               <th class="fixed-column name-column">Product Name</th>
               <!-- <th >Product Name</th> -->
 
@@ -312,9 +309,18 @@
               <th *ngIf="selectedType.id != '5'" class="fixed-column unitF-column">Remain Unit</th>
               <ng-container *ngFor="let branch of branches">
 
-                <th *ngIf="selectedType.id != '5'" (click)="getId2(branch)">Requested Qnt</th>
-                <th *ngIf="selectedType.id != '5'" (click)="getSameOrders(branch)">Remain Qnt</th>
-                <th *ngIf="selectedType.id != '5'">Status</th>
+                <th *ngIf="selectedType.id != '5'">
+                  <input type="checkbox" [(ngModel)]="exportOptions.requested"> Requested Qnt
+                </th>
+                <th *ngIf="selectedType.id != '5'">
+                  <input type="checkbox" [(ngModel)]="exportOptions.remain"> Remain Qnt
+                </th>
+                <th *ngIf="selectedType.id != '5'">
+                  <input type="checkbox" [(ngModel)]="exportOptions.status"> Status
+                </th>
+                <th *ngIf="selectedType.id != '5'">
+                  <input type="checkbox" [(ngModel)]="exportOptions.cash"> Cash
+                </th>
                 <!-- <th colspan="1"></th> -->
               </ng-container>
             </tr>
@@ -382,6 +388,12 @@
                       <option *ngIf=" order.status == 3" value="{{order.status}}">Not Same
                         ({{order.qntNotRequirement}})</option>
                     </select>
+                  </ng-container>
+                </td>
+
+                <td class="branch-cell">
+                  <ng-container *ngIf="getOrder(branch.id, product.id) as order">
+                    <span *ngIf="order?.isCashEnabled">{{order.cashValue}}</span>
                   </ng-container>
                 </td>
               </ng-container>
