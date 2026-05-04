@@ -2291,7 +2291,7 @@ export class BranchComponent {
     // }
 
     const hasNegativeDirectTransfer = this.processDirectTransfer();
-    
+
     if (hasNegativeDirectTransfer) {
       const modalRef = this.modalService.open(AlertDialogComponent, {
         text: "يتم عمل جرد ميداني للصنف للتأكد من الكمية"
@@ -2303,13 +2303,13 @@ export class BranchComponent {
         } else {
           this.combinedData[i][field] = "";
         }
-        
+
         const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
         this.combinedData[i].closeStock = updatedCloseStock;
         if (subProduct) {
           subProduct.closeStock = this.calculateClosingStock(subProduct, undefined, subProduct.productUnit ?? 1);
         }
-        
+
         // إعادة حساب النواقص بعد مسح القيمة التي سببت المشكلة
         this.processDirectTransfer();
         this.isModalOpen = false;
@@ -2539,14 +2539,19 @@ export class BranchComponent {
         updatedAt: Timestamp.now(),
       });
 
-      // } else {
+      // }
       openStockToAdd.forEach((item: any) => {
         const summaryRef = doc(collection(this.apiService.db, collectionNames.openingStock));
         batch.set(summaryRef, item);
       })
       // }
 
-
+      const latestUpdateRef = doc(this.apiService.db, collectionNames.latestReportUpdate, `${this.branch.id}_${this.selectedType.id}`);
+      batch.set(latestUpdateRef, {
+        branchId: this.branch.id,
+        typeId: this.selectedType.id,
+        updatedAt: firestoreTimestamp,
+      }, { merge: true });
 
       await batch.commit();
       // this.dailyReportService.addDataToLocal(dailyReportToSaveLocally, this.dailyReportService.getDateKey(this.dateToAddInDaily!), this.selectedType.id, this.branch.id)
@@ -3689,6 +3694,35 @@ export class BranchComponent {
       });
 
       await this.syncMonthlySummaries(batch1, allItemsToSync, this.dateToAddInDaily || new Date());
+
+      // تحديث علامة آخر إدخال مع التحقق: لا نحدثها إلا إذا كان التاريخ الجديد أحدث من أو يساوي التاريخ المخزن
+      try {
+        const latestUpdateRef = doc(this.apiService.db, collectionNames.latestReportUpdate, `${this.branch.id}_${this.selectedType.id}`);
+        const latestUpdateSnap = await getDoc(latestUpdateRef);
+        const firestoreTimestamp = Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!));
+
+        if (latestUpdateSnap.exists()) {
+          const existingData = latestUpdateSnap.data();
+          const existingDate = existingData['updatedAt'] ? existingData['updatedAt'].toDate() : new Date(0);
+          const newDate = firestoreTimestamp.toDate();
+
+          if (newDate >= existingDate) {
+            batch1.set(latestUpdateRef, {
+              branchId: this.branch.id,
+              typeId: this.selectedType.id,
+              updatedAt: firestoreTimestamp,
+            }, { merge: true });
+          }
+        } else {
+          batch1.set(latestUpdateRef, {
+            branchId: this.branch.id,
+            typeId: this.selectedType.id,
+            updatedAt: firestoreTimestamp,
+          }, { merge: true });
+        }
+      } catch (e) {
+        console.error("Error updating latestReportUpdate in saveChangesDaily:", e);
+      }
 
       await batch1.commit();
 

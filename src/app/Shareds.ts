@@ -10,7 +10,9 @@ export const collectionNames = {
     dailyReports: 'dailyReports',
     dailyReportsUpdates: 'dailyReportsUpdates',
 
-    dailyReportsDates: 'dailyReportsDates'
+    dailyReportsDates: 'dailyReportsDates',
+
+    latestReportUpdate: 'latestReportUpdate'
 
 }
 

@@ -508,6 +508,18 @@
                   </a>
                   <button (click)="goToBranch(branch)" class="btn btn-success">open</button>
                 </div>
+
+                <div class="last-entry-container" style="margin-top: 5px; width: 100%;">
+                  <div *ngIf="getLastEntryDate(branch.id)"
+                    style="font-size: 11px; color: #ffd700; direction: rtl; text-align: center;">
+                    <i class="fas fa-calendar-check" style="margin-left: 4px;"></i>
+                    آخر إدخال: {{ getLastEntryDate(branch.id) | date:'yyyy-MM-dd' }}
+                  </div>
+                  <div *ngIf="!getLastEntryDate(branch.id)"
+                    style="font-size: 11px; color: #ccc; direction: rtl; text-align: center;">
+                    لا يوجد إدخال سابق
+                  </div>
+                </div>
               </div>
             </th>
 

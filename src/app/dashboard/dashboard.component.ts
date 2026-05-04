@@ -222,6 +222,9 @@ export class DashboardComponent implements OnInit {
       this.data = []
       this.orders = []
       await this.getSharedData(false)
+      if (this.selectedType?.id == '5') {
+        await this.fetchLastEntryDates();
+      }
       // await this.getPreOrders()
     }
     this.isLoading = false
@@ -430,6 +433,9 @@ export class DashboardComponent implements OnInit {
         this.data = []
         this.orders = []
         await this.getSharedData()
+        if (this.selectedType?.id == '5') {
+          await this.fetchLastEntryDates();
+        }
       }
 
     }
@@ -466,6 +472,7 @@ export class DashboardComponent implements OnInit {
 
 
   orderMap: Map<string, any> = new Map();
+  branchLastEntryDates: Map<string, Date> = new Map();
 
   ifHasChanges = false
 
@@ -640,13 +647,9 @@ export class DashboardComponent implements OnInit {
 
       // this.isLoading = true
       await this.getSharedData()
-      // await Promise.all([
-      //   await this.getTypes(),
-      //   await this.getPreOrders(),
-      //   await this.getDatesToAdd(),
-      //   await this.getSettings()
-      // ]);
-
+      if (this.selectedType?.id == '5') {
+        await this.fetchLastEntryDates();
+      }
       this.addMissingOrders();
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -803,6 +806,7 @@ export class DashboardComponent implements OnInit {
           // });
           // console.log("maps", this.orderMap);
           // this.addMissingOrders();
+          await this.fetchLastEntryDates();
         }
         else {
           await this.getDailyReportsDates();
@@ -1899,8 +1903,16 @@ export class DashboardComponent implements OnInit {
     // Header
     const header1 = [this.selectedColumn];
     const header2 = ['#', "المنتج"];
-    this.branches.forEach(branch => header2.push(branch.name));
+    const headerEntryDates = ['', 'تاريخ آخر إدخال']; // صف جديد للتواريخ
+
+    this.branches.forEach(branch => {
+      header2.push(branch.name);
+      const lastDate = this.getLastEntryDate(branch.id);
+      headerEntryDates.push(lastDate ? this.formatDateForExcel(lastDate) : 'لا يوجد');
+    });
+
     wsData.push(header1);
+    wsData.push(headerEntryDates); // إضافة صف التواريخ تحت العنوان
     wsData.push(header2);
 
     // الحقول التي لا تحتاج subProducts
@@ -2868,6 +2880,41 @@ export class DashboardComponent implements OnInit {
     if (this.selectedType.id == '5') {
       this.selectedBranch = branch
     }
+  }
+
+  async fetchLastEntryDates(): Promise<void> {
+    this.branchLastEntryDates.clear();
+    try {
+      // استخدام المجموعة الجديدة "latestReportUpdate" للاقتصاد في جلب البيانات
+      const q = query(
+        collection(this.apiService.db, collectionNames.latestReportUpdate),
+        where("typeId", "==", this.selectedType.id)
+      );
+      const snapshot = await getDocs(q);
+
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const branchId = data['branchId'];
+        const updatedAt = data['updatedAt'];
+        
+        if (branchId && updatedAt) {
+          this.branchLastEntryDates.set(branchId, updatedAt.toDate());
+        }
+      });
+
+      console.log('branchLastEntryDates updated from latestReportUpdate', this.branchLastEntryDates);
+    } catch (error) {
+      console.error('Error fetching last entry dates:', error);
+    }
+  }
+
+  getLastEntryDate(branchId: string): Date | null {
+    return this.branchLastEntryDates.get(branchId) || null;
+  }
+
+  private formatDateForExcel(date: Date): string {
+    const d = new Date(date);
+    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
   }
 
   normalizeDate(date: Date): Date {
