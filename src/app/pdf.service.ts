@@ -767,6 +767,319 @@ export class PdfService {
     doc.save(`${branchName}_Daily_${date}.pdf`);
   }
 
+
+   exportPDF6(data: any[], date: string, branchName: string, note: any) {
+    const doc = new jsPDF();
+    doc.setFont('ARIAL', 'normal');
+    const rows: any[] = [];
+
+    for (const item of data) {
+      if (Array.isArray(item.products) && item.products.length > 0) {
+        const productCount = item.products.length;
+
+        for (let i = 0; i < productCount; i++) {
+          const sub = item.products[i];
+
+          const row = [];
+
+          // 1. اسم المنتج الفرعي (دائمًا)
+          row.push({ content: sub.productName });
+
+          // 2. openingStockQnt (خلية مدمجة rowspan فقط لأول صف)
+          if (i === 0) {
+            row.push({
+              content: item.isSales ? '' : item.openingStockQnt,
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle', ineWidth: 0, },
+            });
+          }
+          // else {
+          //   row.push({ content: '' }); // خلايا فارغة لبقية الصفوف
+          // }
+
+          // 3. recieved (نفس الطريقة)
+          if (i === 0) {
+            row.push({
+              content: item.isSales ? '' : item.recieved,
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
+            });
+          }
+          //  else {
+          //   row.push({ content: '' });
+          // }
+
+          // 4. add
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.add ?? '') });
+
+          // 5. sales
+          // لو sub.sales قيمته صفر أو أي قيمة أخرى، نعرضها مباشرة
+          row.push({ content: sub.sales != null ? sub.sales : '--' });
+
+          // 6. staffMeal
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.staffMeal ?? '') });
+
+          // 7. freeIncrease (تعويض زبون) - غير مدمج لأن كل صنف فرعي له كميته
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.freeIncrease ?? '') });
+
+          // 8. canceled (مكنسل)
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.canceled ?? '') });
+
+          if (i === 0) {
+            row.push({
+              content: item.isSales ? '' : (item.directTransfer ?? item.directTransfere ?? ''),
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
+            });
+          }
+
+          // 7. transfer (خلية مدمجة مثل السابق)
+          if (i === 0) {
+            row.push({
+              content: item.isSales ? '' : (item.transfer ?? ''),
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
+            });
+          }
+          // else {
+          //   row.push({ content: '' });
+          // }
+
+          // 8. dameged
+          row.push({ content: (sub.isSales || item.isSales) ? '' : (sub.dameged ?? '') });
+
+          // 9. closeStock (خلية مدمجة)
+          if (i === 0) {
+            row.push({
+              content: item.isSales ? '' : (item.closeStock ?? ''),
+              rowSpan: productCount,
+              styles: { halign: 'center', valign: 'middle' },
+            });
+          }
+          // else {
+          //   row.push({ content: '' });
+          // }
+
+          console.log("rppppw", row);
+
+
+
+
+          // أخيراً، أضف الصف
+          rows.push(row);
+          console.log("rppppws", rows);
+        }
+      } else {
+        // منتجات بدون منتجات فرعية
+        rows.push([
+          { content: item.productName },
+          { content: item.isSales ? '' : item.openingStockQnt },
+          { content: item.isSales ? '' : item.recieved },
+          { content: item.isSales ? '' : item.add },
+          { content: item.sales },
+          { content: item.isSales ? '' : item.staffMeal },
+          { content: item.isSales ? '' : (item.freeIncrease ?? '') },
+          { content: item.isSales ? '' : (item.canceled ?? '') },
+          { content: item.isSales ? '' : item.directTransfer },
+          { content: item.isSales ? '' : item.transfer },
+          { content: item.isSales ? '' : item.dameged },
+          { content: item.isSales ? '' : item.closeStock },
+        ]);
+      }
+    }
+
+    console.log("finalRows", rows);
+
+
+
+    const topHeader = [
+      [
+        {
+          content: 'SABA (Authentic Yemini Cuisine)',
+          styles: {
+            halign: 'left' as HAlignType,
+            fontStyle: 'normal' as FontStyle,
+            fontSize: 8,
+            lineWidth: 0.2,
+            lineColor: [0, 0, 0] as Color,
+          },
+          colSpan: 6, // دمج العمودين الأول والثاني في هذا السطر
+        },
+        {
+          content: ` ${date} : التاريخ`,
+          styles: {
+            halign: 'right' as HAlignType,
+            fontStyle: 'normal' as FontStyle,
+            fontSize: 8,
+
+            lineWidth: 0.2,
+            lineColor: [0, 0, 0] as Color,
+          },
+          colSpan: 3, // دمج العمودين الثالث والرابع في هذا السطر
+        },
+        {
+          content: `${branchName} : اسم الفرع`,
+          styles: {
+            halign: 'right' as HAlignType,
+            fontStyle: 'normal' as FontStyle,
+            fontSize: 8,
+            lineWidth: 0.2,
+
+            lineColor: [0, 0, 0] as Color,
+          },
+          colSpan: 3, // دمج العمودين الثالث والرابع في هذا السطر
+        },
+      ],
+    ];
+    const headerRow: any[] = [];
+    headerRow.push(this.items({ name: 'العناصر' }));
+    headerRow.push(this.items({ name: 'الموجودة' }));
+    headerRow.push(this.items({ name: 'المستلم' }));
+    headerRow.push(this.items({ name: 'الجرد' }));
+    headerRow.push(this.items({ name: 'مبيعات' }));
+    headerRow.push(this.items({ name: 'وجبة موظف' }));
+    headerRow.push(this.items({ name: 'تعويض زبون' }));
+    headerRow.push(this.items({ name: 'مكنسل' }));
+    headerRow.push(this.items({ name: 'تحويل مباشر' }));
+    headerRow.push(this.items({ name: 'تحويل' }));
+    headerRow.push(this.items({ name: 'التالف' }));
+    headerRow.push(this.items({ name: 'المتبقي' }));
+
+
+    const topHeader2 = [headerRow];
+
+    autoTable(doc, {
+      head: [...topHeader, ...topHeader2],
+      body: rows,
+      styles: {
+        font: 'ARIAL',
+        fontStyle: 'normal',
+        fontSize: 8,
+        textColor: '#000000',
+        halign: 'center', // Make sure all text in the table is right-aligned
+      },
+      headStyles: {
+        halign: 'center',
+        fontStyle: 'normal',
+      },
+      //  theme: 'striped', // optional, helps with visibility
+
+      // styles: {
+      //   fontSize: 8,
+      //   cellPadding: 3,
+      //   halign: 'center',
+      // },
+
+      /** 🔽 Capture where the table ends */
+      didDrawPage: (data1) => {
+        const notes: string[] = [];
+        let counter = 1;
+
+        // جمع كل الملاحظات (من العناصر الرئيسية أو الفرعية)
+        data.forEach((element: any) => {
+
+          if (Array.isArray(element.products)) {
+            element.products.forEach((sub: any) => {
+              if (sub.note) {
+
+                let cols = [];
+                if (Number(sub?.add ?? 0) !== 0) cols.push("الجرد");
+                if (Number(sub?.dameged ?? 0) > 0) cols.push("التالف");
+                if (Number(sub?.transfer ?? 0) !== 0) cols.push("التحويل");
+                if (Number(sub?.recieved ?? 0) !== 0) cols.push("المستلم");
+                if (Number(sub?.freeIncrease ?? 0) !== 0) cols.push("تعويض زبون");
+                if (Number(sub?.canceled ?? 0) !== 0) cols.push("مكنسل");
+
+                if (cols.length > 0) {
+                  notes.push(`ملاحظات الصنف : ${sub.productName}  للأعمدة [ ${cols.join(' ، ')} ] : ${sub.note} `);
+                }
+
+              }
+            });
+          }
+          if (element.note) {
+
+            let cols = [];
+            if (Number(element?.add ?? 0) !== 0) cols.push("الجرد");
+            if (Number(element?.dameged ?? 0) > 0) cols.push("التالف");
+            if (Number(element?.transfer ?? 0) !== 0) cols.push("التحويل");
+            if (Number(element?.recieved ?? 0) !== 0) cols.push("المستلم");
+            if (Number(element?.freeIncrease ?? 0) !== 0) cols.push("تعويض زبون");
+            if (Number(element?.canceled ?? 0) !== 0) cols.push("مكنسل");
+
+            if (cols.length > 0) {
+              notes.push(`ملاحظات الصنف (${element.productName}) للأعمدة ]${cols.join(' ، ')}[ : ${element.note} `);
+            }
+          }
+        });
+
+        // عرض الملاحظات في أسفل الصفحة (بدون تكرار كلمة "ملاحظة")
+        // if (notes.length > 0) {
+        //   const startY = data1.cursor!.y + 10;
+        //   const pageWidth = doc.internal.pageSize.getWidth();
+        //   const rightMargin = 10;
+        //   const lineHeight = 6;
+
+        //   doc.setFontSize(10);
+        //   doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, startY);
+
+        //   notes.forEach((note, index) => {
+        //     doc.text(
+        //       note,
+        //       pageWidth - rightMargin,
+        //       startY + (index + 1) * lineHeight,
+        //       { align: 'right' }
+        //     );
+        //     // doc.text(
+        //     //   note,
+        //     //   pageWidth - doc.getTextWidth(note) - rightMargin,
+        //     //   startY + (index + 1) * lineHeight,
+        //     //   // { align: 'right' }
+        //     // );
+        //   });
+        // }
+        if (notes.length > 0) {
+          const lineHeight = 6;
+          const pageHeight = doc.internal.pageSize.getHeight();
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const rightMargin = 10;
+
+          let currentY = data1.cursor!.y + 10;
+
+          // تحقق من وجود مساحة لعنوان الملاحظات
+          if (currentY + lineHeight > pageHeight - 10) {
+            doc.addPage();
+            currentY = 20;
+          }
+
+          doc.setFontSize(10);
+          doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+          currentY += lineHeight;
+
+          notes.forEach((note) => {
+            // تحقق إذا كنا تجاوزنا حدود الصفحة
+            if (currentY + lineHeight > pageHeight - 10) {
+              doc.addPage();
+              currentY = 20;
+
+              doc.text(":ملاحظات", pageWidth - doc.getTextWidth(":ملاحظات") - rightMargin, currentY);
+              currentY += lineHeight;
+            }
+
+            doc.text(note, pageWidth - rightMargin, currentY, { align: 'right' });
+            currentY += lineHeight;
+          });
+        }
+
+      }
+      ,
+      startY: 20,
+      theme: 'grid',
+    });
+
+    doc.save(`${branchName}_Daily_${date}.pdf`);
+  }
+
   //   exportPDF5(data: any[], date: string, branchName: string, note: any) {
   //     const doc = new jsPDF();
   //     doc.setFont('ARIAL', 'normal');

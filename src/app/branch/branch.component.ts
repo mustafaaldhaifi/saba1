@@ -8,14 +8,22 @@ import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
 import { PdfService } from '../pdf.service';
+import { ConstraintChecker } from './constraint-checker';
 import { ProductsService } from '../products.service';
 import { OrdersService } from '../orders.service copy';
 import { DailyReportsService } from '../dailyReports.service';
-import { retry } from 'rxjs';
+import { from, map, retry, Subscription } from 'rxjs';
 import { ReasonDialogComponent } from "../reason-dialog/reason-dialog.component";
 import { ModalService } from '../CustomModalService';
 import { AlertDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { ReasonDialogComponent2 } from '../reason-dialog2/reason-dialog2.component';
+import { ColumnConstraint, ColumnConstraintsService } from './column-constraints.service';
+import { LockRulePayload, DefaultValueRulePayload, MaxValueRulePayload, RulePayload } from './inventory-rules.model';
+// استيراد الدوال الأساسية من /firestore
+import { Firestore } from '@angular/fire/firestore';
+
+// استيراد collectionData المخصصة لـ RxJS من المسار الفرعي
+import { collectionData } from '@angular/fire/firestore';
 
 @Component({
   selector: 'app-branch',
@@ -119,6 +127,13 @@ export class BranchComponent {
   isOn: any
   orderUpdates: any
   dailyReportUpdates: any
+  ///
+  constraints: ColumnConstraint[] = [];
+  private sub!: Subscription;
+  ///
+  lockRules: LockRulePayload[] = [];
+  defaultValueRules: DefaultValueRulePayload[] = [];
+  maxValueRules: MaxValueRulePayload[] = [];
 
   version: any
   constructor(
@@ -128,12 +143,181 @@ export class BranchComponent {
     private apiService: ApiService,
     private productsServices: ProductsService,
     private orderService: OrdersService,
-    private dailyReportService: DailyReportsService
+    private dailyReportService: DailyReportsService,
+    private constraintsService: ColumnConstraintsService
   ) {
     this.version = environment.version
 
     this.isReadDailyMode = false
     // initializeApp(environment.firebase);
+  }
+
+  isFetchingData: boolean = false;
+
+  async loadConstraintDataFromFirestore(): Promise<void> {
+
+    if (this.isFetchingData) return;
+
+    this.isFetchingData = true;
+    // اسم مجموعة البيانات في Firestore (تأكد من مطابقة الاسم لديك)
+    // const rulesCollection = collection(this.apiService.db, 'column_constraints');
+
+
+    try {
+      const snapshot = await this.apiService.getData('column_constraints');
+
+      if (snapshot && !snapshot.empty) {
+        const rulesList: RulePayload[] = [];
+
+        snapshot.docs.forEach(doc => {
+          const data = { id: doc.id, ...doc.data() } as unknown as RulePayload;
+          rulesList.push(data);
+        });
+
+        console.log("qqq", rulesList);
+        this.onDataReceived(rulesList);
+
+
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      this.isFetchingData = false; // إعادة ضبط الحالة بعد الانتهاء
+    }
+
+
+
+
+
+
+    //     // الاستماع للبيانات في الوقت الفعلي (Real-time)
+    //    from(getDocs(rulesCollection)).pipe(
+    //   map(snapshot => 
+    //     // استخراج البيانات وتمرير الـ id الخاص بكل Document
+    //     snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as RulePayload))
+    //   )
+    // ).subscribe({
+    //   next: (data: RulePayload[]) => {
+    //     console.log("البيانات المجلوبة مرة واحدة:", data);
+
+    //     // إرسال البيانات مباشرة إلى دالة onDataReceived
+    //     this.onDataReceived(data);
+    //     this.isLoading = false;
+    //   },
+    //   error: (err) => {
+    //     console.error('خطأ أثناء جلب البيانات من Firestore:', err);
+    //     this.isLoading = false;
+    // }
+    // });
+  }
+
+  /**
+ * 1. دالة للحصول على الحد الأقصى المسموح به لخيار معين
+ * تعيد الرقم المسموح أو null إذا لم يكن هناك حد أقصى
+ */
+  getMaxValue(itemId: string, columnName: string, currentBranchId: string): number | null {
+    if (!this.maxValueRules || this.maxValueRules.length === 0) {
+      return null;
+    }
+
+    // البحث في قواعد الحد الأقصى (maxValueRules)
+    for (const rule of this.maxValueRules) {
+      // التحقق من الفرع: (إما محدد في القائمة أو [] وتفهم أنها لكل الفروع)
+      const matchesBranch = rule.branchIds.length === 0 || rule.branchIds.includes(currentBranchId);
+
+      if (matchesBranch) {
+        // البحث عن الصنف
+        const matchedItem = rule.items.find(item => item.itemId === itemId);
+
+        if (matchedItem && matchedItem.columns && matchedItem.columns[columnName] !== undefined) {
+          return matchedItem.columns[columnName]!;
+        }
+      }
+    }
+
+    return null; // لا يوجد حد أقصى لهذا العمود
+  }
+
+  /**
+   * 2. دالة تُستدعى عند تغيير القيمة (On Input/Change) لمنع تجاوز الحد الأقصى
+   */
+  validateMaxValue(event: Event, itemId: string, columnName: string, currentBranchId: string) {
+    const inputElement = event.target as HTMLInputElement;
+    const max = this.getMaxValue(itemId, columnName, currentBranchId);
+
+    if (max !== null) {
+      const enteredValue = Number(inputElement.value);
+
+      // إذا تجاوز المستخدم الحد الأقصى، يتم إرجاع القيمة تلقائياً للحد الأقصى
+      if (enteredValue > max) {
+        inputElement.value = max.toString();
+
+        // يمكنك إظهار تنبيه أو رسالة خطأ هنا
+        console.warn(`عفواً، الحد الأقصى المسموح به لـ ${columnName} هو ${max}`);
+      }
+    }
+  }
+
+  /**
+ * دالة تفحص ما إذا كان المدخل مقفلاً أم لا
+ */
+  isColumnLocked(itemId: string, columnName: string, currentDate: string): boolean {
+    if (!this.lockRules || this.lockRules.length === 0) {
+      return false; // إذا لم توجد قواعد قفل، لا تقفل أي شيء
+    }
+
+    // البحث في جميع قواعد القفل (lockRules)
+    return this.lockRules.some(rule => {
+      // 1. التحقق من الفرع: (إما الفرع محدد في القائمة أو المصفوفة فارغة وتعني جميع الفروع)
+      const matchesBranch = rule.branchIds.length === 0 || rule.branchIds.includes(this.branch.id);
+
+      // 2. التحقق من التاريخ: (إما التاريخ محدد في القائمة أو المصفوفة فارغة وتعني جميع التواريخ)
+      const matchesDate = rule.dates.length === 0 || rule.dates.includes(currentDate);
+
+      if (!matchesBranch || !matchesDate) {
+        return false;
+      }
+
+      // 3. التحقق من الصنف والعمود المطلوب داخل قائمة العناصر
+      const matchedItem = rule.items.find(item => item.itemId === itemId);
+      if (matchedItem) {
+        return matchedItem.columns.includes(columnName);
+      }
+
+      return false;
+    });
+  }
+
+  onDataReceived(rulesData: RulePayload[]) {
+    // تفريغ القوائم أولاً
+    this.lockRules = [];
+    this.defaultValueRules = [];
+    this.maxValueRules = [];
+
+    // تصنيف وتخزين كل عنصر في متغيره الخاص
+    rulesData.forEach(rule => {
+      switch (rule.action) {
+        case 'lock':
+          this.lockRules.push(rule as LockRulePayload);
+          break;
+
+        case 'default_value':
+          this.defaultValueRules.push(rule as DefaultValueRulePayload);
+          break;
+
+        case 'max_value':
+          this.maxValueRules.push(rule as MaxValueRulePayload);
+          break;
+
+        default:
+          console.warn('Unknown action type:', rule);
+      }
+    });
+
+    // طباعة للتحقق
+    console.log('Lock Rules:', this.lockRules);
+    console.log('Default Value Rules:', this.defaultValueRules);
+    console.log('Max Value Rules:', this.maxValueRules);
   }
 
 
@@ -342,6 +526,7 @@ export class BranchComponent {
 
         if (this.selectedType.id == '5') {
           await this.initDaily()
+          this.getConstraintsOnce();
         } else {
           await Promise.all([
             this.getDatesToAdd(),
@@ -372,8 +557,14 @@ export class BranchComponent {
           }
           this.combineDataWithOrders();
         }
-        this.isLoading = false;
 
+
+        if (this.selectedType.id == '5') {
+         await this.loadConstraintDataFromFirestore()
+        this.applyDefaultValuesAndRecalculate(this.branch.id)
+
+        }
+        this.isLoading = false;
       } else {
         this.router.navigate(['/login']);
       }
@@ -581,6 +772,85 @@ export class BranchComponent {
       // this.errorMessage = "Failed to load settings"; // Example error handling
     }
   }
+  async getConstraintsOnce(): Promise<ColumnConstraint[]> {
+    try {
+      const colRef = collection(this.apiService.db, 'column_constraints');
+      const snapshot = await getDocs(colRef);
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ColumnConstraint[];
+    } catch (error) {
+      console.error('Error fetching constraints:', error);
+      return [];
+    }
+  }
+
+  isItemLocked(productId: string): boolean {
+    return ConstraintChecker.isLocked(
+      this.constraints,
+      this.selectedDate,
+      this.branch.id,
+      productId
+    );
+  }
+  applyDefaultValuesToCombinedData(): void {
+    if (!this.combinedData || !this.combinedData.length) return;
+
+    this.combinedData.forEach((parentItem, index) => {
+
+      // 1. التعامل مع المنتجات الرئيسية التي تملك منتجات فرعية (subProducts)
+      if (parentItem.products && parentItem.products.length > 0) {
+        parentItem.products.forEach((subProduct: any, subIndex: number) => {
+          this.processItemDefaultValues(subProduct, index, { i: subIndex, subProduct });
+        });
+      } else {
+        // 2. التعامل مع المنتجات العادية/المفردة
+        this.processItemDefaultValues(parentItem, index);
+      }
+
+    });
+  }
+
+  // دالة مساعدة معالجة وإسناد القيم + استدعاء المعادلة
+  private processItemDefaultValues(item: any, index: number, extraData?: any): void {
+    const pId = item.productId || item.id || item._id;
+
+    ['staffMeal', 'transfer', 'dameged', 'freeIncrease'].forEach((col) => {
+      const defaultConfig = ConstraintChecker.getDefaultValue(
+        this.constraints,
+        this.selectedDate,
+        this.selectedType?.id, // معرف الفرع الحالي
+        pId,
+        col
+      );
+
+      if (defaultConfig) {
+        const qntValue = defaultConfig.qnt;
+
+        // تعيين null إذا كانت 0 لتظهر فارغة، وإلا إسناد الرقم
+        const finalValue = (qntValue === 0 || qntValue === null || qntValue === undefined) ? null : qntValue;
+
+        // تطبيق القيمة إذا كانت متغيرة أو جديدة
+        if (item[col] !== finalValue) {
+          item[col] = finalValue;
+
+          // استدعاء الدالة لتحديث الحسابات والمعادلات فوراً إذا كانت هناك قيمة مدخلة
+          if (finalValue !== null) {
+            if (extraData) {
+              this.onQuantityChange(col, item, index, extraData, false);
+            } else {
+              this.onQuantityChange(col, item, index, null, false);
+            }
+          }
+        }
+      }
+    });
+  }
+  ngOnDestroy(): void {
+    if (this.sub) this.sub.unsubscribe();
+  }
+
   async getBranchOrders(startTimestamp: Timestamp, endTimestamp: Timestamp) {
     const constraints = [
       where("branchId", "==", this.branch.id),
@@ -1904,12 +2174,152 @@ export class BranchComponent {
     return hasNegative;
   }
 
-  onQuantityChange(field: string, item: any, i: number, subProduct: any = null): void {
+  applyDefaultValuesAndRecalculate(currentBranchId: string) {
+    if (!this.combinedData || this.combinedData.length === 0) return;
+
+    this.combinedData.forEach((item, i) => {
+      // 1. جلب إعدادات القيمة الافتراضية (مثال لعمود وجبة الموظف staffMeal)
+      const config = this.getDefaultValueConfig(item.productId, 'staffMeal', currentBranchId);
+
+      console.log("config",config);
+      
+      if (config) {
+        if (config.enabled) {
+          // تعبئة القيمة الافتراضية إذا كانت الخانة فارغة أو غير معرفة
+          if (item.staffMeal === undefined || item.staffMeal === null || item.staffMeal === '') {
+            item.staffMeal = config.qnt;
+          }
+        } 
+        // else {
+        //   // إذا كان الحقل غير مفعل، يتم تفريغه
+        //   item.staffMeal = '';
+        // }
+      }
+
+      // 2. إذا كان الصنف يحتوي على منتجات فرعية (subProducts)
+      if (item.products && item.products.length > 0) {
+        item.products.forEach((subProduct: any) => {
+          const subConfig = this.getDefaultValueConfig(subProduct.productId || item.productId, 'staffMeal', currentBranchId);
+          if (subConfig) {
+            if (subConfig.enabled) {
+              if (subProduct.staffMeal === undefined || subProduct.staffMeal === null || subProduct.staffMeal === '') {
+                subProduct.staffMeal = subConfig.qnt;
+              }
+            } 
+            // else {
+            //   subProduct.staffMeal = '';
+            // }
+          }
+        });
+      }
+
+      // 3. إعادة حساب المخزون المتبقي (closeStock) فوراً بعد تعبئة/تحديث القيم
+      const updatedCloseStock = this.calculateClosingStock(item, undefined, item.productUnit);
+      item.closeStock = updatedCloseStock;
+    });
+
+    console.log("تم تطبيق القيم الافتراضية وإعادة حساب المتبقي للجميع بنجاح.");
+  }
+
+  /**
+   * 1. جلب بيانات القيمة الافتراضية وحالة التفعيل لصنف وعمود معين
+   */
+  getDefaultValueConfig(itemId: string, columnName: string, currentBranchId: string): { qnt: number; enabled: boolean } | null {
+      console.log("rule",this.defaultValueRules )
+    if (!this.defaultValueRules || this.defaultValueRules.length === 0) {
+      return null;
+    }
+  
+
+    for (const rule of this.defaultValueRules) {
+      // التحقق من الفرع ([] تعني تطبيق على الكل)
+      const matchesBranch = rule.branchIds.length === 0 || rule.branchIds.includes(currentBranchId);
+
+      if (matchesBranch) {
+        const matchedItem = rule.items.find(item => item.itemId === itemId);
+
+        if (matchedItem && matchedItem.columns && matchedItem.columns[columnName]) {
+          return matchedItem.columns[columnName]!;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 2. دالة تفحص ما إذا كان الحقل معطلاً من القيمة الافتراضية (enabled === false)
+   */
+  isFieldDisabledByDefault(itemId: string, columnName: string, currentBranchId: string): boolean {
+    const config = this.getDefaultValueConfig(itemId, columnName, currentBranchId);
+    // إذا وجدت القاعدة وكان enabled يساوي false، نقوم بتعطيل الحقل
+    return config !== null && config.enabled === false;
+  }
+
+  /**
+   * 3. دالة لتطبيق القيم الافتراضية تلقائياً على عناصر الجدول عند تحميل البيانات
+   */
+  applyDefaultValues(currentBranchId: string) {
+    if (!this.combinedData || this.combinedData.length === 0) return;
+
+    this.combinedData.forEach((item, index) => {
+      // مثال لعمود وجبة الموظف staffMeal
+      const config = this.getDefaultValueConfig(item.itemId, 'staffMeal', currentBranchId);
+
+      if (config) {
+        // إذا كان الحقل مفعلاً وله قيمة افتراضية ولم يقم المستخدم بإدخال قيمة بعد
+        if (config.enabled && (item.staffMeal === undefined || item.staffMeal === '')) {
+          item.staffMeal = config.qnt;
+        } else if (!config.enabled) {
+          // إذا كان غير مفعل نضمن تفريغ القيمة
+          item.staffMeal = '';
+        }
+
+        // إعادة حساب المخزون المغلق بعد تطبيق القيمة الافتراضية
+        const updatedCloseStock = this.calculateClosingStock(item, undefined, item.productUnit);
+        item.closeStock = updatedCloseStock;
+      }
+    });
+  }
+  onQuantityChange(field: string, item: any, i: number, subProduct: any = null, isUser: boolean = true): void {
 
     if (this.isModalOpen == true) {
       return
     }
     console.log("dddu2", item);
+
+
+    // 1. جلب الحد الأقصى المسموح به للصنف والعمود الحالي
+    const maxAllowed = this.getMaxValue(this.combinedData[i].productId, field, this.branch.id);
+
+    // 2. فحص ما إذا كانت القيمة المدخلة حالياً تتجاوز الحد الأقصى (وأن هناك حداً أقصى معرّف بالفعل)
+    const currentValue = Number(subProduct ? this.combinedData[i].products[subProduct.i][field] : this.combinedData[i][field]);
+
+    if (maxAllowed !== null && currentValue > maxAllowed) {
+
+      // 3. فتح نافذة تنبيه تمنع الإدخال وتوضح الحد الأقصى
+      const modalRef = this.modalService.open(AlertDialogComponent, {
+        text: `عذراً، إدخال هذه الكمية ممنوع! الحد الأقصى المسموح به لـ هو ${maxAllowed} فقط.`
+      });
+
+      this.isModalOpen = true;
+
+      // 4. تفريغ الحقل وإعادة حساب المخزون سواء ضغط على موافق أو أغلق النافذة
+      const resetAndRecalculate = () => {
+        if (subProduct) {
+          this.combinedData[i].products[subProduct.i][field] = "";
+        } else {
+          this.combinedData[i][field] = "";
+        }
+
+        // إعادة حساب المخزون المغلق بعد تفريغ القيمة المرفوضة
+        const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+        this.combinedData[i].closeStock = updatedCloseStock;
+        this.isModalOpen = false;
+      };
+
+      modalRef.result.then(resetAndRecalculate).catch(resetAndRecalculate);
+    }
 
     // let deductFromProduct
     // if (subProduct !== null) {
@@ -2037,7 +2447,7 @@ export class BranchComponent {
     const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
     this.combinedData[i].closeStock = updatedCloseStock;
 
-    if (this.combinedData[i].closeStock < 0 && this.combinedData[i].isSales !== true) {
+    if (this.combinedData[i].closeStock < 0 && this.combinedData[i].isSales !== true && isUser === true) {
 
       const modalRef = this.modalService.open(AlertDialogComponent, {
         text: "يتم عمل جرد ميداني للصنف للتأكد من الكمية"
@@ -2060,6 +2470,9 @@ export class BranchComponent {
 
       return
     }
+
+    //// 
+
 
 
     console.log("eeee", field);
