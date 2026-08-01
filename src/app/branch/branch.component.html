@@ -491,7 +491,7 @@
                         <td>
                             <input [attr.tabindex]="6000 + i" [disabled]="isDisabledDailyField()" *ngIf="!item.isSales"
                                 (blur)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
-                                 [disabled]="isColumnLocked(item.productId || item.id,'staffMeal',selectedDate)"
+                                 [disabled]="isColumnLocked(item.productId || item.id,'transfer',selectedDate)"
                                 type="number" required>
 
                         </td>
