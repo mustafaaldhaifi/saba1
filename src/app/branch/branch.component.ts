@@ -3,7 +3,7 @@ import { Component, ElementRef, inject, Inject, PLATFORM_ID, QueryList, ViewChil
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { addDoc, collection, deleteDoc, doc, DocumentReference, getDoc, getDocs, getFirestore, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, and, collection, deleteDoc, doc, DocumentReference, getDoc, getDocs, getFirestore, limit, or, orderBy, query, QueryConstraint, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
@@ -18,7 +18,7 @@ import { ModalService } from '../CustomModalService';
 import { AlertDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { ReasonDialogComponent2 } from '../reason-dialog2/reason-dialog2.component';
 import { ColumnConstraint, ColumnConstraintsService } from './column-constraints.service';
-import { LockRulePayload, DefaultValueRulePayload, MaxValueRulePayload, RulePayload } from './inventory-rules.model';
+import { LockRulePayload, DefaultValueRulePayload, MaxValueRulePayload, RulePayload, WeeklyQuotaRule } from './inventory-rules.model';
 // استيراد الدوال الأساسية من /firestore
 import { Firestore } from '@angular/fire/firestore';
 
@@ -134,6 +134,7 @@ export class BranchComponent {
   lockRules: LockRulePayload[] = [];
   defaultValueRules: DefaultValueRulePayload[] = [];
   maxValueRules: MaxValueRulePayload[] = [];
+  weeklyQuotaRules: any[] = [];
 
   version: any
   constructor(
@@ -164,7 +165,20 @@ export class BranchComponent {
 
 
     try {
-      const snapshot = await this.apiService.getData('column_constraints');
+      const constraints: QueryConstraint[] = [
+        or(
+          and(
+            where("action", "==", "weekly_quota"),
+            where("branchId", "==", this.branch.id)
+          ),
+          and(
+            where("action", "in", ["max_value", "default_value", "lock"]),
+            where("branchIds", "array-contains", this.branch.id)
+          )
+        ) as unknown as QueryConstraint // تحويل النوع ليتوافق مع TypeScript
+      ];
+
+      const snapshot = await this.apiService.getData('column_constraints', constraints);
 
       if (snapshot && !snapshot.empty) {
         const rulesList: RulePayload[] = [];
@@ -210,6 +224,106 @@ export class BranchComponent {
     // }
     // });
   }
+
+  // ==========================================
+  // 1. دالة للتحقق مما إذا كان تاريخ تحديث الكوتة في أسبوع سابق أم لا
+  // ==========================================
+  isNewWeek(lastUpdateDateStr: string | Date | any): boolean {
+    if (!lastUpdateDateStr) return false;
+
+    let lastUpdate: Date;
+    if (lastUpdateDateStr.toDate && typeof lastUpdateDateStr.toDate === 'function') {
+      lastUpdate = lastUpdateDateStr.toDate(); // في حال كان Firestore Timestamp
+    } else {
+      lastUpdate = new Date(lastUpdateDateStr);
+    }
+
+    const now = new Date();
+
+    // الحصول على بداية الأسبوع الحقيقي (مثلاً يوم السبت عند الساعة 00:00:00)
+    // يمكنك تغيير Day == 6 إلى 0 إذا كان بداية أسبوعك الأحد
+    const startOfCurrentWeek = new Date(now);
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+    const diffToStart = (dayOfWeek + 1) % 7; // إرجاع المسافة ليوم السبت
+    startOfCurrentWeek.setDate(now.getDate() - diffToStart);
+    startOfCurrentWeek.setHours(0, 0, 0, 0);
+
+    // إذا كان آخر تحديث قبل بداية هذا الأسبوع، يُعتبر أسبوعاً جديداً
+    return lastUpdate < startOfCurrentWeek;
+  }
+
+  // ==========================================
+  // 2. دالة جلب بيانات الحصة الأسبوعية للمنتج مع التصفير الأسبوعي
+  // ==========================================
+  getWeeklyQuotaConfig(productId: string): { amount: number; used: number; remaining: number; updateAt: string } | null {
+    if (!this.weeklyQuotaRules || this.weeklyQuotaRules.length === 0) return null;
+
+    for (const rule of this.weeklyQuotaRules) {
+      if (rule.action === 'weekly_quota' && rule.branchId === this.branch.id && rule.products) {
+        const prod = rule.products.find((p: any) => p.productId === productId);
+        if (prod) {
+          let currentUsed = prod.used || 0;
+
+          const lastUpdate = prod.updatedAt || rule.updateAt;
+
+          // إذا دخلنا أسبوع جديد، نعتبر الكمية المستخدمة الضمنية هي 0
+          if (rule.updateAt && this.isNewWeek(lastUpdate)) {
+            currentUsed = 0;
+          }
+
+          const remaining = prod.amount - currentUsed;
+          return {
+            amount: prod.amount,
+            used: currentUsed,
+            remaining: remaining > 0 ? remaining : 0,
+            updateAt: rule.updateAt
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // ==========================================
+  // 3. دالة التحقق عند إدخال وجبة الموظف staffMeal
+  // ==========================================
+  validateStaffMealQuota(event: Event, i: number, subProduct?: any, productUnit?: any) {
+    const item = this.combinedData[i];
+    const productId = subProduct ? subProduct.productId : item.itemId;
+    const inputVal = Number(subProduct ? item.products[subProduct.i].staffMeal : item.staffMeal) || 0;
+
+    const quota = this.getWeeklyQuotaConfig(productId);
+
+    if (quota) {
+      // إذا تجاوزت الكمية المتبقية
+      if (inputVal > quota.remaining) {
+        const modalRef = this.modalService.open(AlertDialogComponent, {
+          text: `عذراً! الكمية المدخلة (${inputVal}) تتجاوز المتبقي من الحصة الأسبوعية (${quota.remaining}).
+إجمالي الحصة: ${quota.amount} | المستخدم سابقاً هذا الأسبوع: ${quota.used}`
+        });
+
+        this.isModalOpen = true;
+
+        const reset = () => {
+          if (subProduct) {
+            item.products[subProduct.i].staffMeal = "";
+          } else {
+            item.staffMeal = "";
+          }
+          item.closeStock = this.calculateClosingStock(item, undefined, productUnit);
+          this.isModalOpen = false;
+        };
+
+        modalRef.result.then(reset).catch(reset);
+        return;
+      }
+    }
+
+    // إذا كانت الكمية صحيحة، يعاد حساب المتبقي من المخزون المغلق
+    item.closeStock = this.calculateClosingStock(item, undefined, productUnit);
+  }
+
 
   /**
  * 1. دالة للحصول على الحد الأقصى المسموح به لخيار معين
@@ -307,6 +421,10 @@ export class BranchComponent {
 
         case 'max_value':
           this.maxValueRules.push(rule as MaxValueRulePayload);
+          break;
+
+        case 'weekly_quota':
+          this.weeklyQuotaRules.push(rule as WeeklyQuotaRule);
           break;
 
         default:
@@ -560,8 +678,8 @@ export class BranchComponent {
 
 
         if (this.selectedType.id == '5') {
-         await this.loadConstraintDataFromFirestore()
-        this.applyDefaultValuesAndRecalculate(this.branch.id)
+          await this.loadConstraintDataFromFirestore()
+          this.applyDefaultValuesAndRecalculate(this.branch.id)
 
         }
         this.isLoading = false;
@@ -2181,15 +2299,15 @@ export class BranchComponent {
       // 1. جلب إعدادات القيمة الافتراضية (مثال لعمود وجبة الموظف staffMeal)
       const config = this.getDefaultValueConfig(item.productId, 'staffMeal', currentBranchId);
 
-      console.log("config",config);
-      
+      console.log("config", config);
+
       if (config) {
         if (config.enabled) {
           // تعبئة القيمة الافتراضية إذا كانت الخانة فارغة أو غير معرفة
           if (item.staffMeal === undefined || item.staffMeal === null || item.staffMeal === '') {
             item.staffMeal = config.qnt;
           }
-        } 
+        }
         // else {
         //   // إذا كان الحقل غير مفعل، يتم تفريغه
         //   item.staffMeal = '';
@@ -2205,7 +2323,7 @@ export class BranchComponent {
               if (subProduct.staffMeal === undefined || subProduct.staffMeal === null || subProduct.staffMeal === '') {
                 subProduct.staffMeal = subConfig.qnt;
               }
-            } 
+            }
             // else {
             //   subProduct.staffMeal = '';
             // }
@@ -2225,11 +2343,11 @@ export class BranchComponent {
    * 1. جلب بيانات القيمة الافتراضية وحالة التفعيل لصنف وعمود معين
    */
   getDefaultValueConfig(itemId: string, columnName: string, currentBranchId: string): { qnt: number; enabled: boolean } | null {
-      console.log("rule",this.defaultValueRules )
+    console.log("rule", this.defaultValueRules)
     if (!this.defaultValueRules || this.defaultValueRules.length === 0) {
       return null;
     }
-  
+
 
     for (const rule of this.defaultValueRules) {
       // التحقق من الفرع ([] تعني تطبيق على الكل)
@@ -2281,45 +2399,122 @@ export class BranchComponent {
       }
     });
   }
+
+
+
+
+  /**
+ * دالة فرعية تفحص جميع قيود الحقول (القفل، التفعيل، الحد الأقصى، الحصة الأسبوعية)
+ * @returns boolean - true إذا كان الإدخال صحيحاً، false إذا وُجد خرق للقيود
+ */
+  private validateFieldConstraints(field: string, item: any, productId: string, enteredValue: number, subProduct: any = null, productUnit: any = null): boolean {
+    const currentBranchId = this.branch.id;
+    const currentDate = this.selectedDate;
+
+    // دالة مخصصة لإظهار التنبيه وتفريغ الخانة وإعادة حساب المخزون
+    const handleForbiddenInput = (message: string) => {
+      const modalRef = this.modalService.open(AlertDialogComponent, { text: message });
+      this.isModalOpen = true;
+
+      const resetLogic = () => {
+        if (subProduct) {
+          item.products[subProduct.i][field] = "";
+        } else {
+          item[field] = "";
+        }
+        // إعادة حساب المخزون المغلق بعد تفريغ الحقل المرفوض
+        item.closeStock = this.calculateClosingStock(item, undefined, productUnit);
+        this.isModalOpen = false;
+      };
+
+      modalRef.result.then(resetLogic).catch(resetLogic);
+    };
+
+
+
+    // 3. فحص الحد الأقصى (Max Value)
+    const maxAllowed = this.getMaxValue(productId, field, currentBranchId);
+    if (maxAllowed !== null && enteredValue > maxAllowed) {
+      handleForbiddenInput(`عذراً، الكمية المدخلة (${enteredValue}) تتجاوز الحد الأقصى المسموح به وهو ${maxAllowed}.`);
+      return false;
+    }
+
+    // 4. فحص الحصة الأسبوعية (Weekly Quota) - خاص بحقل staffMeal
+    if (field === 'staffMeal') {
+      const quota = this.getWeeklyQuotaConfig(productId);
+      if (quota && enteredValue > quota.remaining) {
+        handleForbiddenInput(
+          `عذراً! الكمية المدخلة (${enteredValue}) تتجاوز المتبقي من الحصة الأسبوعية (${quota.remaining}).\n` +
+          `إجمالي الحصة: ${quota.amount} | المستخدم هذا الأسبوع: ${quota.used}`
+        );
+        return false;
+      }
+    }
+
+    return true; // جميع الشروط سليمة
+  }
+
   onQuantityChange(field: string, item: any, i: number, subProduct: any = null, isUser: boolean = true): void {
 
     if (this.isModalOpen == true) {
       return
     }
-    console.log("dddu2", item);
-
-
-    // 1. جلب الحد الأقصى المسموح به للصنف والعمود الحالي
-    const maxAllowed = this.getMaxValue(this.combinedData[i].productId, field, this.branch.id);
-
-    // 2. فحص ما إذا كانت القيمة المدخلة حالياً تتجاوز الحد الأقصى (وأن هناك حداً أقصى معرّف بالفعل)
+    const productId = this.combinedData[i].productId
     const currentValue = Number(subProduct ? this.combinedData[i].products[subProduct.i][field] : this.combinedData[i][field]);
 
-    if (maxAllowed !== null && currentValue > maxAllowed) {
+    // // 1. استدعاء دالة التحقق الفرعية
+    const isValid = this.validateFieldConstraints(field, item, productId, currentValue, subProduct, item.productUnit);
 
-      // 3. فتح نافذة تنبيه تمنع الإدخال وتوضح الحد الأقصى
-      const modalRef = this.modalService.open(AlertDialogComponent, {
-        text: `عذراً، إدخال هذه الكمية ممنوع! الحد الأقصى المسموح به لـ هو ${maxAllowed} فقط.`
-      });
-
-      this.isModalOpen = true;
-
-      // 4. تفريغ الحقل وإعادة حساب المخزون سواء ضغط على موافق أو أغلق النافذة
-      const resetAndRecalculate = () => {
-        if (subProduct) {
-          this.combinedData[i].products[subProduct.i][field] = "";
-        } else {
-          this.combinedData[i][field] = "";
-        }
-
-        // إعادة حساب المخزون المغلق بعد تفريغ القيمة المرفوضة
-        const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
-        this.combinedData[i].closeStock = updatedCloseStock;
-        this.isModalOpen = false;
-      };
-
-      modalRef.result.then(resetAndRecalculate).catch(resetAndRecalculate);
+    // 2. إذا نجح التحقق، قم بإعادة حساب المخزون المتبقي بشكل طبيعي
+    if (isValid) {
+      item.closeStock = this.calculateClosingStock(item, undefined, item.productUnit);
     }
+
+    // if (field === 'staffMeal') {
+    //   const quota = this.getWeeklyQuotaConfig(productId);
+    //   console.log('qqq1', productId);
+
+    //   console.log('qqq1', quota);
+
+    //   if (quota && currentValue > quota.remaining) {
+    //     console.log('qqq2', quota);
+    //     handleForbiddenInput(
+    //       `عذراً! الكمية المدخلة (${currentValue}) تتجاوز المتبقي من الحصة الأسبوعية (${quota.remaining}).\n` +
+    //       `إجمالي الحصة: ${quota.amount} | المستخدم هذا الأسبوع: ${quota.used}`
+    //     );
+    //     return false;
+    //   }
+    // }
+    // 1. جلب الحد الأقصى المسموح به للصنف والعمود الحالي
+    // const maxAllowed = this.getMaxValue(this.combinedData[i].productId, field, this.branch.id);
+
+    // // 2. فحص ما إذا كانت القيمة المدخلة حالياً تتجاوز الحد الأقصى (وأن هناك حداً أقصى معرّف بالفعل)
+
+    // if (maxAllowed !== null && currentValue > maxAllowed) {
+
+    //   // 3. فتح نافذة تنبيه تمنع الإدخال وتوضح الحد الأقصى
+    //   const modalRef = this.modalService.open(AlertDialogComponent, {
+    //     text: `عذراً، إدخال هذه الكمية ممنوع! الحد الأقصى المسموح به لـ هو ${maxAllowed} فقط.`
+    //   });
+
+    //   this.isModalOpen = true;
+
+    //   // 4. تفريغ الحقل وإعادة حساب المخزون سواء ضغط على موافق أو أغلق النافذة
+    //   const resetAndRecalculate = () => {
+    //     if (subProduct) {
+    //       this.combinedData[i].products[subProduct.i][field] = "";
+    //     } else {
+    //       this.combinedData[i][field] = "";
+    //     }
+
+    //     // إعادة حساب المخزون المغلق بعد تفريغ القيمة المرفوضة
+    //     const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
+    //     this.combinedData[i].closeStock = updatedCloseStock;
+    //     this.isModalOpen = false;
+    //   };
+
+    //   modalRef.result.then(resetAndRecalculate).catch(resetAndRecalculate);
+    // }
 
     // let deductFromProduct
     // if (subProduct !== null) {
@@ -2895,6 +3090,55 @@ export class BranchComponent {
 
       const batch = writeBatch(this.apiService.db);
 
+
+      // =========================================================
+      // 🔥 [تحديث الحصة الأسبوعية weekly_quota مع الاعتماد على تاريخ المنتج]
+      // =========================================================
+      if (this.weeklyQuotaRules && this.weeklyQuotaRules.length > 0) {
+        this.weeklyQuotaRules.forEach(rule => {
+          if (rule.action === 'weekly_quota' && rule.branchId === this.branch.id && rule.products) {
+
+            let hasProductUpdates = false;
+
+            const updatedProducts = rule.products.map((prod: any) => {
+              // البحث عن المنتج في البيانات التي يدخلها المستخدم حالياً
+              const matchingEnteredItem = newCombinedData.find(item => item.productId === prod.productId || item.itemId === prod.productId);
+
+              if (matchingEnteredItem && matchingEnteredItem.staffMeal && Number(matchingEnteredItem.staffMeal) > 0) {
+                hasProductUpdates = true;
+
+                const newlyAdded = Number(matchingEnteredItem.staffMeal);
+
+                // 🕒 المقارنة تعتمد أولاً على تاريخ المنتج الخاص (prod.updatedAt)
+                // وفي حال عدم وجوده يتم الرجوع لتاريخ المستند الكلي (rule.updateAt)
+                const productLastUpdate = prod.updatedAt || rule.updateAt;
+                const isNewWeekReset = productLastUpdate ? this.isNewWeek(productLastUpdate) : false;
+
+                // إذا كنا في أسبوع جديد لهذا المنتج يتم تصفير الـ used القديم
+                const previousUsed = isNewWeekReset ? 0 : (prod.used || 0);
+
+                return {
+                  ...prod,
+                  used: previousUsed + newlyAdded, // إضافة الكمية الجديدة فوق القيمة المستهلكة
+                  updatedAt: new Date().toISOString() // 🕒 تحديث تاريخ هذا المنتج بالذات للآن
+                };
+              }
+              return prod;
+            });
+
+            // إذا تم إدخال وجبة موظف لأي منتج تابع لهذه القاعدة، يتم إضافة التحديث للـ Batch
+            if (hasProductUpdates && rule.id) {
+              const quotaDocRef = doc(this.apiService.db, 'column_constraints', rule.id);
+              batch.update(quotaDocRef, {
+                products: updatedProducts,
+                updateAt: new Date().toISOString() // تحديث تاريخ المستند العام أيضاً
+              });
+            }
+
+          }
+        });
+      }
+      // =========================================================
 
       openStockToUpdate.forEach((item: any) => {
         if (item.openingStockId) {

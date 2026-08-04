@@ -59,5 +59,24 @@ export interface MaxValueRulePayload {
   updatedAt?: string;
 }
 
+// 1. واجهة منتج الكوتة
+export interface QuotaProduct {
+  productId: string;
+  amount: number;
+  used: number;
+}
+
+// 2. واجهة قاعدة الحصة الأسبوعية بالكامل
+export interface WeeklyQuotaRule {
+  id?: string;
+  action: 'weekly_quota';
+  branchId: string;
+  name?: string;
+  quotaGroupId?: string;
+  createdAt?: any;
+  updateAt?: string | Date; // تاريخ آخر تحديث ISO string أو Timestamp
+  products: QuotaProduct[];
+}
+
 // Union Type للتعامل مع أي كائن قادم من الـ API
-export type RulePayload = LockRulePayload | DefaultValueRulePayload | MaxValueRulePayload;
+export type RulePayload = LockRulePayload | DefaultValueRulePayload | MaxValueRulePayload | WeeklyQuotaRule;
