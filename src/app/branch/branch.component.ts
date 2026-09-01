@@ -189,6 +189,8 @@ export class BranchComponent {
         });
 
         console.log("qqq", rulesList);
+        console.log("qqq", this.branch);
+
         this.onDataReceived(rulesList);
 
 
@@ -334,14 +336,18 @@ export class BranchComponent {
       return null;
     }
 
+    console.log('qqqmaxValueRules', this.maxValueRules);
+
     // البحث في قواعد الحد الأقصى (maxValueRules)
     for (const rule of this.maxValueRules) {
       // التحقق من الفرع: (إما محدد في القائمة أو [] وتفهم أنها لكل الفروع)
       const matchesBranch = rule.branchIds.length === 0 || rule.branchIds.includes(currentBranchId);
 
       if (matchesBranch) {
+        console.log('qqqMatch', matchesBranch);
         // البحث عن الصنف
         const matchedItem = rule.items.find(item => item.itemId === itemId);
+        console.log('qqqMatchItem', matchedItem);
 
         if (matchedItem && matchedItem.columns && matchedItem.columns[columnName] !== undefined) {
           return matchedItem.columns[columnName]!;
@@ -358,6 +364,8 @@ export class BranchComponent {
   validateMaxValue(event: Event, itemId: string, columnName: string, currentBranchId: string) {
     const inputElement = event.target as HTMLInputElement;
     const max = this.getMaxValue(itemId, columnName, currentBranchId);
+
+    console.log('qqqmax', max);
 
     if (max !== null) {
       const enteredValue = Number(inputElement.value);
@@ -644,7 +652,7 @@ export class BranchComponent {
 
         if (this.selectedType.id == '5') {
           await this.initDaily()
-          this.getConstraintsOnce();
+          // this.getConstraintsOnce();
         } else {
           await Promise.all([
             this.getDatesToAdd(),
@@ -888,19 +896,6 @@ export class BranchComponent {
       console.error("Error fetching settings:", error);
       // You can handle the error here, like showing a user message
       // this.errorMessage = "Failed to load settings"; // Example error handling
-    }
-  }
-  async getConstraintsOnce(): Promise<ColumnConstraint[]> {
-    try {
-      const colRef = collection(this.apiService.db, 'column_constraints');
-      const snapshot = await getDocs(colRef);
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ColumnConstraint[];
-    } catch (error) {
-      console.error('Error fetching constraints:', error);
-      return [];
     }
   }
 
@@ -1303,10 +1298,10 @@ export class BranchComponent {
       return true
     }
 
-    if (!this.combinedData.every(e => e.status !== "0")) return false;
+    if (!this.combinedData.every(e => e.status != "0")) return false;
 
     if (this.selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv') {
-      const status3Items = this.combinedData.filter(e => e.status === "1");
+      const status3Items = this.combinedData.filter(e => e.status == "1");
       return status3Items.every(e =>
         typeof e.qntNotRequirement === 'number' &&
         e.qntNotRequirement > 0
@@ -1314,7 +1309,7 @@ export class BranchComponent {
     }
     else {
       // For items with status "3", validate qntNotRequirement
-      const status3Items = this.combinedData.filter(e => e.status === "3");
+      const status3Items = this.combinedData.filter(e => e.status == "3");
       return status3Items.every(e =>
         typeof e.qntNotRequirement === 'number' &&
         e.qntNotRequirement > 0
@@ -1327,9 +1322,26 @@ export class BranchComponent {
    *  to check previous orders is all have complete change status
    */
   isChangeStatus() {
-    const r = this.preOrders.some((e: any) => e.status !== '1')
+    console.log('preOrders', this.preOrders);
+
+    const r = this.preOrders.some((e: any) => e.status != '1')
     return r
   }
+
+isChangeStatus2(): boolean {
+  if (!this.preOrders || this.preOrders.length === 0) {
+    return false;
+  }
+
+  const getTime = (d: any) => (d?.toDate ? d.toDate().getTime() : new Date(d).getTime());
+
+  // 🔥 إضافة : any للمتغيرين لتجنب خطأ ts(7006)
+  const latestPreOrder = this.preOrders.reduce((latest: any, current: any) => {
+    return getTime(current.createdAt) > getTime(latest.createdAt) ? current : latest;
+  });
+
+  return String(latestPreOrder.status) === '0';
+}
   /// Add local
   addToOrdersToAdd(order: any) {
     const existingProductIndex = this.ordersToAdd.findIndex((p: any) => p.productId === order.productId);
@@ -1352,13 +1364,16 @@ export class BranchComponent {
 
   }
   addNewOrder(date: any) {
-    if (this.isChangeStatus() === true && this.selectedType.id != this.reportMonthlyTypeId) {
+    if (this.isChangeStatus2() === true && this.selectedType.id != this.reportMonthlyTypeId) {
       alert("يجب تسجيل حالة الاستلام للطلبية السابقة"); // "Receipt status must be recorded for previous students"
       return;
     }
     // Check if there is any date in openDates greater than the provided date
+    // const hasLaterDate = this.datesToAdd?.some(
+    //   (d: any) => d.createdAt.toDate() < date.toDate()
+    // );
     const hasLaterDate = this.datesToAdd?.some(
-      (d: any) => d.createdAt.toDate() < date.toDate()
+      (d: any) => d.createdAt.toDate() > date.toDate()
     );
     if (hasLaterDate) {
       alert("يرجى الاضافة اولا لقبل هذا التاريخ"); // "Cannot add a new order before completing previous orders"
@@ -2434,6 +2449,10 @@ export class BranchComponent {
 
     // 3. فحص الحد الأقصى (Max Value)
     const maxAllowed = this.getMaxValue(productId, field, currentBranchId);
+    console.log('qqqMM', productId);
+    console.log('qqqMM', field);
+    console.log('qqqMM', maxAllowed);
+
     if (maxAllowed !== null && enteredValue > maxAllowed) {
       handleForbiddenInput(`عذراً، الكمية المدخلة (${enteredValue}) تتجاوز الحد الأقصى المسموح به وهو ${maxAllowed}.`);
       return false;
@@ -4217,42 +4236,53 @@ export class BranchComponent {
 
   }
 
-  isDisabledDropDown(): boolean {
-    const changeStatus = this.isChangeStatus();
-    const isActive = this.isOn;
-    const isPreOrderStatusOne = this.selectedPreOrder.status === '1';
-    const hasEmptyOrder = this.checkIfHasEmptyOrder();
-    const isTypeAllowed = this.isSelectedTypeAllowed();
+  // isDisabledDropDown(): boolean {
+  //   const changeStatus = this.isChangeStatus();
+  //   const isActive = this.isOn;
+  //   const isPreOrderStatusOne = this.selectedPreOrder.status === '1';
+  //   const hasEmptyOrder = this.checkIfHasEmptyOrder();
+  //   const isTypeAllowed = this.isSelectedTypeAllowed();
 
-    // console.log('isChangeStatus():', changeStatus);
-    // console.log('isOn:', isActive);
-    // console.log('selectedPreOrder.status === "1":', isPreOrderStatusOne);
-    // console.log('checkIfHasEmptyOrder():', hasEmptyOrder);
-    // console.log('isSelectedTypeAllowed():', isTypeAllowed);
-    if (isPreOrderStatusOne === true) {
-      if (isActive === false) {
-        return true
-      }
-      return false
+  //   // console.log('isChangeStatus():', changeStatus);
+  //   // console.log('isOn:', isActive);
+  //   // console.log('selectedPreOrder.status === "1":', isPreOrderStatusOne);
+  //   // console.log('checkIfHasEmptyOrder():', hasEmptyOrder);
+  //   // console.log('isSelectedTypeAllowed():', isTypeAllowed);
+  //   if (isPreOrderStatusOne === true) {
+  //     if (isActive === false) {
+  //       return true
+  //     }
+  //     return false
+  //   }
+  //   else {
+  //     if (changeStatus === true) {
+  //       if (isTypeAllowed === true) {
+  //         return false
+  //       }
+  //     }
+  //     return true
+  //   }
+  //   ////
+
+
+  //   // return (
+  //   //   !changeStatus ||
+  //   //   !isActive ||
+  //   //   isPreOrderStatusOne ||
+  //   //   hasEmptyOrder ||
+  //   //   !isTypeAllowed
+  //   // );
+  // }
+
+  // في ملف Component TS
+  get isDropDownDisabled(): boolean {
+    // إذا كانت حالة الطلب المسبق 1، يتم التعطيل بناءً على isOn
+    if (this.selectedPreOrder?.status == '1') {
+      return !this.isOn;
     }
-    else {
-      if (changeStatus === true) {
-        if (isTypeAllowed === true) {
-          return false
-        }
-      }
-      return true
-    }
-    ////
 
-
-    // return (
-    //   !changeStatus ||
-    //   !isActive ||
-    //   isPreOrderStatusOne ||
-    //   hasEmptyOrder ||
-    //   !isTypeAllowed
-    // );
+    // غير ذلك: يفتح فقط إذا كان تغيير الحالة والنوع مسموحين
+    return !(this.isChangeStatus() && this.isSelectedTypeAllowed());
   }
 
 

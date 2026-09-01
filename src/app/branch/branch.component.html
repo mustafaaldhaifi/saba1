@@ -128,7 +128,7 @@
                             *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU' && selectedType.id != 'Ikt6pyFoTwvwn7GBIPvv' ">
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
-                                    <select [disabled]="isDisabledDropDown()" [(ngModel)]="item.status"
+                                    <select [disabled]="isDropDownDisabled" [(ngModel)]="item.status"
                                         [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
 
@@ -150,7 +150,7 @@
                         <td *ngIf="isPreSent === true && selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">
                             <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
                                 <label class="status-dropdown-label">
-                                    <select [disabled]="isDisabledDropDown()" [(ngModel)]="item.status"
+                                    <select [disabled]="isDropDownDisabled" [(ngModel)]="item.status"
                                         [style.background-color]="getStatusColor(item.status)"
                                         (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
 
@@ -167,13 +167,13 @@
                         </td>
                         <td *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
                             <!-- Checkbox -->
-                            <input [disabled]="isDisabledDropDown()" type="checkbox"
+                            <input [disabled]="isDropDownDisabled" type="checkbox"
                                 [(ngModel)]="combinedData[i].isCashEnabled" (change)="onCashToggle(i,item)">
                             <!-- <label>اذا تفعلت اضف ادخال قيمة الكاش</label> -->
 
                             <!-- Cash Input يظهر فقط إذا الـ checkbox مفعّل -->
                             <div *ngIf="combinedData[i].isCashEnabled" style="margin-top: 5px;">
-                                <input [disabled]="isDisabledDropDown()" type="number"
+                                <input [disabled]="isDropDownDisabled" type="number"
                                     [(ngModel)]="combinedData[i].cashValue" #cashInput="ngModel" required
                                     class="sticky-input" [class.alert-red]="cashInput.invalid && cashInput.touched"
                                     placeholder="قيمة الكاش" (input)="onCashInput(i,item)">

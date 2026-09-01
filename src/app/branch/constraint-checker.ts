@@ -20,6 +20,9 @@ export class ConstraintChecker {
       const matchDate = !c.dates || c.dates.length === 0 || c.dates.includes(selectedDate);
       const matchBranch = !c.branchIds || c.branchIds.length === 0 || c.branchIds.includes(branchId);
       const matchItem = !c.itemIds || c.itemIds.length === 0 || c.itemIds.includes(itemId);
+    
+
+      
 
       return matchDate && matchBranch && matchItem;
     });
