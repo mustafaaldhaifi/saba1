@@ -1373,7 +1373,7 @@ isChangeStatus2(): boolean {
     //   (d: any) => d.createdAt.toDate() < date.toDate()
     // );
     const hasLaterDate = this.datesToAdd?.some(
-      (d: any) => d.createdAt.toDate() > date.toDate()
+      (d: any) => d.createdAt.toDate() < date.toDate()
     );
     if (hasLaterDate) {
       alert("يرجى الاضافة اولا لقبل هذا التاريخ"); // "Cannot add a new order before completing previous orders"
