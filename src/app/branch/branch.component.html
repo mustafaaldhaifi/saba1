@@ -104,6 +104,7 @@
                             <input (input)="onQntFChange(combinedData[i])"
                                 *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntFInput="ngModel"
                                 [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
+                                  [disabled]="isFieldDisabled"
                                 [(ngModel)]="combinedData[i].qntF" type="number" required>
                             <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qntF }}</div>
                         </td>
@@ -116,6 +117,7 @@
                             <input (input)="onQntChange(i,combinedData[i])"
                                 *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntInput="ngModel"
                                 [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
+                                [disabled]="isFieldDisabled"
                                 [(ngModel)]="combinedData[i].qnt" type="number" required>
                             <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qnt }}</div>
                         </td>

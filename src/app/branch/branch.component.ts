@@ -1379,7 +1379,7 @@ isChangeStatus2(): boolean {
       alert("يرجى الاضافة اولا لقبل هذا التاريخ"); // "Cannot add a new order before completing previous orders"
       return;
     }
-    console.log(date);
+    console.log('ddddaa',date);
 
     console.log(hasLaterDate);
 
@@ -4236,6 +4236,8 @@ isChangeStatus2(): boolean {
 
   }
 
+  
+
   // isDisabledDropDown(): boolean {
   //   const changeStatus = this.isChangeStatus();
   //   const isActive = this.isOn;
@@ -4276,15 +4278,32 @@ isChangeStatus2(): boolean {
 
   // في ملف Component TS
   get isDropDownDisabled(): boolean {
+    if (this.isAdmin) {
+      return false
+    }
     // إذا كانت حالة الطلب المسبق 1، يتم التعطيل بناءً على isOn
     if (this.selectedPreOrder?.status == '1') {
-      return !this.isOn;
+      return this.isOn;
     }
 
     // غير ذلك: يفتح فقط إذا كان تغيير الحالة والنوع مسموحين
     return !(this.isChangeStatus() && this.isSelectedTypeAllowed());
   }
 
+    get isFieldDisabled(): boolean {
+       if (this.isAdmin) {
+      return false
+    }
+    // إذا كانت حالة الطلب المسبق 1، يتم التعطيل بناءً على isOn
+    // if (this.selectedPreOrder?.status == '1') {
+    // return this.isOn;
+    // }
+    return !this.isToAddMode
+    // return true
+
+    // غير ذلك: يفتح فقط إذا كان تغيير الحالة والنوع مسموحين
+    // return !(this.isChangeStatus() && this.isSelectedTypeAllowed());
+  }
 
   async saveChangesDaily() {
     if (this.orderDailyToUpdate.length === 0) return;
