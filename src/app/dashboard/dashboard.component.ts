@@ -33,6 +33,7 @@ import { OrdersService } from '../orders.service copy';
 import { BranchesService } from '../branches.service';
 import { DashboardOrderType, DashboardTypesService } from '../features/dashboard/data/dashboard-types.service';
 import { DashboardSettingsService } from '../features/dashboard/data/dashboard-settings.service';
+import { DashboardOpenDate, DashboardOpenDatesService } from '../features/dashboard/data/dashboard-open-dates.service';
 
 
 interface Product {
@@ -258,84 +259,32 @@ export class DashboardComponent implements OnInit {
     }
   }
   async deleteOpenDate(id: string): Promise<void> {
-    this.isLoading = true
+    this.isLoading = true;
     try {
-      console.log("Deleting document with ID:", id);
-
-      // Get Firestore reference
-      const db = getFirestore();
-      const docRef = doc(db, 'openDates', id);
-
-      // Delete the document
-      await deleteDoc(docRef);
-
-      // Update local array by filtering out the deleted item
-      this.datesToAdd = this.datesToAdd.filter((item: any) => item.id !== id);
-
-      console.log("Document successfully deleted");
-
-
-
+      await this.dashboardOpenDates.deleteOpenDate(id);
+      this.datesToAdd = this.datesToAdd.filter(item => item.id !== id);
     } catch (error) {
       console.error("Error deleting document:", error);
-
-      // Optional: Show error message
-
-    }
-    finally {
-      this.isLoading = false
+    } finally {
+      this.isLoading = false;
     }
   }
   async addOpenDate() {
-    this.isLoading = true
+    this.isLoading = true;
     try {
-      if (!this.date3) {
-        throw new Error('No date provided');
-      }
-
-      const db = getFirestore();
-      const batch = writeBatch(db);
-      const docRef = doc(collection(db, 'openDates'));
-
-      // Create the date and validate it
-      const date = new Date(this.date3);
-      if (isNaN(date.getTime())) {
-        throw new Error('Invalid date provided');
-      }
-
-      var newData = {
-        typeId: this.selectedType.id,
-        createdAt: Timestamp.fromDate(date),
-      } as any;
-
-      if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1" || this.selectedType.id === "bt9w9ZB1H1IizPBugiUl") {
-        newData.city = this.selectedOption;
-      }
-
-      batch.set(docRef, newData);
-      await batch.commit();
-
-      // Now get the newly added document
-      const docSnapshot = await getDoc(docRef);
-
-      if (!docSnapshot.exists()) {
-        throw new Error('Failed to retrieve added document');
-      }
-
-      const a = {
-        id: docSnapshot.id,
-        createdAt: docSnapshot.data()['createdAt']
-      };
-      this.date3 = ""
-      this.datesToAdd.push(a)
-
-
+      if (!this.date3) throw new Error('No date provided');
+      const openDate = await this.dashboardOpenDates.addOpenDate(
+        this.selectedType.id,
+        new Date(this.date3),
+        this.selectedOption
+      );
+      this.date3 = '';
+      this.datesToAdd.push(openDate);
     } catch (error) {
       console.error('Error in addOpenDate:', error);
       throw error;
-    }
-    finally {
-      this.isLoading = false
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -485,6 +434,7 @@ export class DashboardComponent implements OnInit {
     private branchService: BranchesService,
     private dashboardTypes: DashboardTypesService,
     private dashboardSettings: DashboardSettingsService,
+    private dashboardOpenDates: DashboardOpenDatesService,
 
   ) {
     this.version = environment.version
@@ -1115,8 +1065,14 @@ export class DashboardComponent implements OnInit {
     return this.allowableEdits.includes(this.selectedType.id);
   }
 
-  datesToAdd: any = []
+  datesToAdd: DashboardOpenDate[] = [];
   async getDatesToAdd(): Promise<void> {
+    this.datesToAdd = await this.dashboardOpenDates.loadOpenDates(
+      this.selectedType.id,
+      this.selectedOption
+    );
+    return;
+
     const db = getFirestore();
     // const q = query(collection(db, "openDates"),
     // if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
