@@ -15,9 +15,6 @@
       <i class="fas fa-sync-alt"></i>
     </button>
 
-    <button *ngIf="hasChanges()" class="btn save-btn" (click)="saveChanges()">
-      Save Changes
-    </button>
   </div>
 
 
@@ -329,20 +326,17 @@
           <tbody>
             <!-- Existing Products -->
             <tr class="fixed-column id-column" *ngFor="let product of data; let i = index; trackBy: trackByProductId;">
-              <td (click)="deleteProduct(product.id)" class="delete-cell">
+              <td class="delete-cell">
                 {{ i + 1 }}
               </td>
               <td class="fixed-column name-column">
-                <input type="text" [value]="product.name" [(ngModel)]="product.name"
-                  (ngModelChange)="onProductNameChange(i, product)" class="product-input">
+                {{ product.name }}
               </td>
               <td class="fixed-column unit-column">
-                <input type="text" [value]="product.unit" [(ngModel)]="product.unit"
-                  (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
+                {{ product.unit }}
               </td>
               <td class="fixed-column unitF-column" *ngIf="selectedType.id != '5'">
-                <input type="text" [value]="product.unitF" [(ngModel)]="product.unitF"
-                  (ngModelChange)="onProductNameChange(i, product)" class="unit-input">
+                {{ product.unitF }}
               </td>
 
               <!-- Quantity and Status for each branch -->
@@ -350,15 +344,13 @@
                 <td class="branch-cell">
                   <!-- Find the matching order once per cell -->
                   <ng-container *ngIf="getOrder(branch.id, product.id) as order">
-                    <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qnt"
-                      (ngModelChange)="onOrderChange(order)" class="quantity-input">
+                    {{ order.qnt }}
                   </ng-container>
                 </td>
 
                 <td class="branch-cell">
                   <ng-container *ngIf="getOrder(branch.id, product.id) as order">
-                    <input *ngIf="order" type="number" min="0" [(ngModel)]="order.qntF"
-                      (ngModelChange)="onOrderChange(order)" class="quantity-input">
+                    {{ order.qntF }}
                   </ng-container>
                 </td>
 
@@ -375,20 +367,8 @@
                   </select>
                 </ng-container> -->
                   <ng-container *ngIf="getOrder(branch.id, product.id) as order">
-                    <select [style.background-color]="getStatusColor(order.status)" *ngIf="order?.id"
-                      [(ngModel)]="order.status" (ngModelChange)="onStatusChange(order)" class="status-select">
-                      <option value="0"></option>
-                      <option value="1">Received <span
-                          *ngIf="selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">({{order.qntNotRequirement}})</span>
-                      </option>
-                      <option value="2">Not Received</option>
-                      <option value="4">Not Requested</option>
-                      <!-- <option value="5">Cash</option> -->
-                      <option *ngIf=" order.status == '5'" value="{{order.status}}">Cash e
-                        ({{order.qntNotRequirement}})</option>
-                      <option *ngIf=" order.status == 3" value="{{order.status}}">Not Same
-                        ({{order.qntNotRequirement}})</option>
-                    </select>
+                    <span *ngIf="order?.id" class="status-select"
+                      [style.background-color]="getStatusColor(order.status)">{{ order.status }}</span>
                   </ng-container>
                 </td>
 
@@ -400,30 +380,6 @@
               </ng-container>
             </tr>
 
-            <!-- New Products to Add -->
-            <tr *ngFor="let newProduct of productsToAdd; let i = index; ">
-              <td>New</td>
-              <td>
-                <input style="width: 100px;" type="text" [(ngModel)]="productsToAdd[i].name" placeholder="Product name"
-                  class="product-input">
-              </td>
-              <td>
-                <input type="text" [(ngModel)]="productsToAdd[i].unit" placeholder="Unit" class="unit-input">
-              </td>
-              <td>
-                <input type="text" [(ngModel)]="productsToAdd[i].unitF" placeholder="UnitF" class="unit-input">
-              </td>
-              <td *ngFor="let branch of branches" colspan="3" class="empty-cell"></td>
-            </tr>
-
-            <!-- Add New Product Row -->
-            <tr (click)="addToProductsToAdd()" class="add-row">
-              <td colspan="4">
-                <button class="btn date-btn">
-                  + Add New Product
-                </button>
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -552,24 +508,19 @@
                 </td> -->
                 <td *ngIf="j === 0" [attr.rowspan]="product.subProducts.length">
 
-                  <input
-                    style="writing-mode: vertical-rl; transform: rotate(180deg); font-weight: bold; text-align: center;"
-                    type="text" [(ngModel)]="product.name" class="product-input"
-                    (ngModelChange)="onProductNameChange(i, product)" />
-                  <!-- {{ product.name }} -->
+                  <span style="writing-mode: vertical-rl; transform: rotate(180deg); font-weight: bold; text-align: center;">
+                    {{ product.name }}
+                  </span>
 
                 </td>
 
                 <!-- بيانات المنتج الفرعي -->
                 <td class="fixed-column name-column">
-                  <input type="text" [(ngModel)]="sub.name" class="product-input"
-                    (ngModelChange)="onProductNameChange(i, sub, j)" />
+                  {{ sub.name }}
 
                 </td>
                 <td class="fixed-column unit-column">
-                  <input type="text" [(ngModel)]="sub.unit" class="product-input"
-                    (ngModelChange)="onProductNameChange(i, sub, j)" />
-                  <!-- {{ sub.unit }} -->
+                  {{ sub.unit }}
                 </td>
 
                 <td *ngIf="selectedType.id != '5'" class="unitF-column">
@@ -589,20 +540,17 @@
             <!-- المنتج العادي (بدون منتجات فرعية) -->
             <ng-template #singleProduct>
               <tr class="id-column">
-                <td (click)="deleteProduct(product.id)" class="delete-cell">
+                <td class="delete-cell">
                   {{ i + 1 }}
                 </td>
                 <td class="fixed-column name-column">
-                  <input type="text" [(ngModel)]="product.name" class="product-input"
-                    (ngModelChange)="onProductNameChange(i, product)" />
+                  {{ product.name }}
                 </td>
                 <td class="fixed-column unit-column">
-                  <input type="text" [(ngModel)]="product.unit" class="unit-input"
-                    (ngModelChange)="onProductNameChange(i, product)" />
+                  {{ product.unit }}
                 </td>
                 <td *ngIf="selectedType.id != '5'" class="fixed-column unitF-column">
-                  <input type="text" [(ngModel)]="product.unitF" class="unit-input"
-                    (ngModelChange)="onProductNameChange(i, product)" />
+                  {{ product.unitF }}
                 </td>
                 <ng-container *ngFor="let branch of branches; trackBy: trackByBranchId">
                   <td colspan="3" class="branch-cell">
@@ -618,7 +566,7 @@
 
 
           <!-- New Products to Add -->
-          <tr *ngFor="let newProduct of productsToAdd; let i = index;">
+          <tr *ngFor="let newProduct of productsToAdd.slice(0, 0); let i = index;">
             <td>New</td>
 
             <!-- اسم المنتج -->
@@ -641,7 +589,7 @@
 
 
           <!-- Add New Product Row -->
-          <tr (click)="addToProductsToAdd()" class="add-row">
+          <tr *ngIf="false" class="add-row">
             <td colspan="3">
               <button class="btn date-btn">
                 + Add New Product

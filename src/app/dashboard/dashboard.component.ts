@@ -31,6 +31,7 @@ import { collectionNames } from '../Shareds';
 import { ProductsService } from '../products.service';
 import { OrdersService } from '../orders.service copy';
 import { BranchesService } from '../branches.service';
+import { DashboardOrderType, DashboardTypesService } from '../features/dashboard/data/dashboard-types.service';
 
 
 interface Product {
@@ -170,7 +171,7 @@ export class DashboardComponent implements OnInit {
     const isMonthally = this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU'
 
     console.log('isMonthally', isMonthally);
-    pdfService.export(this.getOrders(branch.id, isMonthally), false, formattedDate, branch.name, this.selectedType.name_en, isMonthally)
+    pdfService.export(this.getOrders(branch.id, isMonthally), false, formattedDate, branch.name, this.selectedType.nameEn, isMonthally)
   }
   async addTemp() {
 
@@ -449,7 +450,7 @@ export class DashboardComponent implements OnInit {
   data: any[] = [];
   branches: Branch[] = [];
   orders: Order[] = [];
-  types: any = [];
+  types: DashboardOrderType[] = [];
 
 
   preOrders: GroupedPreOrder[] = [];
@@ -460,7 +461,7 @@ export class DashboardComponent implements OnInit {
   ordersToAdd: Order[] = [];
   ordersToUpdate: Order[] = [];
   selectedOption = "ryad"
-  selectedType: any
+  selectedType!: DashboardOrderType;
   movableDate: any
 
   productUpdates: any
@@ -481,6 +482,7 @@ export class DashboardComponent implements OnInit {
     private productService: ProductsService,
     private orderService: OrdersService,
     private branchService: BranchesService,
+    private dashboardTypes: DashboardTypesService,
 
   ) {
     this.version = environment.version
@@ -1070,23 +1072,14 @@ export class DashboardComponent implements OnInit {
   }
 
   async getTypes(): Promise<void> {
-    const db = getFirestore();
-    const q = query(collection(db, "types"));
-    const snapshot = await getDocs(q);
-
-    this.types = snapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data()['name'],
-      name_en: doc.data()['name_en'],
-
-    }));
+    this.types = await this.dashboardTypes.loadTypes();
     // if (this.types.length > 0) {
     //   this.selectedType = this.types[0]
     // }
     if (environment.enabledDaily && environment.production == false) {
       // this.types = [{ id: '5', name: "الجرد اليومي", name_en: 'Daily' }, ...this.types];
     }
-    this.selectedType = this.types[0]
+    this.selectedType = this.types[0];
     // this.types.unshift({ id: 5, name: "الجرد اليومي", name_en: 'Daily' })
     console.log('types', this.types);
 
