@@ -2703,33 +2703,7 @@ export class DashboardComponent implements OnInit {
   async toggle() {
     this.isLoading = true
     try {
-      const db = getFirestore();
-      const docRef = doc(db, "settings", this.selectedType.id);
-
-      // First get current value
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const currentValue = docSnap.data()['isOpen'];
-
-        // Update to inverse value
-        await updateDoc(docRef, {
-          isOpen: !currentValue,
-          updatedAt: serverTimestamp()
-        });
-
-        console.log("Status toggled successfully!");
-        // Optional: Update local state
-        this.isOn = !currentValue;
-      } else {
-        console.log("Document doesn't exist, creating it...");
-        // Create document if it doesn't exist
-        await setDoc(docRef, {
-          isOpen: true,
-          createdAt: serverTimestamp()
-        });
-        this.isOn = true;
-      }
+      this.isOn = await this.dashboardSettings.toggleOrderOpenState(this.selectedType.id);
     } catch (error) {
       console.error("Error toggling status:", error);
       this.isOn = !this.isOn;
@@ -2746,36 +2720,7 @@ export class DashboardComponent implements OnInit {
   async toggleAlowEdit() {
     this.isLoading = true;
     try {
-      const db = getFirestore();
-      const docRef = doc(db, "settings", "allowableEdits");
-
-      const docSnap = await getDoc(docRef);
-
-      let currentTypeIds: string[] = [];
-
-      if (docSnap.exists()) {
-        currentTypeIds = docSnap.data()['typeIds'] || [];
-      }
-
-      const idAsString = this.selectedType.id;
-
-      const index = currentTypeIds.indexOf(idAsString);
-
-      if (index > -1) {
-        // Remove if already exists
-        currentTypeIds.splice(index, 1);
-        console.log("Type ID removed");
-      } else {
-        // Add if not exists
-        currentTypeIds.push(idAsString);
-        console.log("Type ID added");
-      }
-
-      // Update in Firestore
-      await setDoc(docRef, { typeIds: currentTypeIds }, { merge: true });
-
-      // Update local state
-      this.allowableEdits = currentTypeIds;
+      this.allowableEdits = await this.dashboardSettings.toggleAllowableEditTypeId(this.selectedType.id);
 
     } catch (error) {
       console.error("Error toggling edit permission:", error);
