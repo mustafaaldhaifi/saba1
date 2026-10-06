@@ -3,9 +3,13 @@
 import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import * as XLSX from 'xlsx-js-style';
-import { AuthService } from '../core/auth/auth.service';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from 'firebase/auth';
 import {
   collection,
   doc,
@@ -75,7 +79,7 @@ interface GroupedPreOrder {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule, CommonModule, RouterLink],
+  imports: [FormsModule, CommonModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -474,7 +478,6 @@ export class DashboardComponent implements OnInit {
 
   version: any
   constructor(
-    private authService: AuthService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
@@ -561,24 +564,26 @@ export class DashboardComponent implements OnInit {
   }
 
   private async checkAuthStatus(): Promise<void> {
-    try {
-      const user = await this.authService.getCurrentUser();
-      if (!user) {
-        await this.router.navigate(['/login']);
-        return;
+    const auth = getAuth();
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log("rtrt", user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2");
+
+        this.isAdmin = user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2";
+        if (!this.isAdmin) {
+          this.router.navigate(['/branch']);
+        }
+      } else {
+        this.router.navigate(['/login']);
       }
-      this.isAdmin = this.authService.isAdmin(user);
-      if (!this.isAdmin) {
-        await this.router.navigate(['/branch']);
-        return;
+
+      if (this.isAdmin) {
+
+        await this.getFirstData()
+        // await this.getData();
+
       }
-      await this.getFirstData();
-    } catch (error) {
-      console.error('Unable to initialize dashboard:', error);
-      alert('تعذر تحميل لوحة الإدارة. أعد المحاولة.');
-    } finally {
-      this.isLoading = false;
-    }
+    });
   }
   ifEnabledSearech() {
 
@@ -1317,13 +1322,13 @@ export class DashboardComponent implements OnInit {
 
 
 
-  async logout(): Promise<void> {
-    try {
-      await this.authService.logout();
-
-    } catch {
-      alert('تعذر تسجيل الخروج. حاول مرة أخرى.');
-    }
+  logout(): void {
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      this.orderService.remove()
+      localStorage.removeItem("dailyCache");
+      this.router.navigate(['/login']);
+    }).catch(console.error);
   }
 
   // Product CRUD operations

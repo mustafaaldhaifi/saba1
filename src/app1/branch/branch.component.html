@@ -1,0 +1,549 @@
+<!-- Loading Overlay -->
+<div class="loading-overlay" *ngIf="isLoading">
+    <div class="spinner"></div>
+</div>
+<a (click)="logout()" class="power-off-icon" style="color: red;">
+    <i class="fas fa-power-off"></i>
+</a>
+<h6>
+    {{version}}
+</h6>
+
+<div class="dropdown-container mb-3">
+    <label for="options" class="dropdown-label me-2">Select Type:</label>
+    <select id="options" [(ngModel)]="selectedType" class="dropdown form-select" (ngModelChange)="onSelectTypeChange()">
+        <option *ngFor="let item of types" [ngValue]="item">
+            {{ item.name }}
+        </option>
+    </select>
+</div>
+<!-- Date Selection Buttons -->
+<div *ngFor="let item of preOrders; let i = index">
+    <button (click)="onSelectDate(item)" style="width: 100%;"
+        [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
+        {{item.createdAt?.toDate() | date:'mediumDate'}}
+    </button>
+</div>
+
+<!-- <button *ngIf="selectedType && selectedType.id == 'WbAP06wLDRvZFTYUtkjU'" (click)="exportPdf()"> Export Pdf</button> -->
+<button *ngIf="selectedDate" (click)="exportPdf()"> Export Pdf</button>
+
+
+<!-- <h3 style="text-align: center;">الايام المسموحه لاضافة طلبات</h3> -->
+<div *ngFor="let item of datesToAdd; let i = index">
+    <button (click)="addNewOrder(item.createdAt)" style="width: 100%;background-color: brown;"
+        [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
+        {{item.createdAt?.toDate() | date:'mediumDate'}}
+        <i class="fas fa-plus" style="margin-left: 10px;"></i>
+
+    </button>
+</div>
+<!-- Add New Order Button -->
+<!-- <button *ngIf="isToAddMode === false && ifCurrentDateInPreOrders1 === false " (click)="addNewOrder()"
+    style="width: 100%;">
+    Add New Order
+</button> -->
+
+<!-- Selected Date Info -->
+<div *ngIf="selectedDate" style="text-align: center;">
+    <hr>
+    {{selectedDate.toDate() | date:'mediumDate'}}
+    <!-- {{selectedDate | date:'mediumDate'}} -->
+    <div *ngIf="branch">
+        {{branch.data.name}}
+    </div>
+</div>
+
+<!-- <button (click)="exportToPDF()">Export to PDF</button> -->
+
+
+
+<ng-container *ngIf="selectedDate && selectedType.id != '5'">
+    <div style="background-color: red; color: white; text-align: center;"
+        *ngIf="checkIfHasEmptyOrder() && isToAddMode === false">يوجد منتجات جديده
+        يجب اضافة كميتها
+    </div>
+
+
+    <!-- <ng-container *ngIf="selectedDate"> -->
+
+    <div class="table-container">
+        <div class="table fixed-header">
+            <!-- Orders Table -->
+            <table *ngIf="branch" class="styled-table">
+                <thead>
+                    <tr vz class="f-h">
+                        <th>الاصناف</th>
+                        <th style="width: 28px;">
+                            <div>الكمية</div>
+                            <div>المتوفرة</div>
+                        </th>
+                        <th>الوحدة</th>
+                        <th style="width: 28px;" *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
+                            <div>الكمية</div>
+                            <div>المطلوبة</div>
+                        </th>
+                        <th *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">الوحدة</th>
+                        <th *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">حالة
+                            الاستلام
+                            <span *ngIf="selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">بالكيلو</span>
+
+                        </th>
+                        <th *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
+                            شراء من الكاش
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of combinedData; let i = index"
+                        [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                        [style.border-bottom]="'1px solid #dee2e6'">
+                        <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
+
+                        <td>
+                            <input (input)="onQntFChange(combinedData[i])"
+                                *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntFInput="ngModel"
+                                [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
+                                  [disabled]="isFieldDisabled"
+                                [(ngModel)]="combinedData[i].qntF" type="number" required>
+                            <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qntF }}</div>
+                        </td>
+
+                        <td>
+                            {{item.unitF}}
+                        </td>
+
+                        <td *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
+                            <input (input)="onQntChange(i,combinedData[i])"
+                                *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntInput="ngModel"
+                                [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
+                                [disabled]="isFieldDisabled"
+                                [(ngModel)]="combinedData[i].qnt" type="number" required>
+                            <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qnt }}</div>
+                        </td>
+
+                        <td *ngIf="selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
+                            {{item.unit}}
+                        </td>
+
+                        <td
+                            *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU' && selectedType.id != 'Ikt6pyFoTwvwn7GBIPvv' ">
+                            <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
+                                <label class="status-dropdown-label">
+                                    <select [disabled]="isDropDownDisabled" [(ngModel)]="item.status"
+                                        [style.background-color]="getStatusColor(item.status)"
+                                        (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+
+                                        <option value="1">تم استلامها</option>
+                                        <option value="2">لم يتم استلامها</option>
+                                        <option value="3">كمية غير مطابقة</option>
+                                        <option value="4">غير مطلوبة</option>
+                                        <!-- <option value="5">شراء من الكاش</option> -->
+                                    </select>
+                                </label>
+                            </span>
+                            <input style="width: 50px;margin: 5px;" type="number"
+                                *ngIf="item.status == '3' || item.status == '5'" #qntInput="ngModel"
+                                [class.alert-red]="qntInput.invalid && qntInput.touched"
+                                [(ngModel)]="combinedData[i].qntNotRequirement"
+                                [disabled]="selectedPreOrder.status == '1'"
+                                (input)="onInputQ($event, i,combinedData[i])" required>
+                        </td>
+                        <td *ngIf="isPreSent === true && selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">
+                            <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
+                                <label class="status-dropdown-label">
+                                    <select [disabled]="isDropDownDisabled" [(ngModel)]="item.status"
+                                        [style.background-color]="getStatusColor(item.status)"
+                                        (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
+
+                                        <option value="1">تم استلامها</option>
+                                        <option value="2">لم يتم استلامها</option>
+                                    </select>
+                                </label>
+                            </span>
+                            <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '1'"
+                                #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
+                                [(ngModel)]="combinedData[i].qntNotRequirement"
+                                [disabled]="selectedPreOrder.status == '1'"
+                                (input)="onInputQ($event, i,combinedData[i])" required>
+                        </td>
+                        <td *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
+                            <!-- Checkbox -->
+                            <input [disabled]="isDropDownDisabled" type="checkbox"
+                                [(ngModel)]="combinedData[i].isCashEnabled" (change)="onCashToggle(i,item)">
+                            <!-- <label>اذا تفعلت اضف ادخال قيمة الكاش</label> -->
+
+                            <!-- Cash Input يظهر فقط إذا الـ checkbox مفعّل -->
+                            <div *ngIf="combinedData[i].isCashEnabled" style="margin-top: 5px;">
+                                <input [disabled]="isDropDownDisabled" type="number"
+                                    [(ngModel)]="combinedData[i].cashValue" #cashInput="ngModel" required
+                                    class="sticky-input" [class.alert-red]="cashInput.invalid && cashInput.touched"
+                                    placeholder="قيمة الكاش" (input)="onCashInput(i,item)">
+                            </div>
+                        </td>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <!-- Action Buttons -->
+    <!-- <button style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading"
+    (click)="checkIfHasEmptyOrder() &&  isToAddMode === false ? addOrders(true) : addOrders()">
+    <ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
+        <span>حفظ كمية المنتجات الجديدة</span>
+    </ng-container>
+
+    <ng-template #sendOrderBlock>
+        <span>Send Order</span>
+    </ng-template>
+</button> -->
+
+    <!-- Action Buttons -->
+
+    <ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
+        <button (click)="addOrders(true)" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
+            <span>حفظ كمية المنتجات الجديدة</span>
+        </button>
+    </ng-container>
+
+    <ng-template #sendOrderBlock>
+        <button (click)="addOrders()" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
+            <span>Send Order</span>
+        </button>
+    </ng-template>
+
+    <button *ngIf="isPreSent === true && ordersToUpdate.length > 0" (click)="saveUpdates()"
+        [disabled]="isUpdateEnabled() == false">
+        Save Updates
+    </button>
+
+</ng-container>
+<!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'"
+    (click)="deleteMultipleCollections()">
+    Delete all
+</div> -->
+<!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'"
+    (click)="resetAllDailyReportForThisBranch()">
+    Delete all this branch 2
+</div> -->
+
+<!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5' && dateToAddInDaily"
+    (click)="resetAllDailyReportForThisBranchAndSelectedDate()">
+    Delete all this branch and selected Date
+</div> -->
+
+<div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
+    <label for="options" class="dropdown-label me-2">Select Date:</label>
+    <select id="options" (ngModelChange)="onDailyDateChange($event)" [(ngModel)]="dateToAddInDaily"
+        class="dropdown form-select">
+        <option *ngFor="let item of dailyReportsDates" [ngValue]="item">
+            Date: {{ item | date:'mediumDate' }}
+        </option>
+    </select>
+</div>
+
+<ng-container *ngIf="selectedType && selectedType.id == '5' && dateToAddInDaily">
+
+
+
+    <!-- <div style="text-align: center;"> {{dateToAddInDaily | date:'mediumDate'}}</div> -->
+    <div *ngIf="dateToAddInDaily" style="text-align: center;">
+        <hr>
+        {{dateToAddInDaily | date:'mediumDate'}}
+        <!-- {{selectedDate | date:'mediumDate'}} -->
+        <div *ngIf="branch">
+            {{branch.data.name}}
+        </div>
+    </div>
+    <!-- *ngIf="isLastDayOfMonth()" -->
+
+    <!-- *ngIf="isAdmin==false && isLastDayOfMonth()"  -->
+
+    <div *ngIf=" groupedDailyDates">
+        <div *ngFor="let item of groupedDailyDates | keyvalue">
+            <button *ngIf="item.value.fullyFilled === true && item.value.hasBeenExported === false"
+                (click)="exportallPdfDaily( item.key,item.value.dates)">Export All {{ item.key }}</button>
+            <button *ngIf="item.value.fullyFilled === true && item.value.hasBeenExportedNotes === false"
+                (click)="exportallNotesPdfDaily( item.key,item.value.dates)">Export All Notes {{ item.key }}</button>
+        </div>
+    </div>
+
+
+    <!-- <button (click)="exportallPdfDaily()">Export Daily All pdf</button> -->
+
+    <button *ngIf="dailyReports.length > 0" (click)="exportPdfDaily()">Export pdf</button>
+    <button *ngIf="orderDailyToUpdate.length > 0" (click)="saveChangesDaily()">Save Changes</button>
+
+
+    <!-- <button (click)="getDailyReportsDates()">date</button> -->
+    <div class=" table-container">
+        <div class="table ">
+            <table *ngIf="branch" class="styled-table">
+                <thead>
+                    <tr vz class="f-h">
+                        <th style="position: sticky; left: 0;">الاصناف</th>
+                        <th style="width: 28px;">
+                            الموجودة
+                        </th>
+                        <th>المستلم</th>
+                        <th>الجرد</th>
+                        <th>مبيعات</th>
+                        <th>وجبة موظف</th>
+                        <th>تعويض زبون</th>
+                        <th>مكنسل</th>
+                        <th>تحويل مباشر</th>
+                        <th>تحويل % </th>
+                        <th>التالف</th>
+                        <th>المتبقي</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of combinedData; let i = index"
+                        [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                        [style.border-bottom]="'1px solid #dee2e6'">
+                        <td [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                            style="position: sticky; left: 0; padding: 0;">
+                            <!-- إذا لديه منتجات فرعية -->
+                            <ng-container *ngIf="item.products?.length; else normalProduct">
+                                <div style="display: flex; align-items: stretch; border: 1px solid #ccc;">
+                                    <!-- المنتج الرئيسي بشكل عمودي -->
+                                    <div style="
+          writing-mode: vertical-rl;
+          transform: rotate(180deg);
+          font-weight: bold;
+          font-size: 13px;
+          padding: 8px;
+          text-align: center;
+          border-right: 1px solid #ccc;
+          background-color: #f1f1f1;
+          min-width: 30px;
+        ">
+                                        {{ item.productName }}
+                                    </div>
+
+                                    <!-- المنتجات الفرعية -->
+                                    <div style="
+          display: flex;
+          flex-direction: column;
+          flex-grow: 1;
+          font-size: 12px;
+        ">
+                                        <div *ngFor="let subProduct of item.products" style="
+            padding: 6px 8px;
+            border-bottom: 1px solid #ccc;
+          ">
+                                            {{ subProduct.productName }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-container>
+
+                            <!-- إذا لا يوجد له منتجات فرعية -->
+                            <ng-template #normalProduct>
+                                <div style="
+        font-weight: bold;
+        font-size: 13px;
+        padding: 8px;
+        border: 1px solid #ccc;
+      ">
+                                    {{ item.productName }}
+                                </div>
+                            </ng-template>
+                        </td>
+
+
+                        <td>
+                            <input [attr.tabindex]=" 1000 + i" *ngIf="!item.isSales"
+                                [disabled]="isPositiveNumber(combinedData[i].openingStockQnt) && combinedData[i].openingStockId != -1 || isReadDailyMode === true"
+                                (blur)="onQuantityChange('openingStockQnt', item, i)"
+                                [(ngModel)]="combinedData[i].openingStockQnt" type="number" required>
+                        </td>
+                        <td>
+                            <input [attr.tabindex]="2000 + i" [disabled]="isDisabledDailyField()" *ngIf="!item.isSales"
+                                [(ngModel)]="item.recieved" (blur)="onQuantityChange('recieved', item, i)" min="0"
+                                step="any" type="number" required>
+
+                        </td>
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct1">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
+                                            *ngIf="!subProduct.isSales" [disabled]="isDisabledDailyField()"
+                                            (blur)="onQuantityChange('add', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="combinedData[i].products[s].add" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct1>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
+                                    *ngIf="!item.isSales" [disabled]="isDisabledDailyField()"
+                                    (blur)="onQuantityChange('add', item, i)" [(ngModel)]="combinedData[i].add"
+                                    type="number" required />
+                            </ng-template>
+                        </td>
+
+
+
+                        <ng-container *ngIf="item.products?.length; else normalProduct2">
+                            <td>
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
+                                            [disabled]="isDisabledDailyField()"
+                                            (blur)="onQuantityChange('sales', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="combinedData[i].products[s].sales" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </td>
+
+                        </ng-container>
+
+                        <ng-template #normalProduct2>
+                            <td>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
+                                    [disabled]="isDisabledDailyField()" (blur)="onQuantityChange('sales', item, i)"
+                                    [(ngModel)]="combinedData[i].sales" type="number" required />
+                            </td>
+
+                        </ng-template>
+
+
+
+                        <ng-container *ngIf="item.products?.length; else normalProduct3">
+                            <td>
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
+                                            *ngIf="!subProduct.isSales" [disabled]="isDisabledDailyField()"
+                                            (blur)="onQuantityChange('staffMeal', item, i,{i:s,subProduct})"
+                                             [disabled]="isColumnLocked(item.productId || item.id,'staffMeal',selectedDate)"
+                                            [(ngModel)]="combinedData[i].products[s].staffMeal" type="number" min="0"
+                                            step="any" required />
+                                    </ng-container>
+                                </div>
+                            </td>
+                        </ng-container>
+
+                        <ng-template #normalProduct3>
+                            <td>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
+                                    *ngIf="!item.isSales"
+                                    [disabled]="isDisabledDailyField()  || isItemLocked(item.productId || item.id)"
+                                    (blur)="onQuantityChange('staffMeal', item, i)" min="0" step="any"
+                                    [disabled]="isColumnLocked(item.productId || item.id,'staffMeal',selectedDate)"
+                                    [(ngModel)]="combinedData[i].staffMeal" type="number" required />
+                            </td>
+                        </ng-template>
+
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct41">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5500 + i"
+                                            *ngIf="!subProduct.isSales" min="0" step="any"
+                                            [disabled]="isDisabledDailyField()"
+                                            (blur)="onQuantityChange('freeIncrease', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="combinedData[i].products[s].freeIncrease" type="number"
+                                            required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct41>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5500 + i" min="0"
+                                    *ngIf="!item.isSales" step="any" [disabled]="isDisabledDailyField()"
+                                    (blur)="onQuantityChange('freeIncrease', item, i)"
+                                    [(ngModel)]="combinedData[i].freeIncrease" type="number" required />
+                            </ng-template>
+                        </td>
+
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct42">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5600 + i"
+                                            *ngIf="!subProduct.isSales" min="0" step="any"
+                                            [disabled]="isDisabledDailyField()"
+                                            (blur)="onQuantityChange('canceled', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="combinedData[i].products[s].canceled" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct42>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5600 + i" min="0"
+                                    *ngIf="!item.isSales" step="any" [disabled]="isDisabledDailyField()"
+                                    (blur)="onQuantityChange('canceled', item, i)"
+                                    [(ngModel)]="combinedData[i].canceled" type="number" required />
+                            </ng-template>
+                        </td>
+
+
+                        <td>
+                            <input [disabled]="true" *ngIf="!item.isSales"
+                                (blur)="onQuantityChange('directTransfer', item, i)"
+                                [(ngModel)]="combinedData[i].directTransfer" type="number" required>
+
+                        </td>
+
+                        <td>
+                            <input [attr.tabindex]="6000 + i" [disabled]="isDisabledDailyField()" *ngIf="!item.isSales"
+                                (blur)="onQuantityChange('transfer', item, i)" [(ngModel)]="combinedData[i].transfer"
+                                 [disabled]="isColumnLocked(item.productId || item.id,'transfer',selectedDate)"
+                                type="number" required>
+
+                        </td>
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct4">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
+                                            *ngIf="!subProduct.isSales" min="0" step="any"
+                                            (blur)="onQuantityChange('dameged', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="combinedData[i].products[s].dameged" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct4>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i" min="0"
+                                    *ngIf="!item.isSales" step="any" (blur)="onQuantityChange('dameged', item, i)"
+                                    [(ngModel)]="combinedData[i].dameged" type="number" required />
+                            </ng-template>
+
+                        </td>
+                        <td *ngIf="!item.isSales">
+                            <!-- {{calculateClosingStock(combinedData[i])}} -->
+                            {{ combinedData[i].closeStock}}
+                        </td>
+
+
+
+                    </tr>
+                </tbody>
+            </table>
+
+
+        </div>
+
+
+    </div>
+
+    <!-- <input *ngIf="ifEnabledNoteFiled()" type="text" placeholder="الملاحظة" [(ngModel)]="dialyNote"> -->
+    <!-- <button (click)="saveDailyNote()"
+        *ngIf="selectedDateToAddObject && selectedDateToAddObject.note != dialyNote && isAdmin">حفظ الملاحظة</button> -->
+    <button [disabled]="ifHaveNegativeValue() == true || ifSalesCompleted() == false"
+        *ngIf="dateToAddInDaily && ifThereisEmptyValue() == false && isReadDailyMode === false"
+        (click)="saveDaily()">Save</button>
+
+
+
+
+</ng-container>
+
+<app-reason-dialog *ngIf="showReasonDialog" (onConfirm)="handleReasonConfirm($event)"
+    (onCancel)="handleReasonCancel()"></app-reason-dialog>

@@ -1,0 +1,24 @@
+<div class="docs" dir="rtl">
+  <header class="docs-header">
+    <div><span class="eyebrow">SABA1 · دليل المشروع</span><h1>توثيق النظام</h1><p>الهيكلة، تسجيل الدخول، والقرارات المرتبطة بالكود.</p></div>
+    <a routerLink="/">العودة للنظام ←</a>
+  </header>
+  <div class="docs-layout">
+    <aside class="docs-nav" aria-label="أقسام التوثيق">
+      <label for="docs-search">البحث في التوثيق</label>
+      <input id="docs-search" type="search" [(ngModel)]="query" placeholder="ابحث عن ملف أو وظيفة…">
+      <nav><a *ngFor="let section of filteredSections" [attr.href]="'#' + section.id">{{ section.title }}</a></nav>
+      <p class="version">v1.1 · 6 أكتوبر 2026</p>
+    </aside>
+    <main>
+      <div class="docs-notice">المرحلة الأولى: تسجيل الدخول. حالات الأقسام توضح المطبّق والموجود سابقًا والمخطّط.</div>
+      <section *ngFor="let section of filteredSections" [id]="section.id">
+        <div class="section-heading"><h2>{{ section.title }}</h2><span class="badge" [class.planned]="section.status === 'مخطّط'">{{ section.status }}</span></div>
+        <p *ngFor="let paragraph of section.paragraphs">{{ paragraph }}</p>
+        <ul><li *ngFor="let item of section.items">{{ item }}</li></ul>
+        <pre *ngIf="section.code" dir="ltr"><code>{{ section.code }}</code></pre>
+      </section>
+      <p *ngIf="filteredSections.length === 0" role="status">لا توجد نتائج مطابقة. جرّب كلمة أخرى.</p>
+    </main>
+  </div>
+</div>

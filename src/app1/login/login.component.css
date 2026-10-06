@@ -204,7 +204,3 @@
     100% { transform: rotate(360deg); }
   }
   
-.auth-error { color: #b42318; text-align: start; line-height: 1.6; }
-.remember-session { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 14px; }
-.remember-session input { width: auto; }
-.btn-login:disabled { opacity: .6; cursor: not-allowed; }

@@ -2,7 +2,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, ElementRef, inject, Inject, PLATFORM_ID, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../core/auth/auth.service';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { addDoc, and, collection, deleteDoc, doc, DocumentReference, getDoc, getDocs, getFirestore, limit, or, orderBy, query, QueryConstraint, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
@@ -138,7 +138,6 @@ export class BranchComponent {
 
   version: any
   constructor(
-    private authService: AuthService,
     private modalService: ModalService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -615,18 +614,16 @@ export class BranchComponent {
   /// Get
   async getBranch() {
     this.isLoading = true;
-    try {
-      const user = await this.authService.getCurrentUser();
+    const auth = getAuth();
+
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
-        if (this.authService.isAdmin(user)) {
+        if (user.uid === "z8B2PHGNnaRIRCqEsvesvE5IeAL2") {
           const branchStr = localStorage.getItem("selectedBranch");
 
           if (branchStr) {
             try {
               const parsed = JSON.parse(branchStr);
-              if (!parsed || typeof parsed.id !== 'string' || typeof parsed.name !== 'string') {
-                throw new Error('Invalid selected branch.');
-              }
               this.branch = {
                 id: parsed.id,
                 data: {
@@ -637,18 +634,14 @@ export class BranchComponent {
               this.isAdmin = true
             } catch (e) {
               console.error('Invalid JSON in localStorage:', e);
-              await this.router.navigate(['/dashboard']);
-              return;
+              this.router.navigate(['/dashboard']);
             }
           } else {
-            await this.router.navigate(['/dashboard']);
-              return;
+            this.router.navigate(['/dashboard']);
           }
         } else {
           const name = user.email?.split('@')[0];
-          if (!name) throw new Error('Account email is missing.');
-          this.branch = await this.getRelatedBranche(name);
-          if (!this.branch) throw new Error('No branch is linked to this account.');
+          this.branch = await this.getRelatedBranche(name!);
         }
         console.log("branch", this.branch);
 
@@ -701,12 +694,7 @@ export class BranchComponent {
       } else {
         this.router.navigate(['/login']);
       }
-    } catch (error) {
-      console.error('Unable to initialize branch:', error);
-      alert('تعذر تحميل بيانات الفرع. أعد المحاولة.');
-    } finally {
-      this.isLoading = false;
-    }
+    });
   }
   async getTypes(): Promise<void> {
     const snapshot = await this.apiService.getData(collectionNames.types);
@@ -882,7 +870,7 @@ export class BranchComponent {
 
     const snapshot = await this.apiService.getData(collectionNames.branches, constraints)
     if (snapshot.empty) {
-      throw new Error('No branch is linked to this account.');
+      this.router.navigate(['/login']);
     }
     const doc = snapshot.docs[0];
     return { id: doc.id, data: doc.data() };
@@ -1414,13 +1402,14 @@ isChangeStatus2(): boolean {
     this.isPreSent = false
   }
   /// Other
-  async logout(): Promise<void> {
-    try {
-      await this.authService.logout();
-
-    } catch {
-      alert('تعذر تسجيل الخروج. حاول مرة أخرى.');
-    }
+  logout(): void {
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      this.orderService.remove()
+      localStorage.removeItem("exported");
+      this.router.navigate(['/login']);
+      window.location.reload();
+    }).catch(console.error);
   }
 
   /////////Start Daily reports

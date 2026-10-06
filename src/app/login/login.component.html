@@ -1,42 +1,36 @@
-
-<div class="loading-overlay" *ngIf="isLoading">
+<div class="loading-overlay" *ngIf="isLoading || isSubmitting" role="status" aria-label="جارٍ التحميل">
   <div class="spinner"></div>
 </div>
-
 <div class="bodydiv">
   <div class="login-container">
-    <div class="logo-container">
-      <!-- <img src="public/logo.png" alt="Logo" class="logo"> -->
-    </div>
+    <div class="logo-container"></div>
     <div class="login-form">
       <h2>Login</h2>
-
-      <form method="POST">
-
-        <!-- <div class="input-group">
-          <label for="email">Email</label>
-          <input type="email" [(ngModel)]="email"  id="email" name="email" required placeholder="Enter your email">
-        </div> -->
+      <p *ngIf="accountsError" class="auth-error" role="alert">{{ accountsError }}</p>
+      <button *ngIf="accountsError" type="button" (click)="loadAccounts()" [disabled]="isLoading">إعادة تحميل الحسابات</button>
+      <form #loginForm="ngForm" (ngSubmit)="login()" autocomplete="on">
         <div class="input-group">
-          <label for="dropdown">Select an Option</label>
-          <select [(ngModel)]="selectedOption" id="dropdown" name="dropdown" required>
-            <option value="" disabled selected>Select your option</option>
+          <label for="username">Account</label>
+          <select id="username" name="username" [(ngModel)]="selectedOption" required
+            [disabled]="isSubmitting || isLoading">
+            <option value="" disabled>Select your account</option>
             <option *ngFor="let option of options" [value]="option">{{ option }}</option>
           </select>
         </div>
-
         <div class="input-group">
           <label for="password">Password</label>
           <input type="password" id="password" [(ngModel)]="password" name="password" required
-            placeholder="Enter your password">
+            autocomplete="current-password" placeholder="Enter your password" [disabled]="isSubmitting">
         </div>
-        <button type="submit" class="btn-login" (click)="login()">Log In</button>
+        <label class="remember-session">
+          <input type="checkbox" name="rememberMe" [(ngModel)]="rememberMe" [disabled]="isSubmitting">
+          إبقاء تسجيل الدخول على هذا الجهاز
+        </label>
+        <p *ngIf="errorMessage" class="auth-error" role="alert">{{ errorMessage }}</p>
+        <button type="submit" class="btn-login" [disabled]="loginForm.invalid || isLoading || isSubmitting || !!accountsError">
+          {{ isSubmitting ? 'جارٍ تسجيل الدخول…' : 'Log In' }}
+        </button>
       </form>
-      <!-- <div class="footer-links">
-      <a href="#">Forgot Password?</a>
-      <a href="#">Create Account</a>
-    </div> -->
     </div>
   </div>
-
 </div>

@@ -1,0 +1,12 @@
+<div class="dialog-backdrop" (click)="cancel()"></div>
+<div class="dialog">
+    <div>
+        <h3 style="text-align: center ;">أدخل اسم المورد</h3>
+        <input #reasonInput2 style="direction: rtl;" [(ngModel)]="provider" class="form-control" />
+    </div>
+    <div class="actions">
+        <button [disabled]="provider.length < 8" class="btn btn-primary"
+            (click)="confirm()">موافق</button>
+        <button class="btn btn-secondary" (click)="cancel()">إلغاء</button>
+    </div>
+</div>
