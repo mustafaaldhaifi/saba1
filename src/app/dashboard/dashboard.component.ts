@@ -36,6 +36,7 @@ import { DashboardSettingsService } from '../features/dashboard/data/dashboard-s
 import { DashboardOpenDate, DashboardOpenDatesService } from '../features/dashboard/data/dashboard-open-dates.service';
 import { BranchesReaderService } from '../features/branches/data/branches-reader.service';
 import { ProductsReaderService } from '../features/inventory/data/products-reader.service';
+import { OrdersReaderService } from '../features/orders/data/orders-reader.service';
 
 
 interface Product {
@@ -439,6 +440,7 @@ export class DashboardComponent implements OnInit {
     private dashboardOpenDates: DashboardOpenDatesService,
     private branchesReader: BranchesReaderService,
     private productsReader: ProductsReaderService,
+    private ordersReader: OrdersReaderService,
 
   ) {
     this.version = environment.version
@@ -932,6 +934,13 @@ export class DashboardComponent implements OnInit {
 
 
   private async fetchOrders(start: Timestamp, end: Timestamp): Promise<Order[]> {
+    return this.ordersReader.loadForDateRange(
+      this.selectedOption,
+      this.selectedType.id,
+      start,
+      end
+    ) as Promise<Order[]>;
+
     console.log("start1", start);
     console.log("end1", end)
     console.log("start", start.toDate());
