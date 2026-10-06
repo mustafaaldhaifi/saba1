@@ -32,6 +32,7 @@ import { ProductsService } from '../products.service';
 import { OrdersService } from '../orders.service copy';
 import { BranchesService } from '../branches.service';
 import { DashboardOrderType, DashboardTypesService } from '../features/dashboard/data/dashboard-types.service';
+import { DashboardSettingsService } from '../features/dashboard/data/dashboard-settings.service';
 
 
 interface Product {
@@ -483,6 +484,7 @@ export class DashboardComponent implements OnInit {
     private orderService: OrdersService,
     private branchService: BranchesService,
     private dashboardTypes: DashboardTypesService,
+    private dashboardSettings: DashboardSettingsService,
 
   ) {
     this.version = environment.version
@@ -1086,26 +1088,7 @@ export class DashboardComponent implements OnInit {
   }
   async getSettings(): Promise<void> {
     try {
-      const db = getFirestore();
-
-      // Reference to the specific document
-      const docRef = doc(db, "settings", this.selectedType.id);
-
-
-      console.log("sss", this.selectedType);
-
-
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const settingsData = docSnap.data();
-        this.isOn = settingsData['isOpen']
-        console.log("Settings data:", settingsData);
-        // You can assign the data to a component property here
-        // this.settings = settingsData; // Assuming you have a settings property
-      } else {
-        console.log("No settings document found!");
-      }
+      this.isOn = await this.dashboardSettings.loadOrderOpenState(this.selectedType.id);
     } catch (error) {
       console.error("Error fetching settings:", error);
       // You can handle the error here, like showing a user message
@@ -1114,24 +1097,11 @@ export class DashboardComponent implements OnInit {
   }
 
   ////
-  allowableEdits: any
+  allowableEdits: string[] = [];
   async getAllowableEdits(): Promise<void> {
     this.isLoading = true
     try {
-      const db = getFirestore();
-
-      // Reference to the specific document
-      const docRef = doc(db, "settings", 'allowableEdits');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const Data = docSnap.data();
-        this.allowableEdits = Data['typeIds']
-        console.log("allowableEdits data:", Data);
-        // You can assign the data to a component property here
-        // this.settings = settingsData; // Assuming you have a settings property
-      } else {
-        console.log("No allowableEdits document found!");
-      }
+      this.allowableEdits = await this.dashboardSettings.loadAllowableEditTypeIds();
     } catch (error) {
       console.error("Error fetching settings:", error);
       // You can handle the error here, like showing a user message
