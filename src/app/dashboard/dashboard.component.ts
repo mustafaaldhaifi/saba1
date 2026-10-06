@@ -35,6 +35,7 @@ import { DashboardOrderType, DashboardTypesService } from '../features/dashboard
 import { DashboardSettingsService } from '../features/dashboard/data/dashboard-settings.service';
 import { DashboardOpenDate, DashboardOpenDatesService } from '../features/dashboard/data/dashboard-open-dates.service';
 import { BranchesReaderService } from '../features/branches/data/branches-reader.service';
+import { ProductsReaderService } from '../features/inventory/data/products-reader.service';
 
 
 interface Product {
@@ -437,6 +438,7 @@ export class DashboardComponent implements OnInit {
     private dashboardSettings: DashboardSettingsService,
     private dashboardOpenDates: DashboardOpenDatesService,
     private branchesReader: BranchesReaderService,
+    private productsReader: ProductsReaderService,
 
   ) {
     this.version = environment.version
@@ -882,6 +884,8 @@ export class DashboardComponent implements OnInit {
     this.isLoading = true
     const city = this.selectedOption == 'all' ? 'ryad' : this.selectedOption;
     const typeId = this.selectedType.id;
+
+    return this.productsReader.loadForCityAndType(city, typeId) as Promise<Product[]>;
 
     // const productsInfo = this.productService.getProductsFromLocal(city, typeId);
 
