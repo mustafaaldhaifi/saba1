@@ -34,6 +34,7 @@ import { BranchesService } from '../branches.service';
 import { DashboardOrderType, DashboardTypesService } from '../features/dashboard/data/dashboard-types.service';
 import { DashboardSettingsService } from '../features/dashboard/data/dashboard-settings.service';
 import { DashboardOpenDate, DashboardOpenDatesService } from '../features/dashboard/data/dashboard-open-dates.service';
+import { BranchesReaderService } from '../features/branches/data/branches-reader.service';
 
 
 interface Product {
@@ -435,6 +436,7 @@ export class DashboardComponent implements OnInit {
     private dashboardTypes: DashboardTypesService,
     private dashboardSettings: DashboardSettingsService,
     private dashboardOpenDates: DashboardOpenDatesService,
+    private branchesReader: BranchesReaderService,
 
   ) {
     this.version = environment.version
@@ -810,17 +812,14 @@ export class DashboardComponent implements OnInit {
     //   name: doc.data()['name']
     // }));
 
-    const city = this.selectedOption;
-    this.branchUpdates = await this.branchService.getLastupdate(city, this.apiService)
-    return await this.branchService.getBranches(city, this.branchUpdates, this.apiService)
+    return this.branchesReader.loadForCity(this.selectedOption);
     // console.log("branches:", this.preOrders);
   }
 
   private async fetchBranchesByName(city: string): Promise<Branch[]> {
 
     // const city = this.selectedOption;
-    this.branchUpdates = await this.branchService.getLastupdate(city, this.apiService)
-    return await this.branchService.getBranches(city, this.branchUpdates, this.apiService)
+    return this.branchesReader.loadForCity(city);
     // console.log("branches:", this.preOrders);
   }
 
