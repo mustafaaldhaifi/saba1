@@ -37,6 +37,8 @@ import { DashboardOpenDate, DashboardOpenDatesService } from '../features/dashbo
 import { BranchesReaderService } from '../features/branches/data/branches-reader.service';
 import { ProductsReaderService } from '../features/inventory/data/products-reader.service';
 import { OrdersReaderService } from '../features/orders/data/orders-reader.service';
+import { OrderSubmissionsService } from '../features/orders/data/order-submissions.service';
+import { OrderRetentionService } from '../features/orders/data/order-retention.service';
 
 
 interface Product {
@@ -441,6 +443,8 @@ export class DashboardComponent implements OnInit {
     private branchesReader: BranchesReaderService,
     private productsReader: ProductsReaderService,
     private ordersReader: OrdersReaderService,
+    private orderSubmissions: OrderSubmissionsService,
+    private orderRetention: OrderRetentionService,
 
   ) {
     this.version = environment.version
@@ -1008,9 +1012,9 @@ export class DashboardComponent implements OnInit {
   async getPreOrders(): Promise<void> {
     const city = this.selectedOption;
     const typeId = this.selectedType.id;
-    this.orderUpdates = await this.orderService.getLastupdate(city, typeId, this.apiService)
-
-    this.actualPreOrders = await this.orderService.getOrders(city, typeId, null, this.orderUpdates, this.apiService)
+    const result = await this.orderSubmissions.load(city, typeId);
+    this.orderUpdates = result.updateId ? { id: result.updateId } : undefined;
+    this.actualPreOrders = result.submissions as PreOrder[];
     console.log("preOrders:", this.preOrders);
 
 
@@ -1031,7 +1035,8 @@ export class DashboardComponent implements OnInit {
     // console.log("act", this.actualPreOrders);
 
 
-    this.groupPreOrdersByDate();
+    this.preOrders = this.orderSubmissions.groupByLocalDate(result.submissions) as GroupedPreOrder[];
+    this.selectedDatey = this.preOrders[0] ?? null;
     await this.deleteOldOrders();
   }
 
@@ -1149,7 +1154,15 @@ export class DashboardComponent implements OnInit {
 
 
   async deleteOldOrders(): Promise<void> {
-    if (!this.preOrders || this.preOrders.length <= 4) return;
+    if (!this.preOrders || this.preOrders.length <= 4 || !this.orderUpdates?.id) return;
+
+    this.preOrders = await this.orderRetention.retainLatestFour(
+      this.preOrders,
+      this.selectedOption,
+      this.selectedType.id,
+      this.orderUpdates.id
+    );
+    return;
 
     const db = getFirestore();
     const batch = writeBatch(db);
