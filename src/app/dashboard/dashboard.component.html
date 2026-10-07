@@ -26,53 +26,11 @@
 
 
 
-  <div class="p-3">
-    <div class="dropdown-container mb-3">
-      <label for="options" class="dropdown-label me-2">Select Option:</label>
-      <select id="options" [(ngModel)]="selectedCity" (ngModelChange)="changeCity($event)"
-        class="dropdown form-select">
-        <option value="ryad">الرياض</option>
-        <option value="other">خارج الرياض</option>
-        <!-- <option *ngIf="selectedType && selectedType.id == '5'" value="all">الكل</option> -->
-      </select>
-    </div>
-
-    <div class="dropdown-container mb-3">
-      <label for="options" class="dropdown-label me-2">Select Type:</label>
-      <select id="options" [(ngModel)]="selectedType" class="dropdown form-select"
-        (ngModelChange)="onSelectTypeChange()">
-        <option *ngFor="let item of types" [ngValue]="item">
-          {{ item.name }}
-        </option>
-      </select>
-    </div>
-
-    <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id != '5'">
-      <label for="options" class="dropdown-label me-2">Select Date:</label>
-      <select id="options" (ngModelChange)="onDateChange($event)" [(ngModel)]="selectedDatey"
-        class="dropdown form-select">
-        <option *ngFor="let item of preOrders" [ngValue]="item">
-          Date: {{ item.createdAt.toDate() | date:'mediumDate' }} | Orders: {{ item.count }}
-        </option>
-      </select>
-    </div>
-    <!-- /// -->
-    <div *ngIf="selectedBranch && selectedType &&selectedType.id == '5' ">{{selectedBranch.name}}</div>
-
-    <!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
-      <label for="options" class="dropdown-label me-2">Select Dialy Date:</label>
-      <select id="options" (ngModelChange)="onDateDailyChange($event)" [(ngModel)]="selectedDailyDate"
-        class="dropdown form-select">
-        <option *ngFor="let item of dailyReportsDates" [ngValue]="item">
-          Date: {{ item.date.toDate() | date:'mediumDate' }}
-        </option>
-      </select>
-    </div> -->
-    <button (click)="search()" class="btn btn-primary" [disabled]="ifEnabledSearech()==false">
-      Search
-    </button>
-  </div>
-
+  <app-dashboard-filters [selectedCity]="selectedCity" [types]="types" [selectedType]="selectedType"
+    [dates]="preOrders" [selectedDate]="selectedDatey" [branchName]="selectedBranch?.name ?? ''"
+    [canSearch]="ifEnabledSearech()" (cityChanged)="changeCity($event)"
+    (typeChanged)="changeOrderType($event)" (dateChanged)="changeOrderDate($event)"
+    (searchRequested)="search()"></app-dashboard-filters>
   <div class="card p-4 mb-4 shadow-sm">
     <h5 class="mb-4 text-primary fw-bold border-bottom pb-2">التحكم في الإعدادات</h5>
 

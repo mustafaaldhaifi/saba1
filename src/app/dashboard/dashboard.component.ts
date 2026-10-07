@@ -28,6 +28,7 @@ import { ApiService } from '../api.service';
 import { PdfReportService } from '../features/reports/data/pdf-report.service';
 import { DailyExcelReportService } from '../features/reports/data/daily-excel-report.service';
 import { DashboardToolbarComponent } from '../features/dashboard/components/dashboard-toolbar/dashboard-toolbar.component';
+import { DashboardFiltersComponent, DashboardDateFilter } from '../features/dashboard/components/dashboard-filters/dashboard-filters.component';
 import { environment } from '../../env';
 import { collectionNames } from '../Shareds';
 import { ProductsService } from '../products.service';
@@ -85,7 +86,7 @@ interface GroupedPreOrder {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule, CommonModule, RouterLink, DashboardToolbarComponent],
+  imports: [FormsModule, CommonModule, RouterLink, DashboardToolbarComponent, DashboardFiltersComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -239,6 +240,14 @@ export class DashboardComponent implements OnInit {
       // await this.getPreOrders()
     }
     this.isLoading = false
+  }
+  changeOrderType(type: DashboardOrderType): void {
+    this.selectedType = type;
+    void this.onSelectTypeChange();
+  }
+  changeOrderDate(date: DashboardDateFilter): void {
+    this.selectedDatey = date as GroupedPreOrder;
+    this.onDateChange(this.selectedDatey);
   }
   async getSameOrders(_t90: Branch) {
     this.isLoading = true;

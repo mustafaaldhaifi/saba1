@@ -1,0 +1,22 @@
+<div class="p-3">
+  <div class="dropdown-container mb-3">
+    <label class="dropdown-label me-2">المدينة:</label>
+    <select [ngModel]="selectedCity" (ngModelChange)="cityChanged.emit($event)" class="dropdown form-select">
+      <option value="ryad">الرياض</option><option value="other">خارج الرياض</option>
+    </select>
+  </div>
+  <div class="dropdown-container mb-3">
+    <label class="dropdown-label me-2">النوع:</label>
+    <select [ngModel]="selectedType" (ngModelChange)="typeChanged.emit($event)" class="dropdown form-select">
+      <option *ngFor="let item of types" [ngValue]="item">{{ item.name }}</option>
+    </select>
+  </div>
+  <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id !== '5'">
+    <label class="dropdown-label me-2">التاريخ:</label>
+    <select [ngModel]="selectedDate" (ngModelChange)="dateChanged.emit($event)" class="dropdown form-select">
+      <option *ngFor="let item of dates" [ngValue]="item">{{ item.createdAt.toDate() | date:'mediumDate' }} | Orders: {{ item.count }}</option>
+    </select>
+  </div>
+  <div *ngIf="branchName && selectedType?.id === '5'">{{ branchName }}</div>
+  <button type="button" (click)="searchRequested.emit()" class="btn btn-primary" [disabled]="!canSearch">Search</button>
+</div>
