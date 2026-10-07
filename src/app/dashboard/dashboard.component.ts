@@ -26,6 +26,7 @@ import {
 } from "firebase/firestore";
 import { ApiService } from '../api.service';
 import { PdfReportService } from '../features/reports/data/pdf-report.service';
+import { DailyExcelReportService } from '../features/reports/data/daily-excel-report.service';
 import { environment } from '../../env';
 import { collectionNames } from '../Shareds';
 import { ProductsService } from '../products.service';
@@ -451,6 +452,7 @@ export class DashboardComponent implements OnInit {
     private orderSubmissions: OrderSubmissionsService,
     private orderRetention: OrderRetentionService,
     private pdfReports: PdfReportService,
+    private dailyExcelReports: DailyExcelReportService,
 
   ) {
     this.version = environment.version
@@ -1442,6 +1444,18 @@ export class DashboardComponent implements OnInit {
     return date.toISOString().slice(0, 10).replace(/-/g, '');
   }
   exportDailytToExcel() {
+    this.dailyExcelReports.export({
+      column: this.selectedColumn,
+      branches: this.branches,
+      products: this.data,
+      startDate: this.startDate,
+      endDate: this.endDate,
+      getLastEntryDate: branchId => this.getLastEntryDate(branchId),
+      formatDate: date => this.formatDateForExcel(date),
+      getValue: (branchId, productId) => this.getColumnReport(branchId, productId)
+    });
+    return;
+
     const wsData = [];
 
     // Header
