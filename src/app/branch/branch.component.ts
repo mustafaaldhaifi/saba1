@@ -35,6 +35,8 @@ import { BranchOrderRowEvent, BranchStandardOrderTableComponent } from '../featu
 import { BranchDailyOrderTableComponent } from '../features/branches/components/branch-daily-order-table/branch-daily-order-table.component';
 import { DailyOrderTableFacade } from '../features/branches/components/branch-daily-order-table/branch-daily-order-table.component';
 import { DailyReportTransactionService } from '../features/branches/data/daily-report-transaction.service';
+import { DailyReportCalculatorService } from '../features/inventory/data/daily-report-calculator.service';
+import { BranchPageDataService } from '../features/branches/data/branch-page-data.service';
 
 @Component({
   selector: 'app-branch',
@@ -213,12 +215,14 @@ export class BranchComponent {
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
     private productsServices: ProductsService,
-    private orderService: OrdersService,
+    @Inject(OrdersService) private orderService: OrdersService,
     private dailyReportService: DailyReportsService,
     private constraintsService: ColumnConstraintsService,
     private pdfReports: PdfReportService,
     private branchAccountReader: BranchAccountReaderService,
-    private dailyReportTransactions: DailyReportTransactionService
+    private dailyReportTransactions: DailyReportTransactionService,
+    private dailyReportCalculator: DailyReportCalculatorService,
+    private branchPageData: BranchPageDataService
   ) {
     this.version = environment.version
 
@@ -760,13 +764,7 @@ export class BranchComponent {
     }
   }
   async getTypes(): Promise<void> {
-    const snapshot = await this.apiService.getData(collectionNames.types);
-    this.types = snapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data()['name'],
-      name_en: doc.data()['name_en'],
-
-    }));
+    this.types = await this.branchPageData.loadOrderTypes();
 
     if (environment.enabledDaily && environment.production == false) {
       // this.types = [{ id: '5', name: "الجرد اليومي", name_en: 'Daily' }, ...this.types];
@@ -900,23 +898,11 @@ export class BranchComponent {
   }
 
   async getDatesToAdd(): Promise<void> {
-    const constraints = [
-      where("typeId", "==", this.selectedType.id)
-    ];
-
-    // أضف شرط city فقط إذا كان النوع محدد
-    if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1" || this.selectedType.id === "bt9w9ZB1H1IizPBugiUl") {
-      constraints.push(where("city", "==", this.branch.data.city));
-    }
-
-
-    const snapshot = await this.apiService.getData(collectionNames.openDates, constraints)
-    this.datesToAdd = snapshot.docs.map(doc => ({
-      id: doc.id,
-      createdAt: doc.data()['createdAt']
-    }));
-  }
-  /** Loads the branch attached to an account through the branches data layer. */
+    this.datesToAdd = await this.branchPageData.loadAllowedOrderDates(
+      this.selectedType.id,
+      this.branch.data.city
+    );
+  }  /** Loads the branch attached to an account through the branches data layer. */
   async getRelatedBranche(name: string) {
     return this.branchAccountReader.findByAccountName(name);
   }
@@ -2063,6 +2049,10 @@ isChangeStatus2(): boolean {
     unit: number = 1
   ): number | string {
 
+    return this.dailyReportCalculator.calculateClosingStock(reportOrData, openingStock, unit);
+
+    /* Legacy implementation retained temporarily for comparison during migration.
+
     // 1. تحديد مصدر مخزون أول المدة
     const source = openingStock ? openingStock : reportOrData;
     const openingStockQnt = Number(source?.openingStockQnt ?? 0);
@@ -2123,7 +2113,7 @@ isChangeStatus2(): boolean {
       "Final Total": total
     });
 
-    return isNaN(total) ? '-' : total;
+    return isNaN(total) ? '-' : total; */
   }
 
   isModalOpen = false;
@@ -3040,40 +3030,17 @@ isChangeStatus2(): boolean {
 
     this.isLoading = true
 
-    let newCombinedData: any[] = [];
-
-    this.combinedData.forEach(group => {
-      if (group.products && group.products.length > 0) {
-        newCombinedData.push(...group.products); // أضف المنتجات الفرعية
-        delete group.products; // احذف الحقل من المنتج الرئيسي
-      }
-      newCombinedData.push(group); // أضف المنتج الرئيسي بعد الحذف
-    });
-
-    // حذف الحقول التي قيمتها undefined أو null من كل عنصر
-    newCombinedData = newCombinedData.map(item => {
-      Object.keys(item).forEach(key => {
-        if (item[key] === undefined || item[key] === null) {
-          delete item[key];
-        }
-      });
-      return item;
-    });
-    // this.combinedData = newCombinedData;
+    const newCombinedData = this.dailyReportTransactions.flattenForSave(this.combinedData);
 
 
 
     try {
-      let openStockToAdd: any = []
-      let openStockToUpdate: any = []
-
-      newCombinedData.forEach((item: any) => {
-        if (item.openingStockId == -1) {
-          openStockToAdd.push({ branchId: this.branch.id, productId: item.productId, openingStockQnt: item.closeStock, typeId: this.selectedType.id, createdAt: Timestamp.now() })
-        } else {
-          openStockToUpdate.push(item)
-        }
-      })
+      const { toCreate: openStockToAdd, toUpdate: openStockToUpdate } =
+        this.dailyReportTransactions.prepareOpeningStockChanges(
+          newCombinedData,
+          this.branch.id,
+          this.selectedType.id
+        );
 
       const batch = writeBatch(this.apiService.db);
 
@@ -3144,34 +3111,14 @@ isChangeStatus2(): boolean {
         ? Timestamp.fromDate(this.dateToAddInDaily)
         : undefined;
 
-      const summaryRef = doc(collection(this.apiService.db, collectionNames.dailyReportsDates));
-      batch.set(summaryRef, {
-        branchId: this.branch.id,
-        typeId: this.selectedType.id,
-        // note: this.dialyNote,
-        date: firestoreTimestamp,
-        createdAt: Timestamp.now(),
-      });
-
-      // let dailyReportToSaveLocally: any = []
-      newCombinedData.forEach((item: any) => {
-        const summaryRef = doc(collection(this.apiService.db, collectionNames.dailyReports));
-
-        const { productName, ...itemWithoutProductName } = item;
-
-        // Add createdAt directly to the item
-        const itemWithTimestamp = {
-          ...itemWithoutProductName,
-          branchId: this.branch.id,
-          typeId: this.selectedType.id,
-          date: firestoreTimestamp,
-          createdAt: Timestamp.now(),
-        };
-        // dailyReportToSaveLocally.push(itemWithTimestamp)
-
-        batch.set(summaryRef, itemWithTimestamp);
-      });
-
+      this.dailyReportTransactions.queueDailyReports(
+        batch,
+        this.apiService.db,
+        this.branch.id,
+        this.selectedType.id,
+        firestoreTimestamp,
+        newCombinedData
+      );
       this.dailyReportTransactions.queueMonthlySummaries(
         batch,
         this.apiService.db,
@@ -3182,13 +3129,6 @@ isChangeStatus2(): boolean {
 
       ///
       this.dailyReportUpdates = await this.dailyReportService.getLastupdate(this.branch.id, Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!!)), this.apiService)
-      // ✅ Corrected document path for updating 
-      const docRef2 = doc(this.apiService.db, collectionNames.dailyReportsUpdates, this.dailyReportUpdates.id);
-
-      batch.update(docRef2, {
-        updatedAt: Timestamp.now(),
-      });
-
       // }
       openStockToAdd.forEach((item: any) => {
         const summaryRef = doc(collection(this.apiService.db, collectionNames.openingStock));
@@ -3196,13 +3136,14 @@ isChangeStatus2(): boolean {
       })
       // }
 
-      const latestUpdateRef = doc(this.apiService.db, collectionNames.latestReportUpdate, `${this.branch.id}_${this.selectedType.id}`);
-      batch.set(latestUpdateRef, {
-        branchId: this.branch.id,
-        typeId: this.selectedType.id,
-        updatedAt: firestoreTimestamp,
-      }, { merge: true });
-
+      this.dailyReportTransactions.queueUpdateMarkers(
+        batch,
+        this.apiService.db,
+        this.branch.id,
+        this.selectedType.id,
+        this.dailyReportUpdates.id,
+        firestoreTimestamp
+      );
       await batch.commit();
       // this.dailyReportService.addDataToLocal(dailyReportToSaveLocally, this.dailyReportService.getDateKey(this.dateToAddInDaily!), this.selectedType.id, this.branch.id)
       alert("يعطيك العافية تم التحديث بنجاح")
