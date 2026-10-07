@@ -1,0 +1,34 @@
+<div class="dropdown-container mb-3">
+  <label for="branch-daily-date" class="dropdown-label me-2">Select Date:</label>
+  <select
+    id="branch-daily-date"
+    [ngModel]="selectedDate"
+    (ngModelChange)="dateChanged.emit($event)"
+    class="dropdown form-select">
+    <option *ngFor="let item of dates" [ngValue]="item">Date: {{ item | date:'mediumDate' }}</option>
+  </select>
+</div>
+
+<ng-container *ngIf="selectedDate">
+  <div style="text-align: center;">
+    <hr>
+    {{ selectedDate | date:'mediumDate' }}
+    <div *ngIf="branchName">{{ branchName }}</div>
+  </div>
+
+  <div *ngFor="let group of reportGroups | keyvalue">
+    <button
+      *ngIf="group.value.fullyFilled && !group.value.hasBeenExported"
+      (click)="exportAllRequested.emit({ key: group.key, dates: group.value.dates })">
+      Export All {{ group.key }}
+    </button>
+    <button
+      *ngIf="group.value.fullyFilled && !group.value.hasBeenExportedNotes"
+      (click)="exportAllNotesRequested.emit({ key: group.key, dates: group.value.dates })">
+      Export All Notes {{ group.key }}
+    </button>
+  </div>
+
+  <button *ngIf="hasDailyReports" (click)="exportCurrentRequested.emit()">Export pdf</button>
+  <button *ngIf="hasUnsavedChanges" (click)="saveChangesRequested.emit()">Save Changes</button>
+</ng-container>

@@ -1,0 +1,15 @@
+<ng-container *ngIf="hasEmptyProduct && !isAddingOrder; else sendOrder">
+  <button (click)="saveNewProductsRequested.emit()" style="width: 100%;" *ngIf="isOrderComplete" [disabled]="isLoading">
+    <span>حفظ كمية المنتجات الجديدة</span>
+  </button>
+</ng-container>
+
+<ng-template #sendOrder>
+  <button (click)="sendOrderRequested.emit()" style="width: 100%;" *ngIf="isOrderComplete" [disabled]="isLoading">
+    <span>Send Order</span>
+  </button>
+</ng-template>
+
+<button *ngIf="isPreSent && hasUpdates" (click)="saveUpdatesRequested.emit()" [disabled]="!canSaveUpdates">
+  Save Updates
+</button>

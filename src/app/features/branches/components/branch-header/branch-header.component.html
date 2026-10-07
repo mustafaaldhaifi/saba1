@@ -1,0 +1,16 @@
+<a (click)="logoutRequested.emit()" class="power-off-icon" style="color: red;">
+  <i class="fas fa-power-off"></i>
+</a>
+
+<h6>{{ version }}</h6>
+
+<div class="dropdown-container mb-3">
+  <label for="branch-order-type" class="dropdown-label me-2">Select Type:</label>
+  <select
+    id="branch-order-type"
+    [ngModel]="selectedType"
+    class="dropdown form-select"
+    (ngModelChange)="typeChanged.emit($event)">
+    <option *ngFor="let item of types" [ngValue]="item">{{ item.name }}</option>
+  </select>
+</div>

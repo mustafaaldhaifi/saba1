@@ -1,0 +1,5 @@
+<div *ngIf="selectedDate" style="text-align: center;">
+  <hr>
+  {{ selectedDate.toDate() | date:'mediumDate' }}
+  <div *ngIf="branchName">{{ branchName }}</div>
+</div>

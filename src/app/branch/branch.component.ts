@@ -24,15 +24,58 @@ import { Firestore } from '@angular/fire/firestore';
 
 // استيراد collectionData المخصصة لـ RxJS من المسار الفرعي
 import { collectionData } from '@angular/fire/firestore';
+import { BranchHeaderComponent, BranchHeaderOrderType } from '../features/branches/components/branch-header/branch-header.component';
+import { BranchDateActionsComponent, BranchOrderDateOption, BranchDateTimestamp } from '../features/branches/components/branch-date-actions/branch-date-actions.component';
+import { BranchOrderContextComponent } from '../features/branches/components/branch-order-context/branch-order-context.component';
+import { BranchOrderActionsComponent } from '../features/branches/components/branch-order-actions/branch-order-actions.component';
+import { BranchDailyReportGroupEvent, BranchDailyToolbarComponent } from '../features/branches/components/branch-daily-toolbar/branch-daily-toolbar.component';
+import { PdfReportService } from '../features/reports/data/pdf-report.service';
+import { BranchAccountReaderService } from '../features/branches/data/branch-account-reader.service';
 
 @Component({
   selector: 'app-branch',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReasonDialogComponent],
+  imports: [CommonModule, FormsModule, ReasonDialogComponent, BranchHeaderComponent, BranchDateActionsComponent, BranchOrderContextComponent, BranchOrderActionsComponent, BranchDailyToolbarComponent],
   templateUrl: './branch.component.html',
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+
+  /** Applies the type chosen in the presentational branch header. */
+  changeOrderType(type: BranchHeaderOrderType): void {
+    this.selectedType = type;
+    void this.onSelectTypeChange();
+  }
+
+  /** Receives an existing order date from the date-actions presentation component. */
+  selectOrderDate(order: BranchOrderDateOption): void {
+    void this.onSelectDate(order);
+  }
+
+  /** Starts a new branch order for an administrator-enabled date. */
+  startNewOrder(date: BranchDateTimestamp): void {
+    this.addNewOrder(date);
+  }
+
+  /** Branch name used by the context presentation component. */
+  get selectedBranchName(): string {
+    return this.branch?.data?.name ?? '';
+  }
+
+  /** Loads the selected daily report date from the daily-toolbar component. */
+  selectDailyReportDate(date: Date): void {
+    void this.onDailyDateChange(date);
+  }
+
+  /** Delegates grouped daily PDF export without coupling the toolbar to PDF code. */
+  exportDailyReportGroup(event: BranchDailyReportGroupEvent): void {
+    void this.exportallPdfDaily(event.key, event.dates);
+  }
+
+  /** Delegates grouped daily notes PDF export. */
+  exportDailyNotesGroup(event: BranchDailyReportGroupEvent): void {
+    void this.exportallNotesPdfDaily(event.key, event.dates);
+  }
 
 
 
@@ -43,36 +86,33 @@ export class BranchComponent {
   Object: any;
   fullyFilledMonths: any;
 
-  exportPdf() {
-    const pdfService = new PdfService();
+  /** Exports the selected standard branch order through the reports feature. */
+  exportPdf(): void {
     const date = this.selectedDate.toDate();
 
     const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    console.log("typeee", this.selectedType);
 
     const isMonthally = this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU'
-
-    console.log('isMonthally', isMonthally);
     const data = this.getOrders(this.branch.id, isMonthally)
-    console.log("dattttaaa", data);
 
 
-    pdfService.export(data, true, formattedDate, this.branch.data.name, this.selectedType.name_en, isMonthally)
+    this.pdfReports.exportBranchReport({
+      rows: data,
+      date: formattedDate,
+      branchName: this.branch.data.name,
+      typeName: this.selectedType.name_en,
+      isMonthly: isMonthally,
+      isBranchLayout: true
+    });
   }
   getOrders(branchId: any, isMonthally: boolean): any[][] {
     const data = this.data;
-    console.log(data);
 
     const result: any[][] = [];
 
     for (let i = 0; i < data.length; i++) {
       const product = data[i];
       const order = this.getOrder2(branchId, product.id);
-      console.log("branchId", branchId);
-
-      console.log("product.id", product.id);
-
-      console.log("orrrddder", order);
 
 
       if (order) {
@@ -146,7 +186,9 @@ export class BranchComponent {
     private productsServices: ProductsService,
     private orderService: OrdersService,
     private dailyReportService: DailyReportsService,
-    private constraintsService: ColumnConstraintsService
+    private constraintsService: ColumnConstraintsService,
+    private pdfReports: PdfReportService,
+    private branchAccountReader: BranchAccountReaderService
   ) {
     this.version = environment.version
 
@@ -188,9 +230,6 @@ export class BranchComponent {
           const data = { id: doc.id, ...doc.data() } as unknown as RulePayload;
           rulesList.push(data);
         });
-
-        console.log("qqq", rulesList);
-        console.log("qqq", this.branch);
 
         this.onDataReceived(rulesList);
 
@@ -337,18 +376,14 @@ export class BranchComponent {
       return null;
     }
 
-    console.log('qqqmaxValueRules', this.maxValueRules);
-
     // البحث في قواعد الحد الأقصى (maxValueRules)
     for (const rule of this.maxValueRules) {
       // التحقق من الفرع: (إما محدد في القائمة أو [] وتفهم أنها لكل الفروع)
       const matchesBranch = rule.branchIds.length === 0 || rule.branchIds.includes(currentBranchId);
 
       if (matchesBranch) {
-        console.log('qqqMatch', matchesBranch);
         // البحث عن الصنف
         const matchedItem = rule.items.find(item => item.itemId === itemId);
-        console.log('qqqMatchItem', matchedItem);
 
         if (matchedItem && matchedItem.columns && matchedItem.columns[columnName] !== undefined) {
           return matchedItem.columns[columnName]!;
@@ -365,8 +400,6 @@ export class BranchComponent {
   validateMaxValue(event: Event, itemId: string, columnName: string, currentBranchId: string) {
     const inputElement = event.target as HTMLInputElement;
     const max = this.getMaxValue(itemId, columnName, currentBranchId);
-
-    console.log('qqqmax', max);
 
     if (max !== null) {
       const enteredValue = Number(inputElement.value);
@@ -442,9 +475,6 @@ export class BranchComponent {
     });
 
     // طباعة للتحقق
-    console.log('Lock Rules:', this.lockRules);
-    console.log('Default Value Rules:', this.defaultValueRules);
-    console.log('Max Value Rules:', this.maxValueRules);
   }
 
 
@@ -467,8 +497,6 @@ export class BranchComponent {
     // const productRef = doc(db, "branchesOrders", element.id);
     // Loop over the orders to update
 
-    console.log("rfrf0", this.ordersToUpdate);
-
     // ✅ Corrected document path for updating 
     const docRef2 = doc(this.apiService.db, 'orderUpdates', this.orderUpdates.id);
 
@@ -486,10 +514,6 @@ export class BranchComponent {
       try {
         // Add the update operation to the batch
         batch.update(productRef, updatedData);
-
-        console.log(updatedData);
-
-        console.log(`Order with ID: ${element.id} added to batch for update.`);
         // Find the index of the selected order
         const orderIndex = this.preOrders.findIndex(
           (order: any) => order.id === this.selectedPreOrder.id
@@ -537,7 +561,6 @@ export class BranchComponent {
 
       alert("يعطيك العافية تم التحديث بنجاح")
       this.ordersToUpdate = []
-      console.log("All orders updated successfully.");
     } catch (e) {
       console.error("Error committing batch update:", e);
     } finally {
@@ -560,7 +583,6 @@ export class BranchComponent {
 
       // 1. Add all order items
       this.ordersToAdd.forEach((element: any) => {
-        console.log("element", element);
 
         const orderRef = doc(collection(this.apiService.db, collectionNames.branchesOrders)); // Auto-generate ID
         batch.set(orderRef, {
@@ -650,7 +672,6 @@ export class BranchComponent {
           this.branch = await this.getRelatedBranche(name);
           if (!this.branch) throw new Error('No branch is linked to this account.');
         }
-        console.log("branch", this.branch);
 
         await this.getTypes()
         await this.getProducts()
@@ -726,8 +747,6 @@ export class BranchComponent {
     // this.types.push({ id:'5', name: "الجرد اليومي", name_en: 'Daily' })
     this.selectedType = this.types[0]
 
-    console.log(this.selectedType);
-
 
     // if (this.types.length > 0) {
     //   this.selectedType = this.types[0];
@@ -744,7 +763,6 @@ export class BranchComponent {
     if (this.preOrders.length > 0) {
       this.selectedPreOrder = this.preOrders[0].createdAt
     }
-    console.log("preOrders:", this.preOrders);
 
     // const constraints = [
     //   where("branchId", "==", this.branch.id),
@@ -770,9 +788,6 @@ export class BranchComponent {
     const city = this.branch.data.city;
     const typeId = this.selectedType.id;
 
-
-    console.log("citytt", this.branch.id);
-
     // const productsInfo = this.productService.getProductsFromLocal(city, typeId);
 
     const productUpdates = await this.productsServices.getLastupdate(city, typeId, this.apiService);
@@ -780,8 +795,6 @@ export class BranchComponent {
     // جلب البيانات بالكامل من الخدمة
     // جلب البيانات بالكامل من الخدمة
     const allProducts = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService);
-
-    console.log("all products", allProducts);
 
 
     this.data = allProducts.filter(product => {
@@ -873,19 +886,9 @@ export class BranchComponent {
       createdAt: doc.data()['createdAt']
     }));
   }
+  /** Loads the branch attached to an account through the branches data layer. */
   async getRelatedBranche(name: string) {
-    const n = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-    const constraints = [
-      where("name", "==", n),
-      limit(1)
-    ];
-
-    const snapshot = await this.apiService.getData(collectionNames.branches, constraints)
-    if (snapshot.empty) {
-      throw new Error('No branch is linked to this account.');
-    }
-    const doc = snapshot.docs[0];
-    return { id: doc.id, data: doc.data() };
+    return this.branchAccountReader.findByAccountName(name);
   }
   async getSettings(): Promise<void> {
     try {
@@ -898,11 +901,9 @@ export class BranchComponent {
       if (docSnap.exists()) {
         const settingsData = docSnap.data();
         this.isOn = settingsData['isOpen']
-        console.log("Settings data:", settingsData);
         // You can assign the data to a component property here
         // this.settings = settingsData; // Assuming you have a settings property
       } else {
-        console.log("No settings document found!");
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -1002,7 +1003,6 @@ export class BranchComponent {
       this.addToOrdersToAdd(item);
     }
     else {
-      console.log("itemm", item);
 
       this.addToOrdersToUpdate(item)
     }
@@ -1024,7 +1024,6 @@ export class BranchComponent {
   }
   async onSelectDate(order: any) {
     this.selectedPreOrder = order
-    console.log('selected', this.selectedPreOrder);
 
     const selectedTimestamp = this.selectedPreOrder.createdAt
     this.isLoading = true;
@@ -1046,10 +1045,6 @@ export class BranchComponent {
       this.branchOrders = await this.getBranchOrders(startTimestamp, endTimestamp);
 
       // Update combined data with orders from selected date
-
-      console.log("rtrtr", selectedDate);
-      console.log("rtrtr2", startOfDay);
-      console.log("rtrtr3", endOfDay);
 
       this.combineDataWithOrders();
       this.isPreSent = this.preOrders.some((o: any) => o.id != -1);
@@ -1085,7 +1080,6 @@ export class BranchComponent {
     this.selectedDate = null
 
     if (this.selectedType.id != '5') {
-      console.log("selllleee", this.selectedType);
 
 
 
@@ -1099,7 +1093,6 @@ export class BranchComponent {
 
       if (this.selectedPreOrder) {
         // this.selectedPreOrder = order
-        console.log('selected', this.selectedPreOrder);
 
         const selectedTimestamp = this.selectedPreOrder.createdAt
         this.isLoading = true;
@@ -1122,7 +1115,6 @@ export class BranchComponent {
           if (this.preOrders.length > 0) {
             this.selectedPreOrder = this.preOrders[0];
             this.selectedDate = this.preOrders[0].createdAt;
-            console.log(this.preOrders[0]);
 
             await this.onSelectDate(this.selectedPreOrder);
           }
@@ -1179,9 +1171,6 @@ export class BranchComponent {
   onInputQ($event: Event, _t50: number, item: any) {
     const newValue = ($event.target as HTMLInputElement).valueAsNumber;
     // throw new Error('Method not implemented.');
-    console.log(newValue, _t50);
-    console.log(this.combinedData[_t50]);
-    console.log(this.selectedDate);
 
     this.addToOrdersToUpdate(item)
     // this.combinedData[_t50].qntNotRequirement = newValue
@@ -1253,21 +1242,18 @@ export class BranchComponent {
     }
   }
   getOrder2(branchId: any, productId: any): any {
-    console.log("ordersss", this.branchOrders);
 
     return this.branchOrders.find((order: any) =>
       order.productId === productId
     );
   }
   combineDataWithOrders() {
-    console.log(this.branchOrders);
 
     this.combinedData = this.data.map((product: any) => {
       const order = this.branchOrders.find((o: any) => o.productId === product.id);
       if (order) {
         this.isPreSent = true;
       }
-      console.log("order", order);
       const qnt = order?.qnt ?? '';
       const status = qnt == '0' ? '4' : (order?.status ?? '0');
       return {
@@ -1334,7 +1320,6 @@ export class BranchComponent {
    *  to check previous orders is all have complete change status
    */
   isChangeStatus() {
-    console.log('preOrders', this.preOrders);
 
     const r = this.preOrders.some((e: any) => e.status != '1')
     return r
@@ -1364,7 +1349,6 @@ isChangeStatus2(): boolean {
     }
   }
   addToOrdersToUpdate(order: any) {
-    console.log("pppppppp", order);
 
     const existingProductIndex = this.ordersToUpdate.findIndex((p: any) => p.id === order.id);
     if (existingProductIndex !== -1) {
@@ -1372,7 +1356,6 @@ isChangeStatus2(): boolean {
     } else {
       this.ordersToUpdate.push(order);
     }
-    console.log("Dddd", this.ordersToUpdate);
 
   }
   addNewOrder(date: any) {
@@ -1391,9 +1374,6 @@ isChangeStatus2(): boolean {
       alert("يرجى الاضافة اولا لقبل هذا التاريخ"); // "Cannot add a new order before completing previous orders"
       return;
     }
-    console.log('ddddaa',date);
-
-    console.log(hasLaterDate);
 
     this.selectedDate = date
     this.combinedData = this.data.map((product: any) => {
@@ -1443,16 +1423,11 @@ isChangeStatus2(): boolean {
       openingStockQnt: doc.data()['openingStockQnt'],
     }));
 
-
-    console.log('openStock', this.openingStock);
-
   }
 
   dailyReports: any = []
   async getDailyReports(startOfDate: Date, endOfDate: Date): Promise<void> {
     // Get the first and last day of the current month
-
-    console.log("ddaaa", this.dailyReportUpdates);
     this.dailyReportUpdates = await this.dailyReportService.getLastupdate(this.branch.id, Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!!)), this.apiService)
     this.dailyReports = await this.dailyReportService.getData(this.selectedType.id, this.branch.id, startOfDate, endOfDate, this.dailyReportUpdates, this.apiService)
     // const q = query(
@@ -1478,8 +1453,6 @@ isChangeStatus2(): boolean {
     //   dameged: doc.data()['dameged'],
     //   closeStock: doc.data()['closeStock'],
     // }));
-
-    console.log('dailyReports', this.dailyReports);
 
   }
 
@@ -1544,8 +1517,6 @@ isChangeStatus2(): boolean {
     // ثم خزّن هذه البيانات المفلترة كبياناتك المحلية الجديدة
     // this.dailyReportService.saveLocalData(filteredLocalReports);
 
-    console.log("dddaaates", this.filteredLocalReports);
-
 
 
 
@@ -1600,13 +1571,10 @@ isChangeStatus2(): boolean {
       // Step 3: Final result
       if (oldestMissingDate) {
         this.dateToAddInDaily = oldestMissingDate;
-        console.log('Oldest missing date:', oldestMissingDate);
       } else if (!todayExists) {
         this.dateToAddInDaily = currentDate;
-        console.log('Today is missing. Setting today as dateToAddInDaily.');
       } else {
         this.dateToAddInDaily = undefined;
-        console.log('No missing dates — including today.');
       }
 
 
@@ -1617,7 +1585,6 @@ isChangeStatus2(): boolean {
 
 
       this.dateToAddInDaily = new Date(now.getFullYear(), now.getMonth(), 1);  // Set the current time if no report exists
-      console.log('No report for today.');
 
       // const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate)
       // console.log("filterd: : ", itemToDelete);
@@ -1686,7 +1653,6 @@ isChangeStatus2(): boolean {
     const tempSnap = await getDoc(tempRef);
     const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
     const itemToDelete = this.getItemsInPreviousMonthFromServer(this.dailyReportsDates1, serverDate)
-    console.log("filterd: : ", itemToDelete);
 
     // const a = localStorage.getItem("dailyReport")
 
@@ -1697,8 +1663,6 @@ isChangeStatus2(): boolean {
       const itemDate = new Date(item.date); // لأن date عبارة عن string
       return !(itemDate >= startOfPrevMonth && itemDate <= endOfPrevMonth);
     });
-
-    console.log("fresh data", filtered);
 
 
 
@@ -1717,7 +1681,6 @@ isChangeStatus2(): boolean {
     await this.deleteOldDailyReportsDatesIfSixthOfMonth();
     this.combineDataWithReports()
     this.groupDatesByMonth();
-    console.log('groupedDailyDates', this.groupedDailyDates);
 
   }
 
@@ -1864,8 +1827,6 @@ isChangeStatus2(): boolean {
         closeStock
       };
     });
-
-    console.log('combinedData', this.combinedData);
   }
 
 
@@ -2117,7 +2078,6 @@ isChangeStatus2(): boolean {
       dameged;
 
     // --- طباعة القيم في الـ Console ---
-    console.log(`--- Calculation for Product: ${reportOrData?.name || 'Unknown'} ---`);
     console.table({
       "Opening Stock": openingStockQnt,
       "Recieved (Raw)": recieved,
@@ -2196,7 +2156,6 @@ isChangeStatus2(): boolean {
 
         // const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
         // this.combinedData[i].closeStock = updatedCloseStock;
-        console.log('تم:', result);
         this.isModalOpen = false
 
       }).catch(() => {
@@ -2217,7 +2176,6 @@ isChangeStatus2(): boolean {
 
         const updatedCloseStock = this.calculateClosingStock(this.combinedData[i], undefined, productUnit);
         this.combinedData[i].closeStock = updatedCloseStock;
-        console.log('تم الإلغاء');
         this.isModalOpen = false
 
       });
@@ -2325,8 +2283,6 @@ isChangeStatus2(): boolean {
       // 1. جلب إعدادات القيمة الافتراضية (مثال لعمود وجبة الموظف staffMeal)
       const config = this.getDefaultValueConfig(item.productId, 'staffMeal', currentBranchId);
 
-      console.log("config", config);
-
       if (config) {
         if (config.enabled) {
           // تعبئة القيمة الافتراضية إذا كانت الخانة فارغة أو غير معرفة
@@ -2361,8 +2317,6 @@ isChangeStatus2(): boolean {
       const updatedCloseStock = this.calculateClosingStock(item, undefined, item.productUnit);
       item.closeStock = updatedCloseStock;
     });
-
-    console.log("تم تطبيق القيم الافتراضية وإعادة حساب المتبقي للجميع بنجاح.");
   }
 
   /**
@@ -2460,9 +2414,6 @@ isChangeStatus2(): boolean {
 
     // 3. فحص الحد الأقصى (Max Value)
     const maxAllowed = this.getMaxValue(productId, field, currentBranchId);
-    console.log('qqqMM', productId);
-    console.log('qqqMM', field);
-    console.log('qqqMM', maxAllowed);
 
     if (maxAllowed !== null && enteredValue > maxAllowed) {
       handleForbiddenInput(`عذراً، الكمية المدخلة (${enteredValue}) تتجاوز الحد الأقصى المسموح به وهو ${maxAllowed}.`);
@@ -2603,9 +2554,6 @@ isChangeStatus2(): boolean {
     //   this.combinedData[i][field] = item[field] ?? '';
     // }
 
-    console.log(this.combinedData[i]);
-    console.log(subProduct);
-
 
     this.combinedData[i][field] = item[field] ?? '';
 
@@ -2697,20 +2645,11 @@ isChangeStatus2(): boolean {
     }
 
     //// 
-
-
-
-    console.log("eeee", field);
-    console.log('eeee', Number(item[field] ?? 0));
-    console.log('eeee', item);
     // this.openModal(field, item, i, subProduct)
 
 
     if (field === 'add' || field === 'transfer' || field === 'dameged' || field === 'recieved' || field === 'freeIncrease' || field === 'canceled') {
       // console.log("this.handleDilogReson", this.handleDilogReson);
-      console.log("eeee1", field);
-      console.log('eeee1', Number(item[field] ?? 0));
-      console.log('eeee1', item);
 
       if (this.ifEnabledNoteFiled()) {
         // this.handleDilogReson = { field, item, i, subProduct }
@@ -2755,8 +2694,6 @@ isChangeStatus2(): boolean {
         }
 
         if (field === 'transfer') {
-          console.log('frfrfr', Number(item[field] ?? 0));
-          console.log('frfrfr', item);
 
 
           if (Number(item[field] ?? 0) !== 0) {
@@ -2799,11 +2736,9 @@ isChangeStatus2(): boolean {
         }
 
         if (field === 'recieved') {
-          console.log("RRRWEEE");
 
           if (subProduct) {
             const a = Number(item.products[subProduct.i][field] ?? 0)
-            console.log("aaa", a);
 
             if (a !== 0) {
               // this.showReasonDialog = true
@@ -2813,7 +2748,6 @@ isChangeStatus2(): boolean {
             }
           } else {
             const a = Number(item[field] ?? 0)
-            console.log("aaa2", a);
 
             if (Number(item[field] ?? 0) !== 0) {
               // this.showReasonDialog = true
@@ -3027,12 +2961,6 @@ isChangeStatus2(): boolean {
       }
       /////
 
-
-      console.log(this.combinedData);
-      console.log("item before update", item);
-      console.log("item after update", this.combinedData.find((data: any) => item.productId == data.productId));
-      console.log("this.orderDailyToUpdate", this.orderDailyToUpdate);
-
     }
   }
   orderDailyToUpdate: any = []
@@ -3102,7 +3030,6 @@ isChangeStatus2(): boolean {
       return item;
     });
     // this.combinedData = newCombinedData;
-    console.log("nnnnn", newCombinedData);
 
 
 
@@ -3242,11 +3169,9 @@ isChangeStatus2(): boolean {
 
       await batch.commit();
       // this.dailyReportService.addDataToLocal(dailyReportToSaveLocally, this.dailyReportService.getDateKey(this.dateToAddInDaily!), this.selectedType.id, this.branch.id)
-      console.log("done");
       alert("يعطيك العافية تم التحديث بنجاح")
       window.location.reload();
     } catch (error) {
-      console.log(error);
 
     } finally {
       this.isLoading = false
@@ -3261,12 +3186,9 @@ isChangeStatus2(): boolean {
     this.isReadDailyMode = true
     this.dailyReports = []
     this.combinedData = []
-    console.log($event);
     // console.log($event.date.toDate());
 
     this.dateToAddInDaily = $event
-
-    console.log('this.dailyReportsDates1', this.dailyReportsDates1);
 
     this.selectedDateToAddObject = this.dailyReportsDates1.find((report: any) => {
       const reportDate = report.date.toDate(); // تحويل من Firestore Timestamp إلى JavaScript Date
@@ -3279,9 +3201,6 @@ isChangeStatus2(): boolean {
     //     this.dialyNote = this.selectedDateToAddObject.note
     //   }
     // }
-
-    console.log("📅 Selected Date:", $event);
-    console.log("✅ Matched Report:", this.selectedDateToAddObject);
 
     // const now = $event
     // const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
@@ -3300,8 +3219,6 @@ isChangeStatus2(): boolean {
       }
     })
 
-    console.log("dialyNotess", this.dialyNote);
-
     this.isLoading = false
 
 
@@ -3319,7 +3236,6 @@ isChangeStatus2(): boolean {
           return deleteDoc(doc(this.apiService.db, colName, document.id));
         });
         await Promise.all(deletePromises);
-        console.log(`✅ تم حذف جميع البيانات من مجموعة: ${colName}`);
       }
     } catch (error) {
       console.error('❌ حدث خطأ أثناء الحذف:', error);
@@ -3351,7 +3267,6 @@ isChangeStatus2(): boolean {
         });
 
         await Promise.all(deletePromises);
-        console.log(`✅ تم حذف جميع البيانات الخاصة بالفرع (${this.branch.id}) من مجموعة: ${colName}`);
       }
     } catch (error) {
       console.error("❌ حدث خطأ أثناء الحذف:", error);
@@ -3477,18 +3392,12 @@ isChangeStatus2(): boolean {
         ); // فلترة حسب branchId
         const snapshot = await getDocs(q);
 
-
-
-
-        console.log("sssssnnnn", snapshot.docs);
-
         const deletePromises = snapshot.docs.map(document => {
           //  console.log("ddddaaa",document)
           return deleteDoc(doc(this.apiService.db, colName, document.id));
         });
 
         await Promise.all(deletePromises);
-        console.log(`✅ تم حذف جميع البيانات الخاصة بالفرع (${this.branch.id}) من مجموعة: ${colName}`);
       }
     } catch (error) {
       console.error("❌ حدث خطأ أثناء الحذف:", error);
@@ -3527,7 +3436,6 @@ isChangeStatus2(): boolean {
       const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
       const tempSnap = await getDoc(tempRef);
       const serverDate = tempSnap.data()?.['serverTime']?.toDate?.();
-      console.log("serverTime", serverDate);
 
       if (!(serverDate instanceof Date)) {
         console.error('فشل في الحصول على وقت السيرفر');
@@ -3536,11 +3444,8 @@ isChangeStatus2(): boolean {
 
       // 2. التحقق من اليوم
       if (serverDate.getDate() < 6) {
-        console.log('اليوم ليس السادس، لا حاجة للحذف.');
         const start = new Date(serverDate.getFullYear() - 5, 1, 1, 0, 0, 0);
         const end = new Date(serverDate.getFullYear(), serverDate.getMonth(), 0, 23, 59, 59);
-        console.log("start", start);
-        console.log("end", end);
         return;
       }
 
@@ -3583,8 +3488,6 @@ isChangeStatus2(): boolean {
       const snapshot1 = await getDocs(q1);
       snapshot1.docs.forEach(docSnap => deleteRefs.push(docSnap.ref));
 
-      console.log(`📦 عدد المستندات المراد حذفها: ${deleteRefs.length}`);
-
       // 6. حذف على دفعات من 300
       const chunkSize = 300;
       for (let i = 0; i < deleteRefs.length; i += chunkSize) {
@@ -3594,7 +3497,6 @@ isChangeStatus2(): boolean {
 
         try {
           await batch.commit();
-          console.log(`✅ تم حذف دفعة ${i / chunkSize + 1} (${chunk.length} مستند)`);
         } catch (error) {
           console.error(`❌ خطأ في دفعة ${i / chunkSize + 1}:`, error);
         }
@@ -3608,9 +3510,6 @@ isChangeStatus2(): boolean {
         return !(itemDate >= startOfPrevMonth && itemDate <= endOfPrevMonth);
       });
       this.dailyReportService.saveToLocal(filtered)
-
-
-      console.log('✅ تم حذف جميع المستندات القديمة بنجاح.');
       window.location.reload();
 
     } catch (error) {
@@ -3743,7 +3642,6 @@ isChangeStatus2(): boolean {
     const pdfService = new PdfService();
 
     const formattedDate = `${this.dateToAddInDaily!.getFullYear()}-${String(this.dateToAddInDaily!.getMonth() + 1).padStart(2, '0')}-${String(this.dateToAddInDaily!.getDate()).padStart(2, '0')}`;
-    console.log("typeee", this.selectedType);
     pdfService.exportPDF5(this.combinedData, formattedDate, this.branch.data.name, this.dialyNote)
     // pdfService.exportPDF5(this.combinedData)
 
@@ -3906,7 +3804,6 @@ isChangeStatus2(): boolean {
 
     this.isReadDailyMode = true
     // اطبع النتيجة للتأكد
-    console.log("Final Data", finalData);
 
     // إنشاء PDF واحد للشهر كله
     pdfService.exportMonthlyReport(date, finalData, this.branch.data.name);
@@ -3969,7 +3866,6 @@ isChangeStatus2(): boolean {
 
     this.isReadDailyMode = true
     // اطبع النتيجة للتأكد
-    console.log("Final Data", finalData);
 
     // إنشاء PDF واحد للشهر كله
     pdfService.exportMonthlyReportNotes(date, finalData, this.branch.data.name);
@@ -4102,15 +3998,12 @@ isChangeStatus2(): boolean {
     //   };
     // });
 
-    console.log('combinedDataRes', res);
-
     return res
   }
 
 
   getOrdersDaily(dailyReports: any): any[][] {
     const data = this.data;
-    console.log(data);
 
     const result: any[][] = [];
 
@@ -4219,11 +4112,9 @@ isChangeStatus2(): boolean {
       if (docSnap.exists()) {
         const Data = docSnap.data();
         this.allowableEdits = Data['typeIds']
-        console.log("allowableEdits data:", Data);
         // You can assign the data to a component property here
         // this.settings = settingsData; // Assuming you have a settings property
       } else {
-        console.log("No allowableEdits document found!");
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -4340,8 +4231,6 @@ isChangeStatus2(): boolean {
               updatedAt: Timestamp.now(),
             };
 
-            console.log(updatedSubProduct);
-
             if (dailyReportId) {
               const docRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
               batch1.update(docRef, updatedSubProduct);
@@ -4367,16 +4256,11 @@ isChangeStatus2(): boolean {
         // تحديث المنتج الرئيسي
         const { productUnit, dailyReportId, productName, products, ...filtedParentProduct } = element;
 
-        console.log("element", element);
-        console.log("filtedParentProduct", filtedParentProduct);
-
 
         const updatedParentProduct = {
           ...filtedParentProduct,
           updatedAt: Timestamp.now(),
         };
-
-        console.log("updatedParentProduct", updatedParentProduct);
 
 
         const parentDocRef = doc(this.apiService.db, collectionNames.dailyReports, dailyReportId);
@@ -4384,9 +4268,7 @@ isChangeStatus2(): boolean {
         const parentDocSnap = await getDoc(parentDocRef);
 
         if (parentDocSnap.exists()) {
-          console.log("📄 بيانات المستند:", parentDocSnap.data());
         } else {
-          console.log("❌ المستند غير موجود");
         }
 
         batch1.update(parentDocRef, updatedParentProduct);
@@ -4394,9 +4276,7 @@ isChangeStatus2(): boolean {
         const parentDocSnap1 = await getDoc(parentDocRef);
 
         if (parentDocSnap.exists()) {
-          console.log("📄 2بيانات المستند:", parentDocSnap1.data());
         } else {
-          console.log("❌ 2المستند غير موجود");
         }
       }
 
@@ -4515,9 +4395,6 @@ isChangeStatus2(): boolean {
             updateData.dameged = dameged;
             updateData.add = add;
           }
-
-          console.log("item to update", item);
-          console.log("closeStock", closeStock);
           batch.update(docRef1, updateData);
           fcloseStock = closeStock
         }
@@ -4545,7 +4422,6 @@ isChangeStatus2(): boolean {
       }
 
       await batch.commit();
-      console.log('تم التحديث بنجاح');
       alert("يعطيك العافية تم التحديث بنجاح")
 
       this.orderDailyToUpdate = []
@@ -4728,7 +4604,6 @@ isChangeStatus2(): boolean {
     // if (!Array.isArray(this.combinedData)) return false;
 
     return this.combinedData.some((item: any) => {
-      console.log(item);
 
       if (item.products) {
         return item.products.some((subitem: any) => {
@@ -4749,13 +4624,6 @@ isChangeStatus2(): boolean {
         const isRecieved = Number(item.recieved) !== 0;
         const isFreeIncreasePositive = Number(item.freeIncrease) > 0;
         const isCanceledPositive = Number(item.canceled) > 0;
-
-        console.log('isAddNegative', isAddNegative);
-        console.log('isTransferNonZero', isTransferNonZero);
-        console.log('isDamagedPositive', isDamagedPositive);
-        console.log('isREcievesPositive', isRecieved);
-        console.log('isFreeIncreasePositive', isFreeIncreasePositive);
-        console.log('isCanceledPositive', isCanceledPositive);
 
 
 
@@ -4817,7 +4685,6 @@ isChangeStatus2(): boolean {
     if (reason === null || reason.length == 0) {
       // this.combinedData[i][field] = ""
       // تم الإلغاء من قبل المستخدم
-      console.log("cenceled", this.combinedData[this.handleDilogReson.i]);
 
       return;
     }
@@ -4918,4 +4785,3 @@ isChangeStatus2(): boolean {
   }
 
 }
-

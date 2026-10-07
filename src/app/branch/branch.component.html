@@ -2,59 +2,24 @@
 <div class="loading-overlay" *ngIf="isLoading">
     <div class="spinner"></div>
 </div>
-<a (click)="logout()" class="power-off-icon" style="color: red;">
-    <i class="fas fa-power-off"></i>
-</a>
-<h6>
-    {{version}}
-</h6>
+<app-branch-header
+    [version]="version"
+    [types]="types"
+    [selectedType]="selectedType"
+    (logoutRequested)="logout()"
+    (typeChanged)="changeOrderType($event)">
+</app-branch-header>
+<app-branch-date-actions
+    [orderDates]="preOrders"
+    [allowedNewOrderDates]="datesToAdd"
+    [selectedDate]="selectedDate"
+    (dateSelected)="selectOrderDate($event)"
+    (exportRequested)="exportPdf()"
+    (newOrderRequested)="startNewOrder($event)">
+</app-branch-date-actions>
 
-<div class="dropdown-container mb-3">
-    <label for="options" class="dropdown-label me-2">Select Type:</label>
-    <select id="options" [(ngModel)]="selectedType" class="dropdown form-select" (ngModelChange)="onSelectTypeChange()">
-        <option *ngFor="let item of types" [ngValue]="item">
-            {{ item.name }}
-        </option>
-    </select>
-</div>
-<!-- Date Selection Buttons -->
-<div *ngFor="let item of preOrders; let i = index">
-    <button (click)="onSelectDate(item)" style="width: 100%;"
-        [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
-        {{item.createdAt?.toDate() | date:'mediumDate'}}
-    </button>
-</div>
+<app-branch-order-context [selectedDate]="selectedDate" [branchName]="selectedBranchName"></app-branch-order-context>
 
-<!-- <button *ngIf="selectedType && selectedType.id == 'WbAP06wLDRvZFTYUtkjU'" (click)="exportPdf()"> Export Pdf</button> -->
-<button *ngIf="selectedDate" (click)="exportPdf()"> Export Pdf</button>
-
-
-<!-- <h3 style="text-align: center;">الايام المسموحه لاضافة طلبات</h3> -->
-<div *ngFor="let item of datesToAdd; let i = index">
-    <button (click)="addNewOrder(item.createdAt)" style="width: 100%;background-color: brown;"
-        [class.selected]="selectedDate?.seconds === item.createdAt?.seconds">
-        {{item.createdAt?.toDate() | date:'mediumDate'}}
-        <i class="fas fa-plus" style="margin-left: 10px;"></i>
-
-    </button>
-</div>
-<!-- Add New Order Button -->
-<!-- <button *ngIf="isToAddMode === false && ifCurrentDateInPreOrders1 === false " (click)="addNewOrder()"
-    style="width: 100%;">
-    Add New Order
-</button> -->
-
-<!-- Selected Date Info -->
-<div *ngIf="selectedDate" style="text-align: center;">
-    <hr>
-    {{selectedDate.toDate() | date:'mediumDate'}}
-    <!-- {{selectedDate | date:'mediumDate'}} -->
-    <div *ngIf="branch">
-        {{branch.data.name}}
-    </div>
-</div>
-
-<!-- <button (click)="exportToPDF()">Export to PDF</button> -->
 
 
 
@@ -64,8 +29,6 @@
         يجب اضافة كميتها
     </div>
 
-
-    <!-- <ng-container *ngIf="selectedDate"> -->
 
     <div class="table-container">
         <div class="table fixed-header">
@@ -187,36 +150,18 @@
     </div>
 
 
-    <!-- Action Buttons -->
-    <!-- <button style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading"
-    (click)="checkIfHasEmptyOrder() &&  isToAddMode === false ? addOrders(true) : addOrders()">
-    <ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
-        <span>حفظ كمية المنتجات الجديدة</span>
-    </ng-container>
-
-    <ng-template #sendOrderBlock>
-        <span>Send Order</span>
-    </ng-template>
-</button> -->
-
-    <!-- Action Buttons -->
-
-    <ng-container *ngIf="checkIfHasEmptyOrder() &&  isToAddMode === false; else sendOrderBlock">
-        <button (click)="addOrders(true)" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
-            <span>حفظ كمية المنتجات الجديدة</span>
-        </button>
-    </ng-container>
-
-    <ng-template #sendOrderBlock>
-        <button (click)="addOrders()" style="width: 100%;" *ngIf="isFullFilled()" [disabled]="isLoading">
-            <span>Send Order</span>
-        </button>
-    </ng-template>
-
-    <button *ngIf="isPreSent === true && ordersToUpdate.length > 0" (click)="saveUpdates()"
-        [disabled]="isUpdateEnabled() == false">
-        Save Updates
-    </button>
+    <app-branch-order-actions
+        [hasEmptyProduct]="checkIfHasEmptyOrder()"
+        [isAddingOrder]="isToAddMode"
+        [isOrderComplete]="isFullFilled()"
+        [isLoading]="isLoading"
+        [isPreSent]="isPreSent"
+        [hasUpdates]="ordersToUpdate.length > 0"
+        [canSaveUpdates]="isUpdateEnabled()"
+        (saveNewProductsRequested)="addOrders(true)"
+        (sendOrderRequested)="addOrders()"
+        (saveUpdatesRequested)="saveUpdates()">
+    </app-branch-order-actions>
 
 </ng-container>
 <!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'"
@@ -233,50 +178,25 @@
     Delete all this branch and selected Date
 </div> -->
 
-<div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'">
-    <label for="options" class="dropdown-label me-2">Select Date:</label>
-    <select id="options" (ngModelChange)="onDailyDateChange($event)" [(ngModel)]="dateToAddInDaily"
-        class="dropdown form-select">
-        <option *ngFor="let item of dailyReportsDates" [ngValue]="item">
-            Date: {{ item | date:'mediumDate' }}
-        </option>
-    </select>
-</div>
+<app-branch-daily-toolbar
+    *ngIf="selectedType && selectedType.id == '5'"
+    [dates]="dailyReportsDates"
+    [selectedDate]="dateToAddInDaily"
+    [branchName]="selectedBranchName"
+    [reportGroups]="groupedDailyDates"
+    [hasDailyReports]="dailyReports.length > 0"
+    [hasUnsavedChanges]="orderDailyToUpdate.length > 0"
+    (dateChanged)="selectDailyReportDate($event)"
+    (exportAllRequested)="exportDailyReportGroup($event)"
+    (exportAllNotesRequested)="exportDailyNotesGroup($event)"
+    (exportCurrentRequested)="exportPdfDaily()"
+    (saveChangesRequested)="saveChangesDaily()">
+</app-branch-daily-toolbar>
 
 <ng-container *ngIf="selectedType && selectedType.id == '5' && dateToAddInDaily">
 
 
 
-    <!-- <div style="text-align: center;"> {{dateToAddInDaily | date:'mediumDate'}}</div> -->
-    <div *ngIf="dateToAddInDaily" style="text-align: center;">
-        <hr>
-        {{dateToAddInDaily | date:'mediumDate'}}
-        <!-- {{selectedDate | date:'mediumDate'}} -->
-        <div *ngIf="branch">
-            {{branch.data.name}}
-        </div>
-    </div>
-    <!-- *ngIf="isLastDayOfMonth()" -->
-
-    <!-- *ngIf="isAdmin==false && isLastDayOfMonth()"  -->
-
-    <div *ngIf=" groupedDailyDates">
-        <div *ngFor="let item of groupedDailyDates | keyvalue">
-            <button *ngIf="item.value.fullyFilled === true && item.value.hasBeenExported === false"
-                (click)="exportallPdfDaily( item.key,item.value.dates)">Export All {{ item.key }}</button>
-            <button *ngIf="item.value.fullyFilled === true && item.value.hasBeenExportedNotes === false"
-                (click)="exportallNotesPdfDaily( item.key,item.value.dates)">Export All Notes {{ item.key }}</button>
-        </div>
-    </div>
-
-
-    <!-- <button (click)="exportallPdfDaily()">Export Daily All pdf</button> -->
-
-    <button *ngIf="dailyReports.length > 0" (click)="exportPdfDaily()">Export pdf</button>
-    <button *ngIf="orderDailyToUpdate.length > 0" (click)="saveChangesDaily()">Save Changes</button>
-
-
-    <!-- <button (click)="getDailyReportsDates()">date</button> -->
     <div class=" table-container">
         <div class="table ">
             <table *ngIf="branch" class="styled-table">
