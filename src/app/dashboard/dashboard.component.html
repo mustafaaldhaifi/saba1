@@ -3,21 +3,7 @@
 </div>
 
 <div *ngIf="isAdmin">
-  <div class="admin-controls">
-    <button class="icon-btn logout" (click)="logout()">
-      <i class="fas fa-power-off"></i>
-    </button>
-
-    <h6 class="version-label">{{ version }}</h6>
-    <a routerLink="/documentation" class="btn" aria-label="فتح توثيق النظام">التوثيق</a>
-
-    <button class="icon-btn reset" (click)="resetStorage()">
-      <i class="fas fa-sync-alt"></i>
-    </button>
-
-  </div>
-
-
+  <app-dashboard-toolbar [version]="version" (logoutRequested)="logout()" (resetRequested)="resetStorage()"></app-dashboard-toolbar>
 
   <!-- <button (click)="addProductsToCity()">add Products To City</button> -->
   <!-- <button (click)="exportProductsToFile()">buckup product</button> -->

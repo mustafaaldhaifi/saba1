@@ -27,6 +27,7 @@ import {
 import { ApiService } from '../api.service';
 import { PdfReportService } from '../features/reports/data/pdf-report.service';
 import { DailyExcelReportService } from '../features/reports/data/daily-excel-report.service';
+import { DashboardToolbarComponent } from '../features/dashboard/components/dashboard-toolbar/dashboard-toolbar.component';
 import { environment } from '../../env';
 import { collectionNames } from '../Shareds';
 import { ProductsService } from '../products.service';
@@ -84,7 +85,7 @@ interface GroupedPreOrder {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule, CommonModule, RouterLink],
+  imports: [FormsModule, CommonModule, RouterLink, DashboardToolbarComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
