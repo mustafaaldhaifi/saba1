@@ -4,6 +4,7 @@ import './ARIAL-normal.js';
 import autoTable, { Color, FontStyle, HAlignType } from 'jspdf-autotable';
 import { PdfTableRow } from './features/reports/data/report.models';
 import { prepareBranchOrderRows } from './features/reports/data/branch-order-report.mapper';
+import { createReportPdf } from './features/reports/data/pdf-document.factory';
 
 @Injectable({
   providedIn: 'root',
@@ -20,9 +21,7 @@ export class PdfService {
       });
     }
 
-    const doc = new jsPDF();
-    doc.setFont('ARIAL', 'normal');
-    doc.setFontSize(12);
+    const doc = createReportPdf();
 
     const topHeader = [
       [
