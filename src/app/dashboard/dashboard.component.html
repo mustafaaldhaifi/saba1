@@ -43,7 +43,7 @@
   <div class="p-3">
     <div class="dropdown-container mb-3">
       <label for="options" class="dropdown-label me-2">Select Option:</label>
-      <select id="options" [(ngModel)]="selectedOption" (ngModelChange)="onSelectChange($event)"
+      <select id="options" [(ngModel)]="selectedCity" (ngModelChange)="changeCity($event)"
         class="dropdown form-select">
         <option value="ryad">الرياض</option>
         <option value="other">خارج الرياض</option>
@@ -612,7 +612,7 @@
     <div class="container">
       <div class="dropdown-container">
         <label for="options" class="dropdown-label">Select Option:</label>
-        <select id="options" [(ngModel)]="selectedOption" (ngModelChange)="onSelectChange($event)" class="dropdown">
+        <select id="options" [(ngModel)]="selectedCity" (ngModelChange)="changeCity($event)" class="dropdown">
           <option value="ryad">الرياض</option>
           <option value="other">خارج الرياض</option>
         </select>

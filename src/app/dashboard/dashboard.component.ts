@@ -286,7 +286,7 @@ export class DashboardComponent implements OnInit {
       const openDate = await this.dashboardOpenDates.addOpenDate(
         this.selectedType.id,
         new Date(this.date3),
-        this.selectedOption
+        this.selectedCity
       );
       this.date3 = '';
       this.datesToAdd.push(openDate);
@@ -325,7 +325,7 @@ export class DashboardComponent implements OnInit {
     const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
     // throw new Error('Method not implemented.');
     const q = query(collection(db, "branchesOrders"),
-      where("city", '==', this.selectedOption),
+      where("city", '==', this.selectedCity),
       where("createdAt", ">=", Timestamp.fromDate(startOfDay)),
       where("createdAt", "<=", Timestamp.fromDate(endOfDay)),
     );
@@ -341,7 +341,7 @@ export class DashboardComponent implements OnInit {
     });
 
     const q1 = query(collection(db, "orders"),
-      where("city", '==', this.selectedOption),
+      where("city", '==', this.selectedCity),
       where("createdAt", ">=", Timestamp.fromDate(startOfDay)),
       where("createdAt", "<=", Timestamp.fromDate(endOfDay)),
     );
@@ -367,11 +367,11 @@ export class DashboardComponent implements OnInit {
     console.log(arg0.toDate());
 
   }
-  async onSelectChange(event: any) {
-    this.selectedOption = event
+  async changeCity(event: any) {
+    this.selectedCity = event
     this.isLoading = true
 
-    if (this.selectedOption == 'all') {
+    if (this.selectedCity == 'all') {
 
       const ryadBranches = await this.fetchBranchesByName('ryad');
       const otherBranches = await this.fetchBranchesByName('other');
@@ -420,7 +420,7 @@ export class DashboardComponent implements OnInit {
   productsToUpdate: Product[] = [];
   ordersToAdd: Order[] = [];
   ordersToUpdate: Order[] = [];
-  selectedOption = "ryad"
+  selectedCity = "ryad"
   selectedType!: DashboardOrderType;
   movableDate: any
 
@@ -556,7 +556,7 @@ export class DashboardComponent implements OnInit {
       return true
     }
 
-    if (this.selectedDatey && this.selectedOption && this.selectedType) {
+    if (this.selectedDatey && this.selectedCity && this.selectedType) {
       return true
     }
     return false
@@ -818,7 +818,7 @@ export class DashboardComponent implements OnInit {
 
   private async fetchBranches(): Promise<Branch[]> {
     // const q = query(collection(this.apiService.db, "branches"),
-    //   where("city", '==', this.selectedOption),
+    //   where("city", '==', this.selectedCity),
     // );
     // const snapshot = await getDocs(q);
     // return snapshot.docs.map(doc => ({
@@ -826,13 +826,13 @@ export class DashboardComponent implements OnInit {
     //   name: doc.data()['name']
     // }));
 
-    return this.branchesReader.loadForCity(this.selectedOption);
+    return this.branchesReader.loadForCity(this.selectedCity);
     // console.log("branches:", this.preOrders);
   }
 
   private async fetchBranchesByName(city: string): Promise<Branch[]> {
 
-    // const city = this.selectedOption;
+    // const city = this.selectedCity;
     return this.branchesReader.loadForCity(city);
     // console.log("branches:", this.preOrders);
   }
@@ -894,7 +894,7 @@ export class DashboardComponent implements OnInit {
 
   private async fetchProducts(): Promise<Product[]> {
     this.isLoading = true
-    const city = this.selectedOption == 'all' ? 'ryad' : this.selectedOption;
+    const city = this.selectedCity == 'all' ? 'ryad' : this.selectedCity;
     const typeId = this.selectedType.id;
 
     return this.productsReader.loadForCityAndType(city, typeId) as Promise<Product[]>;
@@ -945,7 +945,7 @@ export class DashboardComponent implements OnInit {
 
   private async fetchOrders(start: Timestamp, end: Timestamp): Promise<Order[]> {
     return this.ordersReader.loadForDateRange(
-      this.selectedOption,
+      this.selectedCity,
       this.selectedType.id,
       start,
       end
@@ -955,14 +955,14 @@ export class DashboardComponent implements OnInit {
     console.log("end1", end)
     console.log("start", start.toDate());
     console.log("end", end.toDate());
-    console.log("city", this.selectedOption);
+    console.log("city", this.selectedCity);
 
 
 
     const db = getFirestore();
     const q = query(
       collection(db, "branchesOrders"),
-      where("city", '==', this.selectedOption),
+      where("city", '==', this.selectedCity),
       where("typeId", "==", this.selectedType.id),
       where("createdAt", ">=", start),
       where("createdAt", "<=", end),
@@ -1016,7 +1016,7 @@ export class DashboardComponent implements OnInit {
   branchUpdates: any
 
   async getPreOrders(): Promise<void> {
-    const city = this.selectedOption;
+    const city = this.selectedCity;
     const typeId = this.selectedType.id;
     const result = await this.orderSubmissions.load(city, typeId);
     this.orderUpdates = result.updateId ? { id: result.updateId } : undefined;
@@ -1026,7 +1026,7 @@ export class DashboardComponent implements OnInit {
 
     // const db = getFirestore();
     // const q = query(collection(db, "orders"),
-    //   where("city", '==', this.selectedOption),
+    //   where("city", '==', this.selectedCity),
     //   where("typeId", '==', this.selectedType.id),
     //   orderBy("createdAt", "desc"));
     // const snapshot = await getDocs(q);
@@ -1092,14 +1092,14 @@ export class DashboardComponent implements OnInit {
   async getDatesToAdd(): Promise<void> {
     this.datesToAdd = await this.dashboardOpenDates.loadOpenDates(
       this.selectedType.id,
-      this.selectedOption
+      this.selectedCity
     );
     return;
 
     const db = getFirestore();
     // const q = query(collection(db, "openDates"),
     // if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1") {
-    //   where("city", "==", this.selectedOption)
+    //   where("city", "==", this.selectedCity)
     // }
     //   where("typeId", "==", this.selectedType.id),);
     // const snapshot = await getDocs(q);
@@ -1109,7 +1109,7 @@ export class DashboardComponent implements OnInit {
 
     // أضف شرط city فقط إذا كان النوع محدد
     if (this.selectedType.id === "6A64dQOXrkAOGIZYm2G1" || this.selectedType.id === "bt9w9ZB1H1IizPBugiUl") {
-      conditions.push(where("city", "==", this.selectedOption));
+      conditions.push(where("city", "==", this.selectedCity));
     }
 
     // أنشئ الـ query مع كل الشروط
@@ -1164,7 +1164,7 @@ export class DashboardComponent implements OnInit {
 
     this.preOrders = await this.orderRetention.retainLatestFour(
       this.preOrders,
-      this.selectedOption,
+      this.selectedCity,
       this.selectedType.id,
       this.orderUpdates.id
     );
@@ -1201,7 +1201,7 @@ export class DashboardComponent implements OnInit {
         const ordersQuery = query(
           collection(db, 'branchesOrders'),
           where("typeId", "==", this.selectedType.id),
-          where("city", "==", this.selectedOption),
+          where("city", "==", this.selectedCity),
           where("createdAt", ">=", startOfDay),
           where("createdAt", "<=", endOfDay)
         );
@@ -1278,7 +1278,7 @@ export class DashboardComponent implements OnInit {
 
   // Product CRUD operations
   addToProductsToAdd(): void {
-    this.productsToAdd.push({ name: "", unit: "", unitF: "", city: this.selectedOption, typeId: this.selectedType.id, createdAt: Timestamp.now() });
+    this.productsToAdd.push({ name: "", unit: "", unitF: "", city: this.selectedCity, typeId: this.selectedType.id, createdAt: Timestamp.now() });
     this.ifHasChanges = true
   }
 
@@ -1340,7 +1340,7 @@ export class DashboardComponent implements OnInit {
 
     const element = {
       order,
-      city: this.selectedOption,
+      city: this.selectedCity,
 
     }
 
@@ -1427,7 +1427,7 @@ export class DashboardComponent implements OnInit {
             ...productWithoutId,
             // You can optionally add:
             // createdAt: Timestamp.now(),
-            // city: this.selectedOption,
+            // city: this.selectedCity,
           };
           console.log(newData);
 
@@ -1439,7 +1439,7 @@ export class DashboardComponent implements OnInit {
       this.productsToAdd = []
       console.log("added success");
 
-      // this.productService.updateProductInLocal(this.data, this.selectedOption, this.selectedType.id)
+      // this.productService.updateProductInLocal(this.data, this.selectedCity, this.selectedType.id)
       // await this.fetchProducts()
       this.search()
     } catch (error) {
@@ -1516,7 +1516,7 @@ export class DashboardComponent implements OnInit {
       batch.set(summaryRef, {
         status: 0,
         branchId: branch.id,
-        city: this.selectedOption,
+        city: this.selectedCity,
         typeId: this.selectedType.id,
         // qntNumber: this.ordersToAdd.length,
         createdAt: this.selectedDate // Server-side timestamp
@@ -1587,7 +1587,7 @@ export class DashboardComponent implements OnInit {
         const branchesOrderRef = doc(collection(db, 'branchesOrders'));
         batch.set(branchesOrderRef, {
           ...order,
-          city: this.selectedOption,
+          city: this.selectedCity,
           createdAt: this.selectedDatey.createdAt
         });
       }
@@ -1764,7 +1764,7 @@ export class DashboardComponent implements OnInit {
 
   //   // Generate Excel file
   //   const date = this.selectedDate!!.toISOString().slice(0, 10);
-  //   XLSX.writeFile(wb, `Orders${this.selectedOption}_Export_${date}.xlsx`);
+  //   XLSX.writeFile(wb, `Orders${this.selectedCity}_Export_${date}.xlsx`);
   // }
 
   // prepareWorksheetData(): any[][] {
@@ -2037,7 +2037,7 @@ export class DashboardComponent implements OnInit {
 
     // Generate filename and save
     const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
-    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    const city = this.selectedCity == 'ryad' ? 'Riyadh' : 'out_Riyadh';
     XLSX.writeFile(wb, `Custom_Export_${city}_${dateStr}.xlsx`);
   }
 
@@ -2132,7 +2132,7 @@ export class DashboardComponent implements OnInit {
 
     // Generate filename and save
     const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
-    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    const city = this.selectedCity == 'ryad' ? 'Riyadh' : 'out_Riyadh';
     XLSX.writeFile(wb, `Orders_${city}_all_data_${dateStr}.xlsx`);
   }
   exportToExcel2() {
@@ -2220,7 +2220,7 @@ export class DashboardComponent implements OnInit {
 
     // Generate filename and save
     const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
-    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    const city = this.selectedCity == 'ryad' ? 'Riyadh' : 'out_Riyadh';
     XLSX.writeFile(wb, `Orders_${city}_with_notes_${dateStr}.xlsx`);
   }
   exportToExcel3() {
@@ -2304,7 +2304,7 @@ export class DashboardComponent implements OnInit {
 
     // Generate filename and save
     const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
-    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    const city = this.selectedCity == 'ryad' ? 'Riyadh' : 'out_Riyadh';
     XLSX.writeFile(wb, `Orders_${city}_with_notes_${dateStr}.xlsx`);
   }
 
@@ -2368,7 +2368,7 @@ export class DashboardComponent implements OnInit {
 
     // Generate filename and save
     const dateStr = this.formatDate(this.selectedDatey.createdAt.toDate()!!);
-    const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh';
+    const city = this.selectedCity == 'ryad' ? 'Riyadh' : 'out_Riyadh';
     XLSX.writeFile(wb, `Remain_${city}_${dateStr}.xlsx`);
   }
 
@@ -2405,7 +2405,7 @@ export class DashboardComponent implements OnInit {
 
   //   // Generate Excel file with formatted date
   //   const dateStr = this.formatDate(this.selectedDate!!);
-  //   const city = this.selectedOption == 'ryad' ? 'Riyadh' : 'out_Riyadh'
+  //   const city = this.selectedCity == 'ryad' ? 'Riyadh' : 'out_Riyadh'
   //   XLSX.writeFile(wb, `Orders_${city}_all_data_${dateStr}.xlsx`);
   // }
   // prepareWorksheetData(): { data: any[][], merges: any[] } {
@@ -3509,7 +3509,7 @@ export class DashboardComponent implements OnInit {
       collection(this.apiService.db, collectionNames.branchesOrders),
       where("typeId", "==", this.selectedType.id),
       where("branchId", "==", branch.id),
-      where("city", "==", this.selectedOption),
+      where("city", "==", this.selectedCity),
       where("createdAt", ">=", Timestamp.fromDate(from)),
       where("createdAt", "<=", Timestamp.fromDate(to))
     );
