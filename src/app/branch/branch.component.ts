@@ -34,6 +34,7 @@ import { BranchAccountReaderService } from '../features/branches/data/branch-acc
 import { BranchOrderRowEvent, BranchStandardOrderTableComponent } from '../features/branches/components/branch-standard-order-table/branch-standard-order-table.component';
 import { BranchDailyOrderTableComponent } from '../features/branches/components/branch-daily-order-table/branch-daily-order-table.component';
 import { DailyOrderTableFacade } from '../features/branches/components/branch-daily-order-table/branch-daily-order-table.component';
+import { DailyReportTransactionService } from '../features/branches/data/daily-report-transaction.service';
 
 @Component({
   selector: 'app-branch',
@@ -216,7 +217,8 @@ export class BranchComponent {
     private dailyReportService: DailyReportsService,
     private constraintsService: ColumnConstraintsService,
     private pdfReports: PdfReportService,
-    private branchAccountReader: BranchAccountReaderService
+    private branchAccountReader: BranchAccountReaderService,
+    private dailyReportTransactions: DailyReportTransactionService
   ) {
     this.version = environment.version
 
@@ -3170,7 +3172,13 @@ isChangeStatus2(): boolean {
         batch.set(summaryRef, itemWithTimestamp);
       });
 
-      await this.syncMonthlySummaries(batch, newCombinedData, this.dateToAddInDaily || new Date());
+      this.dailyReportTransactions.queueMonthlySummaries(
+        batch,
+        this.apiService.db,
+        this.branch.id,
+        newCombinedData,
+        this.dateToAddInDaily || new Date()
+      );
 
       ///
       this.dailyReportUpdates = await this.dailyReportService.getLastupdate(this.branch.id, Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!!)), this.apiService)
