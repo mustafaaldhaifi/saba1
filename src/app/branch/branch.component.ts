@@ -32,15 +32,20 @@ import { BranchDailyReportGroupEvent, BranchDailyToolbarComponent } from '../fea
 import { PdfReportService } from '../features/reports/data/pdf-report.service';
 import { BranchAccountReaderService } from '../features/branches/data/branch-account-reader.service';
 import { BranchOrderRowEvent, BranchStandardOrderTableComponent } from '../features/branches/components/branch-standard-order-table/branch-standard-order-table.component';
+import { BranchDailyOrderTableComponent } from '../features/branches/components/branch-daily-order-table/branch-daily-order-table.component';
+import { DailyOrderTableFacade } from '../features/branches/components/branch-daily-order-table/branch-daily-order-table.component';
 
 @Component({
   selector: 'app-branch',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReasonDialogComponent, BranchHeaderComponent, BranchDateActionsComponent, BranchOrderContextComponent, BranchOrderActionsComponent, BranchDailyToolbarComponent, BranchStandardOrderTableComponent],
+  imports: [CommonModule, FormsModule, ReasonDialogComponent, BranchHeaderComponent, BranchDateActionsComponent, BranchOrderContextComponent, BranchOrderActionsComponent, BranchDailyToolbarComponent, BranchStandardOrderTableComponent, BranchDailyOrderTableComponent],
   templateUrl: './branch.component.html',
   styleUrls: ['./branch.component.css']
 })
 export class BranchComponent {
+
+  /** Typed contract exposed to the extracted daily table. */
+  readonly dailyTableContext: DailyOrderTableFacade = this;
 
   /** Applies the type chosen in the presentational branch header. */
   changeOrderType(type: BranchHeaderOrderType): void {

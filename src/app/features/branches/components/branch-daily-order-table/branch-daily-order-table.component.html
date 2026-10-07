@@ -1,0 +1,256 @@
+    <div class=" table-container">
+        <div class="table ">
+            <table *ngIf="context.branch" class="styled-table">
+                <thead>
+                    <tr vz class="f-h">
+                        <th style="position: sticky; left: 0;">الاصناف</th>
+                        <th style="width: 28px;">
+                            الموجودة
+                        </th>
+                        <th>المستلم</th>
+                        <th>الجرد</th>
+                        <th>مبيعات</th>
+                        <th>وجبة موظف</th>
+                        <th>تعويض زبون</th>
+                        <th>مكنسل</th>
+                        <th>تحويل مباشر</th>
+                        <th>تحويل % </th>
+                        <th>التالف</th>
+                        <th>المتبقي</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of context.combinedData; let i = index"
+                        [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                        [style.border-bottom]="'1px solid #dee2e6'">
+                        <td [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
+                            style="position: sticky; left: 0; padding: 0;">
+                            <!-- إذا لديه منتجات فرعية -->
+                            <ng-container *ngIf="item.products?.length; else normalProduct">
+                                <div style="display: flex; align-items: stretch; border: 1px solid #ccc;">
+                                    <!-- المنتج الرئيسي بشكل عمودي -->
+                                    <div style="
+          writing-mode: vertical-rl;
+          transform: rotate(180deg);
+          font-weight: bold;
+          font-size: 13px;
+          padding: 8px;
+          text-align: center;
+          border-right: 1px solid #ccc;
+          background-color: #f1f1f1;
+          min-width: 30px;
+        ">
+                                        {{ item.productName }}
+                                    </div>
+
+                                    <!-- المنتجات الفرعية -->
+                                    <div style="
+          display: flex;
+          flex-direction: column;
+          flex-grow: 1;
+          font-size: 12px;
+        ">
+                                        <div *ngFor="let subProduct of item.products" style="
+            padding: 6px 8px;
+            border-bottom: 1px solid #ccc;
+          ">
+                                            {{ subProduct.productName }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-container>
+
+                            <!-- إذا لا يوجد له منتجات فرعية -->
+                            <ng-template #normalProduct>
+                                <div style="
+        font-weight: bold;
+        font-size: 13px;
+        padding: 8px;
+        border: 1px solid #ccc;
+      ">
+                                    {{ item.productName }}
+                                </div>
+                            </ng-template>
+                        </td>
+
+
+                        <td>
+                            <input [attr.tabindex]=" 1000 + i" *ngIf="!item.isSales"
+                                [disabled]="context.isPositiveNumber(context.combinedData[i].openingStockQnt) && context.combinedData[i].openingStockId != -1 || context.isReadDailyMode === true"
+                                (blur)="context.onQuantityChange('openingStockQnt', item, i)"
+                                [(ngModel)]="context.combinedData[i].openingStockQnt" type="number" required>
+                        </td>
+                        <td>
+                            <input [attr.tabindex]="2000 + i" [disabled]="context.isDisabledDailyField()" *ngIf="!item.isSales"
+                                [(ngModel)]="item.recieved" (blur)="context.onQuantityChange('recieved', item, i)" min="0"
+                                step="any" type="number" required>
+
+                        </td>
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct1">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
+                                            *ngIf="!subProduct.isSales" [disabled]="context.isDisabledDailyField()"
+                                            (blur)="context.onQuantityChange('add', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="context.combinedData[i].products[s].add" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct1>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="3000 + i"
+                                    *ngIf="!item.isSales" [disabled]="context.isDisabledDailyField()"
+                                    (blur)="context.onQuantityChange('add', item, i)" [(ngModel)]="context.combinedData[i].add"
+                                    type="number" required />
+                            </ng-template>
+                        </td>
+
+
+
+                        <ng-container *ngIf="item.products?.length; else normalProduct2">
+                            <td>
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
+                                            [disabled]="context.isDisabledDailyField()"
+                                            (blur)="context.onQuantityChange('sales', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="context.combinedData[i].products[s].sales" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </td>
+
+                        </ng-container>
+
+                        <ng-template #normalProduct2>
+                            <td>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
+                                    [disabled]="context.isDisabledDailyField()" (blur)="context.onQuantityChange('sales', item, i)"
+                                    [(ngModel)]="context.combinedData[i].sales" type="number" required />
+                            </td>
+
+                        </ng-template>
+
+
+
+                        <ng-container *ngIf="item.products?.length; else normalProduct3">
+                            <td>
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
+                                            *ngIf="!subProduct.isSales" [disabled]="context.isDisabledDailyField()"
+                                            (blur)="context.onQuantityChange('staffMeal', item, i,{i:s,subProduct})"
+                                             [disabled]="context.isColumnLocked(item.productId || item.id,'staffMeal',context.selectedDate)"
+                                            [(ngModel)]="context.combinedData[i].products[s].staffMeal" type="number" min="0"
+                                            step="any" required />
+                                    </ng-container>
+                                </div>
+                            </td>
+                        </ng-container>
+
+                        <ng-template #normalProduct3>
+                            <td>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
+                                    *ngIf="!item.isSales"
+                                    [disabled]="context.isDisabledDailyField()  || context.isItemLocked(item.productId || item.id)"
+                                    (blur)="context.onQuantityChange('staffMeal', item, i)" min="0" step="any"
+                                    [disabled]="context.isColumnLocked(item.productId || item.id,'staffMeal',context.selectedDate)"
+                                    [(ngModel)]="context.combinedData[i].staffMeal" type="number" required />
+                            </td>
+                        </ng-template>
+
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct41">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5500 + i"
+                                            *ngIf="!subProduct.isSales" min="0" step="any"
+                                            [disabled]="context.isDisabledDailyField()"
+                                            (blur)="context.onQuantityChange('freeIncrease', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="context.combinedData[i].products[s].freeIncrease" type="number"
+                                            required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct41>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5500 + i" min="0"
+                                    *ngIf="!item.isSales" step="any" [disabled]="context.isDisabledDailyField()"
+                                    (blur)="context.onQuantityChange('freeIncrease', item, i)"
+                                    [(ngModel)]="context.combinedData[i].freeIncrease" type="number" required />
+                            </ng-template>
+                        </td>
+
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct42">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5600 + i"
+                                            *ngIf="!subProduct.isSales" min="0" step="any"
+                                            [disabled]="context.isDisabledDailyField()"
+                                            (blur)="context.onQuantityChange('canceled', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="context.combinedData[i].products[s].canceled" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct42>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5600 + i" min="0"
+                                    *ngIf="!item.isSales" step="any" [disabled]="context.isDisabledDailyField()"
+                                    (blur)="context.onQuantityChange('canceled', item, i)"
+                                    [(ngModel)]="context.combinedData[i].canceled" type="number" required />
+                            </ng-template>
+                        </td>
+
+
+                        <td>
+                            <input [disabled]="true" *ngIf="!item.isSales"
+                                (blur)="context.onQuantityChange('directTransfer', item, i)"
+                                [(ngModel)]="context.combinedData[i].directTransfer" type="number" required>
+
+                        </td>
+
+                        <td>
+                            <input [attr.tabindex]="6000 + i" [disabled]="context.isDisabledDailyField()" *ngIf="!item.isSales"
+                                (blur)="context.onQuantityChange('transfer', item, i)" [(ngModel)]="context.combinedData[i].transfer"
+                                 [disabled]="context.isColumnLocked(item.productId || item.id,'transfer',context.selectedDate)"
+                                type="number" required>
+
+                        </td>
+                        <td>
+                            <ng-container *ngIf="item.products?.length; else normalProduct4">
+                                <div class="d-flex flex-column gap-2 w-100">
+                                    <ng-container *ngFor="let subProduct of item.products; let s = index">
+                                        <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i"
+                                            *ngIf="!subProduct.isSales" min="0" step="any"
+                                            (blur)="context.onQuantityChange('dameged', item, i,{i:s,subProduct})"
+                                            [(ngModel)]="context.combinedData[i].products[s].dameged" type="number" required />
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #normalProduct4>
+                                <input class="form-control1" [style.width.%]="100" [attr.tabindex]="7000 + i" min="0"
+                                    *ngIf="!item.isSales" step="any" (blur)="context.onQuantityChange('dameged', item, i)"
+                                    [(ngModel)]="context.combinedData[i].dameged" type="number" required />
+                            </ng-template>
+
+                        </td>
+                        <td *ngIf="!item.isSales">
+                            <!-- {{calculateClosingStock(context.combinedData[i])}} -->
+                            {{ context.combinedData[i].closeStock}}
+                        </td>
+
+
+
+                    </tr>
+                </tbody>
+            </table>
+
+
+        </div>
+
+
+    </div>
+
