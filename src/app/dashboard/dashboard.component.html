@@ -563,39 +563,6 @@
               </tr>
             </ng-template>
           </ng-container>
-
-
-          <!-- New Products to Add -->
-          <tr *ngFor="let newProduct of productsToAdd.slice(0, 0); let i = index;">
-            <td>New</td>
-
-            <!-- اسم المنتج -->
-            <td>
-              <input style="width: 100px;" type="text" [(ngModel)]="newProduct.name" placeholder="Product name"
-                class="product-input">
-            </td>
-
-            <!-- الوحدة فقط إذا لم يكن منتج فرعي -->
-            <td *ngIf="!newProduct.parentProduct">
-              <input type="text" [(ngModel)]="newProduct.unit" placeholder="Unit" class="unit-input">
-            </td>
-
-            <!-- فراغ بديل للحفاظ على التناسق إذا كان منتج فرعي -->
-            <td *ngIf="newProduct.parentProduct"></td>
-
-            <!-- الأعمدة الفارغة للفروع -->
-            <td *ngFor="let branch of branches" colspan="3" class="empty-cell"></td>
-          </tr>
-
-
-          <!-- Add New Product Row -->
-          <tr *ngIf="false" class="add-row">
-            <td colspan="3">
-              <button class="btn date-btn">
-                + Add New Product
-              </button>
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
