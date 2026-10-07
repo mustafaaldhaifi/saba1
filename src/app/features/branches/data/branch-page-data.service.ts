@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from '../../../api.service';
 import { collectionNames } from '../../../Shareds';
-import { where } from 'firebase/firestore';
+import { doc, getDoc, where } from 'firebase/firestore';
 
 export interface BranchOrderType {
   id: string;
@@ -30,5 +30,11 @@ export class BranchPageDataService {
     if (typeId === '6A64dQOXrkAOGIZYm2G1' || typeId === 'bt9w9ZB1H1IizPBugiUl') constraints.push(where('city', '==', city));
     const snapshot = await this.api.getData(collectionNames.openDates, constraints);
     return snapshot.docs.map(item => ({ id: item.id, createdAt: item.data()['createdAt'] }));
+  }
+
+  /** Reads whether the selected order type is open; this operation is read-only. */
+  async loadOrderTypeOpenState(typeId: string): Promise<boolean | undefined> {
+    const snapshot = await getDoc(doc(this.api.db, 'settings', typeId));
+    return snapshot.exists() ? Boolean(snapshot.data()['isOpen']) : undefined;
   }
 }

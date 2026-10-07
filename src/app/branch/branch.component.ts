@@ -908,26 +908,11 @@ export class BranchComponent {
   }
   async getSettings(): Promise<void> {
     try {
-
-
-      // Reference to the specific document
-      const docRef = doc(this.apiService.db, "settings", this.selectedType.id);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const settingsData = docSnap.data();
-        this.isOn = settingsData['isOpen']
-        // You can assign the data to a component property here
-        // this.settings = settingsData; // Assuming you have a settings property
-      } else {
-      }
+      this.isOn = await this.branchPageData.loadOrderTypeOpenState(this.selectedType.id);
     } catch (error) {
       console.error("Error fetching settings:", error);
-      // You can handle the error here, like showing a user message
-      // this.errorMessage = "Failed to load settings"; // Example error handling
     }
   }
-
   isItemLocked(productId: string): boolean {
     return ConstraintChecker.isLocked(
       this.constraints,
