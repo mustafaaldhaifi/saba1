@@ -25,7 +25,7 @@ import {
   setDoc
 } from "firebase/firestore";
 import { ApiService } from '../api.service';
-import { PdfService } from '../pdf.service';
+import { PdfReportService } from '../features/reports/data/pdf-report.service';
 import { environment } from '../../env';
 import { collectionNames } from '../Shareds';
 import { ProductsService } from '../products.service';
@@ -151,7 +151,6 @@ export class DashboardComponent implements OnInit {
     }
   }
   exportPdf(branch: any) {
-    const pdfService = new PdfService();
     // console.log('sddsds');
     // var data = [];
 
@@ -178,7 +177,13 @@ export class DashboardComponent implements OnInit {
     const isMonthally = this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU'
 
     console.log('isMonthally', isMonthally);
-    pdfService.export(this.getOrders(branch.id, isMonthally), false, formattedDate, branch.name, this.selectedType.nameEn, isMonthally)
+    this.pdfReports.exportBranchReport({
+      rows: this.getOrders(branch.id, isMonthally),
+      date: formattedDate,
+      branchName: branch.name,
+      typeName: this.selectedType.nameEn,
+      isMonthly: isMonthally
+    });
   }
   async addTemp() {
 
@@ -445,6 +450,7 @@ export class DashboardComponent implements OnInit {
     private ordersReader: OrdersReaderService,
     private orderSubmissions: OrderSubmissionsService,
     private orderRetention: OrderRetentionService,
+    private pdfReports: PdfReportService,
 
   ) {
     this.version = environment.version
