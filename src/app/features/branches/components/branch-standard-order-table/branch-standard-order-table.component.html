@@ -1,0 +1,49 @@
+<div class="table-container">
+  <div class="table fixed-header">
+    <table *ngIf="hasBranch" class="styled-table">
+      <thead>
+        <tr vz class="f-h">
+          <th>الأصناف</th>
+          <th style="width: 28px;"><div>الكمية</div><div>المتوفرة</div></th>
+          <th>الوحدة</th>
+          <th *ngIf="showsRequestedQuantity" style="width: 28px;"><div>الكمية</div><div>المطلوبة</div></th>
+          <th *ngIf="showsRequestedQuantity">الوحدة</th>
+          <th *ngIf="isPreSent && showsRequestedQuantity">حالة الاستلام <span *ngIf="isWeightOrder">بالكيلو</span></th>
+          <th *ngIf="isPreSent && showsRequestedQuantity">شراء من الكاش</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of rows; let i = index" [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'" [style.border-bottom]="'1px solid #dee2e6'">
+          <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
+          <td>
+            <input *ngIf="canEdit(item)" #qntFInput="ngModel" class="sticky-input" [class.alert-red]="qntFInput.invalid && qntFInput.touched" [disabled]="isFieldDisabled" [(ngModel)]="rows[i].qntF" (input)="availableQuantityChanged.emit(rows[i])" type="number" required>
+            <div *ngIf="!canEdit(item)">{{ item.qntF }}</div>
+          </td>
+          <td>{{ item.unitF }}</td>
+          <td *ngIf="showsRequestedQuantity">
+            <input *ngIf="canEdit(item)" #qntInput="ngModel" class="sticky-input" [class.alert-red]="qntInput.invalid && qntInput.touched" [disabled]="isFieldDisabled" [(ngModel)]="rows[i].qnt" (input)="requestedQuantityChanged.emit({ index: i, item: rows[i] })" type="number" required>
+            <div *ngIf="!canEdit(item)">{{ item.qnt }}</div>
+          </td>
+          <td *ngIf="showsRequestedQuantity">{{ item.unit }}</td>
+          <td *ngIf="isPreSent && showsRequestedQuantity">
+            <span *ngIf="!isAddedItem(item)" class="status-dropdown-container">
+              <label class="status-dropdown-label">
+                <select [disabled]="isDropDownDisabled" [(ngModel)]="item.status" [style.background-color]="statusColor(item.status)" (ngModelChange)="statusChanged.emit(item)" class="status-dropdown" required>
+                  <option value="1">تم استلامها</option><option value="2">لم يتم استلامها</option>
+                  <option *ngIf="!isWeightOrder" value="3">كمية غير مطابقة</option><option *ngIf="!isWeightOrder" value="4">غير مطلوبة</option>
+                </select>
+              </label>
+            </span>
+            <input *ngIf="(!isWeightOrder && (item.status === '3' || item.status === '5')) || (isWeightOrder && item.status === '1')" #qntNotRequirement="ngModel" style="width: 50px; margin: 5px;" [class.alert-red]="qntNotRequirement.invalid && qntNotRequirement.touched" [(ngModel)]="rows[i].qntNotRequirement" [disabled]="selectedOrderStatus === '1'" (input)="unmatchedQuantityChanged.emit({ index: i, item: rows[i], domEvent: $event })" type="number" required>
+          </td>
+          <td *ngIf="isPreSent && showsRequestedQuantity">
+            <input [disabled]="isDropDownDisabled" [(ngModel)]="rows[i].isCashEnabled" (change)="cashToggled.emit({ index: i, item })" type="checkbox">
+            <div *ngIf="rows[i].isCashEnabled" style="margin-top: 5px;">
+              <input [disabled]="isDropDownDisabled" [(ngModel)]="rows[i].cashValue" #cashInput="ngModel" class="sticky-input" [class.alert-red]="cashInput.invalid && cashInput.touched" placeholder="قيمة الكاش" (input)="cashValueChanged.emit({ index: i, item })" type="number" required>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

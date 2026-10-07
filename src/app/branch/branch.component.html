@@ -30,126 +30,26 @@
     </div>
 
 
-    <div class="table-container">
-        <div class="table fixed-header">
-            <!-- Orders Table -->
-            <table *ngIf="branch" class="styled-table">
-                <thead>
-                    <tr vz class="f-h">
-                        <th>الاصناف</th>
-                        <th style="width: 28px;">
-                            <div>الكمية</div>
-                            <div>المتوفرة</div>
-                        </th>
-                        <th>الوحدة</th>
-                        <th style="width: 28px;" *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
-                            <div>الكمية</div>
-                            <div>المطلوبة</div>
-                        </th>
-                        <th *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">الوحدة</th>
-                        <th *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">حالة
-                            الاستلام
-                            <span *ngIf="selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">بالكيلو</span>
-
-                        </th>
-                        <th *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
-                            شراء من الكاش
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let item of combinedData; let i = index"
-                        [style.background-color]="i % 2 === 0 ? '#f8f9fa' : '#e9ecef'"
-                        [style.border-bottom]="'1px solid #dee2e6'">
-                        <td style="font-weight: bold; font-size: 13px;">{{ item.name }}</td>
-
-                        <td>
-                            <input (input)="onQntFChange(combinedData[i])"
-                                *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntFInput="ngModel"
-                                [class.alert-red]="qntFInput.invalid && qntFInput.touched" class="sticky-input"
-                                  [disabled]="isFieldDisabled"
-                                [(ngModel)]="combinedData[i].qntF" type="number" required>
-                            <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qntF }}</div>
-                        </td>
-
-                        <td>
-                            {{item.unitF}}
-                        </td>
-
-                        <td *ngIf="selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
-                            <input (input)="onQntChange(i,combinedData[i])"
-                                *ngIf="item.id === -1 || isSelectedTypeAllowed() == true" #qntInput="ngModel"
-                                [class.alert-red]="qntInput.invalid && qntInput.touched" class="sticky-input"
-                                [disabled]="isFieldDisabled"
-                                [(ngModel)]="combinedData[i].qnt" type="number" required>
-                            <div *ngIf="item.id !== -1 && isSelectedTypeAllowed() == false">{{ item.qnt }}</div>
-                        </td>
-
-                        <td *ngIf="selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
-                            {{item.unit}}
-                        </td>
-
-                        <td
-                            *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU' && selectedType.id != 'Ikt6pyFoTwvwn7GBIPvv' ">
-                            <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
-                                <label class="status-dropdown-label">
-                                    <select [disabled]="isDropDownDisabled" [(ngModel)]="item.status"
-                                        [style.background-color]="getStatusColor(item.status)"
-                                        (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-
-                                        <option value="1">تم استلامها</option>
-                                        <option value="2">لم يتم استلامها</option>
-                                        <option value="3">كمية غير مطابقة</option>
-                                        <option value="4">غير مطلوبة</option>
-                                        <!-- <option value="5">شراء من الكاش</option> -->
-                                    </select>
-                                </label>
-                            </span>
-                            <input style="width: 50px;margin: 5px;" type="number"
-                                *ngIf="item.status == '3' || item.status == '5'" #qntInput="ngModel"
-                                [class.alert-red]="qntInput.invalid && qntInput.touched"
-                                [(ngModel)]="combinedData[i].qntNotRequirement"
-                                [disabled]="selectedPreOrder.status == '1'"
-                                (input)="onInputQ($event, i,combinedData[i])" required>
-                        </td>
-                        <td *ngIf="isPreSent === true && selectedType && selectedType.id == 'Ikt6pyFoTwvwn7GBIPvv'">
-                            <span *ngIf="!isItemInAdd(item)" class="status-dropdown-container">
-                                <label class="status-dropdown-label">
-                                    <select [disabled]="isDropDownDisabled" [(ngModel)]="item.status"
-                                        [style.background-color]="getStatusColor(item.status)"
-                                        (ngModelChange)="onStatusChange(item)" class="status-dropdown" required>
-
-                                        <option value="1">تم استلامها</option>
-                                        <option value="2">لم يتم استلامها</option>
-                                    </select>
-                                </label>
-                            </span>
-                            <input style="width: 50px;margin: 5px;" type="number" *ngIf="item.status == '1'"
-                                #qntInput="ngModel" [class.alert-red]="qntInput.invalid && qntInput.touched"
-                                [(ngModel)]="combinedData[i].qntNotRequirement"
-                                [disabled]="selectedPreOrder.status == '1'"
-                                (input)="onInputQ($event, i,combinedData[i])" required>
-                        </td>
-                        <td *ngIf="isPreSent === true && selectedType && selectedType.id != 'WbAP06wLDRvZFTYUtkjU'">
-                            <!-- Checkbox -->
-                            <input [disabled]="isDropDownDisabled" type="checkbox"
-                                [(ngModel)]="combinedData[i].isCashEnabled" (change)="onCashToggle(i,item)">
-                            <!-- <label>اذا تفعلت اضف ادخال قيمة الكاش</label> -->
-
-                            <!-- Cash Input يظهر فقط إذا الـ checkbox مفعّل -->
-                            <div *ngIf="combinedData[i].isCashEnabled" style="margin-top: 5px;">
-                                <input [disabled]="isDropDownDisabled" type="number"
-                                    [(ngModel)]="combinedData[i].cashValue" #cashInput="ngModel" required
-                                    class="sticky-input" [class.alert-red]="cashInput.invalid && cashInput.touched"
-                                    placeholder="قيمة الكاش" (input)="onCashInput(i,item)">
-                            </div>
-                        </td>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-
+    <app-branch-standard-order-table
+        [rows]="combinedData"
+        [hasBranch]="!!branch"
+        [orderTypeId]="selectedType?.id ?? ''"
+        monthlyTypeId="WbAP06wLDRvZFTYUtkjU"
+        weightTypeId="Ikt6pyFoTwvwn7GBIPvv"
+        [canEditQuantities]="isSelectedTypeAllowed()"
+        [isPreSent]="isPreSent"
+        [isFieldDisabled]="isFieldDisabled"
+        [isDropDownDisabled]="isDropDownDisabled"
+        [selectedOrderStatus]="selectedPreOrder?.status ?? ''"
+        [isAddedItem]="isItemInAdd.bind(this)"
+        [statusColor]="getStatusColor.bind(this)"
+        (availableQuantityChanged)="onQntFChange($event)"
+        (requestedQuantityChanged)="updateRequestedQuantity($event)"
+        (statusChanged)="onStatusChange($event)"
+        (unmatchedQuantityChanged)="updateUnmatchedQuantity($event)"
+        (cashToggled)="updateCashToggle($event)"
+        (cashValueChanged)="updateCashValue($event)">
+    </app-branch-standard-order-table>
     <app-branch-order-actions
         [hasEmptyProduct]="checkIfHasEmptyOrder()"
         [isAddingOrder]="isToAddMode"

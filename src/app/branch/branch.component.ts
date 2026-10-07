@@ -31,11 +31,12 @@ import { BranchOrderActionsComponent } from '../features/branches/components/bra
 import { BranchDailyReportGroupEvent, BranchDailyToolbarComponent } from '../features/branches/components/branch-daily-toolbar/branch-daily-toolbar.component';
 import { PdfReportService } from '../features/reports/data/pdf-report.service';
 import { BranchAccountReaderService } from '../features/branches/data/branch-account-reader.service';
+import { BranchOrderRowEvent, BranchStandardOrderTableComponent } from '../features/branches/components/branch-standard-order-table/branch-standard-order-table.component';
 
 @Component({
   selector: 'app-branch',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReasonDialogComponent, BranchHeaderComponent, BranchDateActionsComponent, BranchOrderContextComponent, BranchOrderActionsComponent, BranchDailyToolbarComponent],
+  imports: [CommonModule, FormsModule, ReasonDialogComponent, BranchHeaderComponent, BranchDateActionsComponent, BranchOrderContextComponent, BranchOrderActionsComponent, BranchDailyToolbarComponent, BranchStandardOrderTableComponent],
   templateUrl: './branch.component.html',
   styleUrls: ['./branch.component.css']
 })
@@ -75,6 +76,28 @@ export class BranchComponent {
   /** Delegates grouped daily notes PDF export. */
   exportDailyNotesGroup(event: BranchDailyReportGroupEvent): void {
     void this.exportallNotesPdfDaily(event.key, event.dates);
+  }
+
+  /** Adapts standard-table quantity events to the existing branch rules. */
+  updateRequestedQuantity(event: BranchOrderRowEvent): void {
+    this.onQntChange(event.index, event.item);
+  }
+
+  /** Applies an unmatched received quantity entered in the standard order table. */
+  updateUnmatchedQuantity(event: BranchOrderRowEvent): void {
+    if (event.domEvent) {
+      this.onInputQ(event.domEvent, event.index, event.item);
+    }
+  }
+
+  /** Adapts the cash controls to the existing update tracking logic. */
+  updateCashToggle(event: BranchOrderRowEvent): void {
+    this.onCashToggle(event.index, event.item);
+  }
+
+  /** Registers a changed cash value in the existing order draft. */
+  updateCashValue(event: BranchOrderRowEvent): void {
+    this.onCashInput(event.index, event.item);
   }
 
 
