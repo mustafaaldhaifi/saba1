@@ -1,13 +1,8 @@
 import { Injectable } from '@angular/core';
 import { PdfService } from '../../../pdf.service';
+import { BranchOrderPdfReport } from './report.models';
 
-export interface PdfReportRequest {
-  rows: unknown[][];
-  date: string;
-  branchName: string;
-  typeName: string;
-  isMonthly: boolean;
-}
+export type PdfReportRequest = BranchOrderPdfReport;
 
 /**
  * Exports the current branch report as a browser PDF.

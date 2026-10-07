@@ -2,14 +2,17 @@ import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
 import './ARIAL-normal.js';
 import autoTable, { Color, FontStyle, HAlignType } from 'jspdf-autotable';
+import { PdfTableRow } from './features/reports/data/report.models';
+import { prepareBranchOrderRows } from './features/reports/data/branch-order-report.mapper';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PdfService {
 
-  export(data: any[], isBranch: boolean = false, date: string, branchName: string, typeName: string, isMonthly: boolean) {
-    if (!isMonthly) {
+  export(data: PdfTableRow[], isBranch: boolean = false, date: string, branchName: string, typeName: string, isMonthly: boolean) {
+    data = prepareBranchOrderRows(data, isMonthly);
+    if (false) {
       data = data.filter(row => {
         // For non-monthly reports, "المطلوب" is typically at index 3
         const requiredQty = row[3];
