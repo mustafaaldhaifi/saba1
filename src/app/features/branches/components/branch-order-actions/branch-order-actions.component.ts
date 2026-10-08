@@ -11,7 +11,8 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
   selector: 'app-branch-order-actions',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './branch-order-actions.component.html'
+  templateUrl: './branch-order-actions.component.html',
+  styleUrl: './branch-order-actions.component.css'
 })
 export class BranchOrderActionsComponent {
   @Input() hasEmptyProduct = false;

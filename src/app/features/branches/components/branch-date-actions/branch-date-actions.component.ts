@@ -22,7 +22,8 @@ export interface BranchOrderDateOption {
   selector: 'app-branch-date-actions',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './branch-date-actions.component.html'
+  templateUrl: './branch-date-actions.component.html',
+  styleUrl: './branch-date-actions.component.css'
 })
 export class BranchDateActionsComponent {
   @Input() orderDates: BranchOrderDateOption[] = [];

@@ -1,0 +1,116 @@
+:host {
+  display: block;
+}
+
+.date-actions {
+  display: grid;
+  gap: 12px;
+  margin: 16px 10px;
+}
+
+.date-grid,
+.new-date-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.12);
+}
+
+button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.25);
+  outline-offset: 2px;
+}
+
+.date-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #334155;
+  background: #ffffff;
+  border-color: #dbe3ec;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.06);
+}
+
+.date-button.selected {
+  color: #ffffff;
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.24);
+}
+
+.calendar-icon {
+  color: #64748b;
+}
+
+.date-button.selected .calendar-icon {
+  color: #ffffff;
+}
+
+.date-toolbar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 145px;
+  color: #ffffff;
+  background: #475569;
+}
+
+.new-order-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #b4232a, #8f1d23);
+  box-shadow: 0 5px 14px rgba(180, 35, 42, 0.2);
+}
+
+.new-order-button.selected {
+  background: #166534;
+}
+
+.plus-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  color: #8f1d23;
+  background: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+}
+
+@media (max-width: 600px) {
+  .date-grid,
+  .new-date-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .export-button {
+    width: 100%;
+  }
+}

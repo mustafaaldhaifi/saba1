@@ -1,19 +1,25 @@
-<ng-container *ngIf="hasEmptyProduct && !isAddingOrder; else sendOrder">
-  <button (click)="saveNewProductsRequested.emit()" style="width: 100%;" *ngIf="isOrderComplete" [disabled]="isLoading">
-    <span>حفظ كمية المنتجات الجديدة</span>
+<div class="order-actions" dir="rtl">
+  <ng-container *ngIf="hasEmptyProduct && !isAddingOrder; else sendOrder">
+    <button class="action-button products-button" type="button" (click)="saveNewProductsRequested.emit()"
+      *ngIf="isOrderComplete" [disabled]="isLoading">
+      حفظ كميات المنتجات الجديدة
+    </button>
+  </ng-container>
+
+  <ng-template #sendOrder>
+    <button class="action-button send-button" type="button" (click)="sendOrderRequested.emit()"
+      *ngIf="isOrderComplete" [disabled]="isLoading">
+      إرسال الطلب
+    </button>
+  </ng-template>
+
+  <button class="action-button update-button" type="button" *ngIf="isPreSent && hasUpdates"
+    (click)="saveUpdatesRequested.emit()" [disabled]="!canSaveUpdates">
+    حفظ التعديلات
   </button>
-</ng-container>
 
-<ng-template #sendOrder>
-  <button (click)="sendOrderRequested.emit()" style="width: 100%;" *ngIf="isOrderComplete" [disabled]="isLoading">
-    <span>Send Order</span>
+  <button class="action-button draft-button" type="button" *ngIf="canSaveDraft && !isDraftSaved"
+    (click)="saveDraftRequested.emit()" [disabled]="isLoading">
+    حفظ كمسودة
   </button>
-</ng-template>
-
-<button *ngIf="isPreSent && hasUpdates" (click)="saveUpdatesRequested.emit()" [disabled]="!canSaveUpdates">
-  Save Updates
-</button>
-
-<button *ngIf="canSaveDraft && !isDraftSaved" (click)="saveDraftRequested.emit()" [disabled]="isLoading">
-  حفظ كمسودة
-</button>
+</div>

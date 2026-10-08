@@ -1,20 +1,24 @@
-<!-- Existing orders: selecting one loads its data in the parent page. -->
-<div *ngFor="let item of orderDates">
-  <button (click)="dateSelected.emit(item)" style="width: 100%;" [class.selected]="isSelected(item.createdAt)">
-    {{ item.createdAt.toDate() | date:'mediumDate' }}
-  </button>
-</div>
+<section class="date-actions" dir="rtl">
+  <div class="date-grid" *ngIf="orderDates.length">
+    <button class="date-button" type="button" *ngFor="let item of orderDates"
+      (click)="dateSelected.emit(item)" [class.selected]="isSelected(item.createdAt)">
+      <span class="calendar-icon" aria-hidden="true">▣</span>
+      <span>{{ item.createdAt.toDate() | date:'mediumDate' }}</span>
+    </button>
+  </div>
 
-<!-- The export action is available only once an order date is selected. -->
-<button *ngIf="selectedDate" (click)="exportRequested.emit()">Export Pdf</button>
+  <div class="date-toolbar" *ngIf="selectedDate">
+    <button class="export-button" type="button" (click)="exportRequested.emit()">
+      <span aria-hidden="true">⇩</span>
+      تصدير PDF
+    </button>
+  </div>
 
-<!-- Dates enabled by the administrator for creating a new branch order. -->
-<div *ngFor="let item of allowedNewOrderDates">
-  <button
-    (click)="newOrderRequested.emit(item.createdAt)"
-    style="width: 100%; background-color: brown;"
-    [class.selected]="isSelected(item.createdAt)">
-    {{ item.createdAt.toDate() | date:'mediumDate' }}
-    <i class="fas fa-plus" style="margin-left: 10px;"></i>
-  </button>
-</div>
+  <div class="new-date-grid" *ngIf="allowedNewOrderDates.length">
+    <button class="new-order-button" type="button" *ngFor="let item of allowedNewOrderDates"
+      (click)="newOrderRequested.emit(item.createdAt)" [class.selected]="isSelected(item.createdAt)">
+      <span class="plus-icon" aria-hidden="true">+</span>
+      <span>طلب جديد ليوم {{ item.createdAt.toDate() | date:'mediumDate' }}</span>
+    </button>
+  </div>
+</section>
