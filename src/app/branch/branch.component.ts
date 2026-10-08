@@ -9,8 +9,6 @@ import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
 import { PdfService } from '../pdf.service';
 import { ConstraintChecker } from './constraint-checker';
-import { ProductsService } from '../products.service';
-import { OrdersService } from '../orders.service copy';
 import { DailyReportsService } from '../dailyReports.service';
 import { from, map, retry, Subscription } from 'rxjs';
 import { ReasonDialogComponent } from "../reason-dialog/reason-dialog.component";
@@ -37,6 +35,8 @@ import { DailyOrderTableFacade } from '../features/branches/components/branch-da
 import { DailyReportTransactionService } from '../features/branches/data/daily-report-transaction.service';
 import { DailyReportCalculatorService } from '../features/inventory/data/daily-report-calculator.service';
 import { BranchPageDataService } from '../features/branches/data/branch-page-data.service';
+import { ProductsReaderService } from '../features/inventory/data/products-reader.service';
+import { BranchPreOrdersReaderService } from '../features/branches/data/branch-preorders-reader.service';
 
 @Component({
   selector: 'app-branch',
@@ -214,15 +214,15 @@ export class BranchComponent {
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
-    private productsServices: ProductsService,
-    @Inject(OrdersService) private orderService: OrdersService,
     private dailyReportService: DailyReportsService,
     private constraintsService: ColumnConstraintsService,
     private pdfReports: PdfReportService,
     private branchAccountReader: BranchAccountReaderService,
     private dailyReportTransactions: DailyReportTransactionService,
     private dailyReportCalculator: DailyReportCalculatorService,
-    private branchPageData: BranchPageDataService
+    private branchPageData: BranchPageDataService,
+    private productsReader: ProductsReaderService,
+    private preOrdersReader: BranchPreOrdersReaderService
   ) {
     this.version = environment.version
 
@@ -784,9 +784,9 @@ export class BranchComponent {
 
     const city = this.branch.data.city;
     const typeId = this.selectedType.id;
-    this.orderUpdates = await this.orderService.getLastupdate(city, typeId, this.apiService)
-
-    this.preOrders = await this.orderService.getOrders(city, typeId, this.branch.id, this.orderUpdates, this.apiService)
+    const result = await this.preOrdersReader.load(city, typeId, this.branch.id);
+    this.orderUpdates = result.update;
+    this.preOrders = result.orders;
 
     if (this.preOrders.length > 0) {
       this.selectedPreOrder = this.preOrders[0].createdAt
@@ -818,12 +818,7 @@ export class BranchComponent {
 
     // const productsInfo = this.productService.getProductsFromLocal(city, typeId);
 
-    const productUpdates = await this.productsServices.getLastupdate(city, typeId, this.apiService);
-
-    // جلب البيانات بالكامل من الخدمة
-    // جلب البيانات بالكامل من الخدمة
-    const allProducts = await this.productsServices.getProducts(city, typeId, productUpdates, this.apiService);
-
+    const allProducts: any[] = await this.productsReader.loadForCityAndType(city, typeId);
 
     this.data = allProducts.filter(product => {
       // 1. التأكد من أن الحقل موجود وأنه مصفوفة
