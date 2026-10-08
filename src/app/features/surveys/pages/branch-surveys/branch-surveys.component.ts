@@ -36,6 +36,11 @@ export class BranchSurveysComponent implements OnInit {
     try {
       const user = await this.auth.getCurrentUser();
       if (!user) throw new Error('Unauthenticated user');
+      // Defensive fallback if this component was already mounted from a stale URL.
+      if (this.auth.isAdmin(user)) {
+        await this.router.navigateByUrl('/branch');
+        return;
+      }
       this.branchId = await this.service.getBranchId((user.email ?? '').split('@')[0]);
       this.surveys = await this.service.getIncompleteRequiredSurveys(this.branchId);
       if (!this.surveys.length) {

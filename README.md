@@ -36,6 +36,10 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+### Vercel deployment
+
+When deploying the browser build as a single-page application, set the Vercel output directory to `dist/saba1/browser`. The repository's `vercel.json` sends application routes such as `/branch` and `/branch/surveys` to the generated `index.csr.html` file. Angular produces this filename because this project uses server output mode.
+
 ## Running unit tests
 
 To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
