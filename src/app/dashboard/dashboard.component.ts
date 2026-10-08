@@ -3,7 +3,7 @@
 import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import * as XLSX from 'xlsx-js-style';
 import { AuthService } from '../core/auth/auth.service';
 import {
@@ -86,7 +86,7 @@ interface GroupedPreOrder {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule, CommonModule, RouterLink, DashboardToolbarComponent, DashboardFiltersComponent],
+  imports: [FormsModule, CommonModule, DashboardToolbarComponent, DashboardFiltersComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
