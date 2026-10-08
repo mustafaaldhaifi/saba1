@@ -37,6 +37,8 @@ import { DailyReportCalculatorService } from '../features/inventory/data/daily-r
 import { BranchPageDataService } from '../features/branches/data/branch-page-data.service';
 import { ProductsReaderService } from '../features/inventory/data/products-reader.service';
 import { BranchPreOrdersReaderService } from '../features/branches/data/branch-preorders-reader.service';
+import { OrderDraftStorageService } from '../features/orders/data/order-draft-storage.service';
+import { OrderDraftField, OrderDraftIdentity, OrderDraftRow } from '../features/orders/models/order-draft.models';
 
 @Component({
   selector: 'app-branch',
@@ -208,6 +210,15 @@ export class BranchComponent {
   weeklyQuotaRules: any[] = [];
 
   version: any
+  draftSavedAt: Date | null = null;
+  isDraftSaved = false;
+  private readonly lockedDraftFields = new Set<string>();
+  private readonly unsavedDraftFields = new Set<string>();
+
+  /** Used by the table to lock only values included in the saved draft. */
+  readonly isDraftFieldLocked = (item: any, field: string): boolean =>
+    this.lockedDraftFields.has(this.draftFieldKey(String(item.productId ?? item.id ?? ''), field));
+
   constructor(
     private authService: AuthService,
     private modalService: ModalService,
@@ -222,7 +233,8 @@ export class BranchComponent {
     private dailyReportCalculator: DailyReportCalculatorService,
     private branchPageData: BranchPageDataService,
     private productsReader: ProductsReaderService,
-    private preOrdersReader: BranchPreOrdersReaderService
+    private preOrdersReader: BranchPreOrdersReaderService,
+    private orderDraftStorage: OrderDraftStorageService
   ) {
     this.version = environment.version
 
@@ -577,6 +589,8 @@ export class BranchComponent {
       batch.update(orderRef, s)
       // Commit the batch (all updates happen in one command)
       await batch.commit();
+      this.ordersToUpdate = [];
+      this.updateOrderDraftAfterSuccessfulWrite();
 
       if (this.selectedPreOrder) {
         // تحديث الكائن المختار
@@ -594,7 +608,6 @@ export class BranchComponent {
       }
 
       alert("يعطيك العافية تم التحديث بنجاح")
-      this.ordersToUpdate = []
     } catch (e) {
       console.error("Error committing batch update:", e);
     } finally {
@@ -655,8 +668,8 @@ export class BranchComponent {
 
       // 3. Execute everything as a single batch
       await batch.commit(); // Single network call
-
       this.ordersToAdd = [];
+      this.updateOrderDraftAfterSuccessfulWrite();
       // alert('All orders added successfully in one operation!');
       alert("يعطيك العافية تم الارسال بنجاح")
       await this.getBranch()
@@ -995,6 +1008,7 @@ export class BranchComponent {
   }
   /// On Events
   onQntFChange(item: any) {
+    this.markDraftFieldChanged(item, 'qntF');
     if (this.checkIfHasEmptyOrder() == true || this.isToAddMode === true) {
       this.addToOrdersToAdd(item);
     }
@@ -1011,6 +1025,7 @@ export class BranchComponent {
         return
       };
     }
+    this.markDraftFieldChanged(item, 'qnt');
     if (this.checkIfHasEmptyOrder() == true || this.isToAddMode === true) {
       this.addToOrdersToAdd(item);
     }
@@ -1046,7 +1061,9 @@ export class BranchComponent {
       this.isPreSent = this.preOrders.some((o: any) => o.id != -1);
       this.selectedDate = selectedTimestamp
       this.isToAddMode = false
+      this.ordersToAdd = []
       this.ordersToUpdate = []
+      this.restoreOrderDraft()
 
       // this.combinedData = this.combinedData.slice(0, 1);
 
@@ -1060,6 +1077,7 @@ export class BranchComponent {
     if (order.status == '3') {
       return
     }
+    this.markDraftFieldChanged(order, 'status');
     const { qntNotRequirement, ...orderWithoutQntNotRequirement } = order;
     this.addToOrdersToUpdate(orderWithoutQntNotRequirement)
   }
@@ -1168,6 +1186,7 @@ export class BranchComponent {
     const newValue = ($event.target as HTMLInputElement).valueAsNumber;
     // throw new Error('Method not implemented.');
 
+    this.markDraftFieldChanged(item, 'qntNotRequirement');
     this.addToOrdersToUpdate(item)
     // this.combinedData[_t50].qntNotRequirement = newValue
   }
@@ -1343,6 +1362,7 @@ isChangeStatus2(): boolean {
     } else {
       this.ordersToAdd.push(order);
     }
+    this.isDraftSaved = false;
   }
   addToOrdersToUpdate(order: any) {
 
@@ -1352,6 +1372,8 @@ isChangeStatus2(): boolean {
     } else {
       this.ordersToUpdate.push(order);
     }
+
+    this.isDraftSaved = false;
 
   }
   addNewOrder(date: any) {
@@ -1388,6 +1410,139 @@ isChangeStatus2(): boolean {
 
     this.isToAddMode = true
     this.isPreSent = false
+    this.ordersToAdd = []
+    this.ordersToUpdate = []
+    this.restoreOrderDraft()
+  }
+
+  /** Identifies one local draft without mixing branches, order types or dates. */
+  private getOrderDraftIdentity(): OrderDraftIdentity | null {
+    if (!this.branch?.id || !this.selectedType?.id || this.selectedType.id === '5' || !this.selectedDate) {
+      return null;
+    }
+
+    return {
+      branchId: String(this.branch.id),
+      typeId: String(this.selectedType.id),
+      orderDateKey: this.orderDraftStorage.buildDateKey(this.selectedDate)
+    };
+  }
+
+  /** Saves only when the user explicitly chooses to keep a local draft. */
+  saveOrderDraft(): void {
+    const identity = this.getOrderDraftIdentity();
+    if (!identity) return;
+
+    const changedRows = [...this.ordersToAdd, ...this.ordersToUpdate];
+    if (changedRows.length === 0) return;
+
+    const draft = this.orderDraftStorage.save(identity, changedRows, this.draftFieldsByRow(changedRows));
+    this.draftSavedAt = draft ? new Date(draft.savedAt) : null;
+    this.isDraftSaved = !!draft;
+    this.setLockedDraftFields(draft?.rows ?? []);
+    this.unsavedDraftFields.clear();
+  }
+
+  /** Restores the editable values and rebuilds the pending-send collection. */
+  private restoreOrderDraft(): void {
+    const identity = this.getOrderDraftIdentity();
+    if (!identity) {
+      this.draftSavedAt = null;
+      this.isDraftSaved = false;
+      this.lockedDraftFields.clear();
+      this.unsavedDraftFields.clear();
+      return;
+    }
+
+    const draft = this.orderDraftStorage.restore(identity, this.combinedData);
+    if (!draft) {
+      this.draftSavedAt = null;
+      this.isDraftSaved = false;
+      this.lockedDraftFields.clear();
+      this.unsavedDraftFields.clear();
+      return;
+    }
+
+    const changedIds = new Set(draft.rows.map(row => row.rowId));
+    const restoredRows = this.combinedData.filter(row =>
+      changedIds.has(String(row.productId ?? row.id ?? ''))
+    );
+
+    this.ordersToAdd = restoredRows.filter(row => row.id === -1);
+    this.ordersToUpdate = restoredRows.filter(row => row.id !== -1);
+    this.draftSavedAt = new Date(draft.savedAt);
+    this.isDraftSaved = true;
+    this.setLockedDraftFields(draft.rows);
+    this.unsavedDraftFields.clear();
+  }
+
+  /** Removes a draft only after its Firestore write has completed successfully. */
+  private clearOrderDraft(): void {
+    const identity = this.getOrderDraftIdentity();
+    if (!identity) return;
+
+    this.orderDraftStorage.remove(identity);
+    this.draftSavedAt = null;
+    this.isDraftSaved = false;
+    this.lockedDraftFields.clear();
+    this.unsavedDraftFields.clear();
+  }
+
+  /** A successful server write completes and removes the corresponding local draft. */
+  private updateOrderDraftAfterSuccessfulWrite(): void {
+    this.clearOrderDraft();
+  }
+
+  /** Locks populated values captured in the last explicit draft save. */
+  private setLockedDraftFields(rows: OrderDraftRow[]): void {
+    this.lockedDraftFields.clear();
+    const fields: OrderDraftField[] = [
+      'qnt', 'qntF', 'status', 'qntNotRequirement', 'isCashEnabled', 'cashValue', 'note'
+    ];
+
+    for (const row of rows) {
+      if (Array.isArray(row.lockedFields)) {
+        for (const field of row.lockedFields) {
+          this.lockedDraftFields.add(this.draftFieldKey(row.rowId, field));
+        }
+      } else {
+        // Compatibility with drafts saved before field-level locking was introduced.
+        for (const field of fields) {
+          const value = row[field];
+          if (value !== null && value !== undefined && value !== '' && value !== false) {
+            this.lockedDraftFields.add(this.draftFieldKey(row.rowId, field));
+          }
+        }
+      }
+    }
+  }
+
+  private markDraftFieldChanged(row: any, field: OrderDraftField): void {
+    if (this.selectedType?.id === '5') return;
+    const rowId = String(row.productId ?? row.id ?? '');
+    if (!rowId) return;
+    this.unsavedDraftFields.add(this.draftFieldKey(rowId, field));
+    this.isDraftSaved = false;
+  }
+
+  private draftFieldsByRow(rows: any[]): ReadonlyMap<string, readonly OrderDraftField[]> {
+    const result = new Map<string, OrderDraftField[]>();
+    const fields: OrderDraftField[] = [
+      'qnt', 'qntF', 'status', 'qntNotRequirement', 'isCashEnabled', 'cashValue', 'note'
+    ];
+
+    for (const row of rows) {
+      const rowId = String(row.productId ?? row.id ?? '');
+      result.set(rowId, fields.filter(field => {
+        const key = this.draftFieldKey(rowId, field);
+        return this.lockedDraftFields.has(key) || this.unsavedDraftFields.has(key);
+      }));
+    }
+    return result;
+  }
+
+  private draftFieldKey(rowId: string, field: string): string {
+    return `${rowId}:${field}`;
   }
   /// Other
   async logout(): Promise<void> {
@@ -4725,11 +4880,13 @@ isChangeStatus2(): boolean {
       this.combinedData[i].cashValue = null;
       this.combinedData[i].isCashEnabled = false;
     }
+    this.markDraftFieldChanged(item, 'isCashEnabled');
     this.addToOrdersToUpdate(item)
   }
 
   onCashInput(i: number, item: any) {
     console.log("item::: " + JSON.stringify(item))
+    this.markDraftFieldChanged(item, 'cashValue');
     this.addToOrdersToUpdate(item)
     const value = this.combinedData[i].cashValue;
 

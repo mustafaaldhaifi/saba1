@@ -34,6 +34,7 @@ export class BranchStandardOrderTableComponent {
   @Input() isFieldDisabled = false;
   @Input() isDropDownDisabled = false;
   @Input() selectedOrderStatus = '';
+  @Input() isDraftFieldLocked: (item: any, field: string) => boolean = () => false;
   @Input() isAddedItem: (item: any) => boolean = () => false;
   @Input() statusColor: (status: string) => string = () => '';
 

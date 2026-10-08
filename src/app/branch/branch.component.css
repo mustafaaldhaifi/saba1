@@ -199,3 +199,10 @@ button:disabled {
   /* background-color: rgb(139, 132, 113); */
   border: 1px solid black;
 }
+
+.draft-status {
+  margin: 12px auto;
+  color: #52606d;
+  font-size: 0.9rem;
+  text-align: center;
+}

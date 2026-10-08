@@ -13,3 +13,7 @@
 <button *ngIf="isPreSent && hasUpdates" (click)="saveUpdatesRequested.emit()" [disabled]="!canSaveUpdates">
   Save Updates
 </button>
+
+<button *ngIf="canSaveDraft && !isDraftSaved" (click)="saveDraftRequested.emit()" [disabled]="isLoading">
+  حفظ كمسودة
+</button>

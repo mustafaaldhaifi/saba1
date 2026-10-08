@@ -40,6 +40,7 @@
         [isPreSent]="isPreSent"
         [isFieldDisabled]="isFieldDisabled"
         [isDropDownDisabled]="isDropDownDisabled"
+        [isDraftFieldLocked]="isDraftFieldLocked"
         [selectedOrderStatus]="selectedPreOrder?.status ?? ''"
         [isAddedItem]="isItemInAdd.bind(this)"
         [statusColor]="getStatusColor.bind(this)"
@@ -58,10 +59,16 @@
         [isPreSent]="isPreSent"
         [hasUpdates]="ordersToUpdate.length > 0"
         [canSaveUpdates]="isUpdateEnabled()"
+        [canSaveDraft]="ordersToAdd.length > 0 || ordersToUpdate.length > 0"
+        [isDraftSaved]="isDraftSaved"
         (saveNewProductsRequested)="addOrders(true)"
         (sendOrderRequested)="addOrders()"
-        (saveUpdatesRequested)="saveUpdates()">
+        (saveUpdatesRequested)="saveUpdates()"
+        (saveDraftRequested)="saveOrderDraft()">
     </app-branch-order-actions>
+    <p class="draft-status" *ngIf="draftSavedAt">
+        تم حفظ المسودة محليًا في هذا الجهاز الساعة {{ draftSavedAt | date:'shortTime' }}
+    </p>
 
 </ng-container>
 <!-- <div class="dropdown-container mb-3" *ngIf="selectedType && selectedType.id == '5'"

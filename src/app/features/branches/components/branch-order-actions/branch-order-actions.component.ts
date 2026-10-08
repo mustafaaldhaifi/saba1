@@ -21,8 +21,11 @@ export class BranchOrderActionsComponent {
   @Input() isPreSent = false;
   @Input() hasUpdates = false;
   @Input() canSaveUpdates = false;
+  @Input() canSaveDraft = false;
+  @Input() isDraftSaved = false;
 
   @Output() readonly saveNewProductsRequested = new EventEmitter<void>();
   @Output() readonly sendOrderRequested = new EventEmitter<void>();
   @Output() readonly saveUpdatesRequested = new EventEmitter<void>();
+  @Output() readonly saveDraftRequested = new EventEmitter<void>();
 }
