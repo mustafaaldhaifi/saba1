@@ -1,2 +1,137 @@
-<main class="survey-page" dir="rtl"><section class="card"><header class="head"><h1>الاستبيانات الشهرية</h1><p>أكمل الاستبيان المطلوب للمتابعة.</p></header><div class="body"><p *ngIf="loading" class="message">جارٍ التحميل…</p><p *ngIf="error" class="message error">{{error}}</p><p *ngIf="success" class="message success">{{success}}</p><section *ngIf="active"><h2>{{active.title}}</h2><p>{{active.description}}</p><form [formGroup]="form"><div *ngFor="let q of active.questions" [formGroupName]="q.id" class="question"><label>{{q.label}} <b *ngIf="q.required">*</b></label><ng-container [ngSwitch]="q.type"><ng-container *ngSwitchCase="'document'"><input formControlName="documentNumber" placeholder="رقم الوثيقة"><label class="field-label">تاريخ الانتهاء</label><input formControlName="expiryDate" type="date" aria-label="تاريخ الانتهاء"></ng-container><ng-container *ngSwitchCase="'yes_no'"><div class="choices"><button type="button" [class.active]="form.get(q.id+'.value')?.value==='yes'" (click)="form.get(q.id+'.value')?.setValue('yes')">نعم</button><button type="button" [class.active]="form.get(q.id+'.value')?.value==='no'" (click)="form.get(q.id+'.value')?.setValue('no')">لا</button></div><textarea *ngIf="form.get(q.id+'.value')?.value==='no'" formControlName="reason" placeholder="سبب عدم التصحيح"></textarea></ng-container><textarea *ngSwitchDefault formControlName="value" placeholder="ملاحظات"></textarea></ng-container></div><footer class="actions"><button type="button" class="secondary" [disabled]="saving" (click)="save(false)">حفظ مسودة</button><button type="button" class="primary" [disabled]="saving" (click)="save(true)">إرسال الاستبيان</button></footer></form></section></div></section></main>
-<div *ngIf="showLicenseQrNotice" class="notice-backdrop" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="qr-notice-title"><section class="notice-dialog"><div class="qr-icon" aria-hidden="true">▦</div><h2 id="qr-notice-title">تحقق من الرخصة أولًا</h2><p>يرجى مسح رمز QR الموجود في الرخصة للتأكد من حالة المستند وصلاحيته قبل تعبئة الاستبيان.</p><button type="button" class="primary notice-confirm" (click)="showLicenseQrNotice = false">فهمت، متابعة</button></section></div>
+<main class="survey-page" dir="rtl">
+  <section class="survey-card">
+    <header class="survey-header">
+      <span class="header-kicker">استبيان الفرع</span>
+      <h1>الاستبيانات الشهرية</h1>
+      <p>راجع البيانات المطلوبة ثم أرسل الاستبيان للمتابعة.</p>
+    </header>
+
+    <div class="survey-body">
+      <p *ngIf="loading" class="state-message">جارٍ تحميل الاستبيان…</p>
+      <p *ngIf="success" class="success-message" role="status">{{ success }}</p>
+      <div *ngIf="!loading && !active" class="empty-state">
+        <p>لم نتمكن من عرض الاستبيان الآن.</p>
+        <button type="button" class="retry-button" (click)="loadSurveys()">إعادة المحاولة</button>
+      </div>
+
+      <section *ngIf="active" class="survey-content">
+        <div class="survey-intro">
+          <div>
+            <span class="section-caption">الاستبيان المطلوب</span>
+            <h2>{{ active.title }}</h2>
+            <p *ngIf="active.description">{{ active.description }}</p>
+          </div>
+          <span class="month-badge">{{ getMonthLabel(activeMonth) }}</span>
+        </div>
+
+        <div *ngIf="copiedFromMonth" class="copied-notice" role="status">
+          <span class="notice-mark" aria-hidden="true">i</span>
+          <p>تم جلب بيانات شهر {{ getMonthLabel(copiedFromMonth) }}. راجعها وحدّث ما تغيّر قبل الإرسال.</p>
+        </div>
+
+        <form [formGroup]="form">
+          <div class="questions-list">
+            <section *ngFor="let q of active.questions; let questionIndex = index"
+              [formGroupName]="q.id" class="question-card">
+              <div class="question-heading">
+                <span class="question-number">{{ questionIndex + 1 }}</span>
+                <div>
+                  <h3>{{ q.label }}</h3>
+                  <span class="required-label" *ngIf="q.required">حقل مطلوب</span>
+                </div>
+              </div>
+
+              <ng-container *ngIf="isHealthDocumentsQuestion(q); else standardQuestion">
+                <div formArrayName="workers" class="workers-list">
+                  <section *ngFor="let worker of workersFor(q.id).controls; let i = index"
+                    [formGroupName]="i" class="worker-card">
+                    <div class="worker-heading">
+                      <h4>العامل {{ i + 1 }}</h4>
+                      <button type="button" class="remove-worker" (click)="removeWorker(q.id, i)"
+                        [attr.aria-label]="'حذف العامل ' + (i + 1)">حذف العامل</button>
+                    </div>
+                    <div class="worker-fields">
+                      <label>الاسم الرباعي <input formControlName="fullName" autocomplete="name" required></label>
+                      <label>رقم الهوية <input formControlName="identityNumber" inputmode="numeric" required></label>
+                      <label>رقم الهاتف <input formControlName="phoneNumber" type="tel" inputmode="tel" required></label>
+                      <label>تاريخ انتهاء الشهادة الصحية
+                        <input formControlName="healthCertificateExpiryDate" type="date" required>
+                      </label>
+                      <label>تاريخ انتهاء شهادة التثقيف
+                        <input formControlName="educationExpiryDate" type="date" required>
+                      </label>
+                    </div>
+                  </section>
+                </div>
+                <p *ngIf="!workersFor(q.id).length" class="helper-text">لم تُضف بيانات أي عامل بعد.</p>
+                <button type="button" class="add-worker" (click)="addWorker(q.id)">+ إضافة عامل</button>
+              </ng-container>
+
+              <ng-template #standardQuestion>
+                <ng-container [ngSwitch]="q.type">
+                  <div *ngSwitchCase="'document'" class="document-fields">
+                    <label>رقم الوثيقة
+                      <input formControlName="documentNumber" placeholder="أدخل رقم الوثيقة">
+                    </label>
+                    <label>تاريخ الانتهاء
+                      <input formControlName="expiryDate" type="date">
+                    </label>
+                  </div>
+                  <ng-container *ngSwitchCase="'yes_no'">
+                    <div class="choices" role="group" [attr.aria-label]="q.label">
+                      <button type="button" [class.active]="form.get(q.id + '.value')?.value === 'yes'"
+                        [attr.aria-pressed]="form.get(q.id + '.value')?.value === 'yes'"
+                        (click)="form.get(q.id + '.value')?.setValue('yes')">نعم</button>
+                      <button type="button" [class.active]="form.get(q.id + '.value')?.value === 'no'"
+                        [attr.aria-pressed]="form.get(q.id + '.value')?.value === 'no'"
+                        (click)="form.get(q.id + '.value')?.setValue('no')">لا</button>
+                    </div>
+                    <label *ngIf="form.get(q.id + '.value')?.value === 'no'" class="reason-field">
+                      سبب الإجابة
+                      <textarea formControlName="reason" placeholder="اكتب السبب هنا"></textarea>
+                    </label>
+                  </ng-container>
+                  <label *ngSwitchDefault class="notes-field">ملاحظات
+                    <textarea formControlName="value" placeholder="اكتب ملاحظاتك هنا"></textarea>
+                  </label>
+                </ng-container>
+              </ng-template>
+            </section>
+          </div>
+
+          <footer class="form-actions">
+            <p>راجع الإجابات قبل الإرسال. يمكنك حفظها كمسودة والعودة لاحقًا.</p>
+            <div class="action-buttons">
+              <button type="button" class="secondary-button" [disabled]="saving" (click)="save(false)">حفظ مسودة</button>
+              <button type="button" class="primary-button" [disabled]="saving" (click)="save(true)">إرسال الاستبيان</button>
+            </div>
+          </footer>
+        </form>
+      </section>
+    </div>
+  </section>
+</main>
+
+<div *ngIf="showLicenseQrNotice" class="notice-backdrop" dir="rtl" role="dialog"
+  aria-modal="true" aria-labelledby="qr-notice-title">
+  <section class="notice-dialog">
+    <div class="qr-icon" aria-hidden="true">▦</div>
+    <h2 id="qr-notice-title">تحقق من الرخصة أولًا</h2>
+    <p>يرجى مسح رمز QR الموجود في الرخصة للتأكد من حالة المستند وصلاحيته قبل تعبئة الاستبيان.</p>
+    <button type="button" class="primary-button notice-confirm" (click)="showLicenseQrNotice = false">
+      فهمت، متابعة
+    </button>
+  </section>
+</div>
+
+<div *ngIf="error" class="error-backdrop" dir="rtl" role="alertdialog"
+  aria-modal="true" aria-labelledby="error-dialog-title" aria-describedby="error-dialog-message">
+  <section class="error-dialog">
+    <span class="error-icon" aria-hidden="true">!</span>
+    <h2 id="error-dialog-title">تعذر إكمال العملية</h2>
+    <p id="error-dialog-message">{{ error }}</p>
+    <button #errorCloseButton type="button" class="error-close-button" (click)="dismissError()">
+      فهمت
+    </button>
+  </section>
+</div>

@@ -1,9 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { Survey, SurveyAnswers } from '../../models/survey.models';
+import {
+  HealthDocumentWorker,
+  HealthDocumentsAnswer,
+  RequiredSurvey,
+  Survey,
+  SurveyAnswers,
+  SurveyQuestion
+} from '../../models/survey.models';
 import { SurveyService } from '../../services/survey.service';
 
 @Component({
@@ -14,8 +21,12 @@ import { SurveyService } from '../../services/survey.service';
   styleUrl: './branch-surveys.component.css'
 })
 export class BranchSurveysComponent implements OnInit {
-  surveys: Survey[] = [];
+  @ViewChild('errorCloseButton') private errorCloseButton?: ElementRef<HTMLButtonElement>;
+
+  requiredSurveys: RequiredSurvey[] = [];
   active?: Survey;
+  activeMonth = '';
+  copiedFromMonth: string | null = null;
   branchId = '';
   loading = true;
   saving = false;
@@ -23,6 +34,7 @@ export class BranchSurveysComponent implements OnInit {
   success = '';
   showLicenseQrNotice = false;
   form!: FormGroup;
+  private previousFocus: HTMLElement | null = null;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -33,36 +45,93 @@ export class BranchSurveysComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
+    await this.loadSurveys();
+  }
+
+  /** Reloads the pending survey list after a temporary read failure. */
+  async loadSurveys(): Promise<void> {
+    this.loading = true;
+    this.error = '';
     try {
       const user = await this.auth.getCurrentUser();
       if (!user) throw new Error('Unauthenticated user');
-      // Defensive fallback if this component was already mounted from a stale URL.
       if (this.auth.isAdmin(user)) {
         await this.router.navigateByUrl('/branch');
         return;
       }
+
       this.branchId = await this.service.getBranchId((user.email ?? '').split('@')[0]);
-      this.surveys = await this.service.getIncompleteRequiredSurveys(this.branchId);
-      if (!this.surveys.length) {
+      this.requiredSurveys = await this.service.getIncompleteRequiredSurveys(this.branchId);
+      if (!this.requiredSurveys.length) {
         await this.navigateAfterCompletion();
         return;
       }
-      await this.open(this.surveys[0]);
+      await this.open(this.requiredSurveys[0]);
     } catch (error) {
       console.error('Unable to load required surveys:', error);
-      this.error = 'تعذر التحقق من الاستبيانات المطلوبة، حاول مرة أخرى.';
+      this.active = undefined;
+      this.showError('تعذر التحقق من الاستبيانات المطلوبة. تحقق من الاتصال ثم حاول مرة أخرى.');
     } finally {
       this.loading = false;
     }
   }
 
-  async open(survey?: Survey): Promise<void> {
-    if (!survey) return;
-    this.active = survey;
-    this.showLicenseQrNotice = survey.questions.some(question => question.type === 'document');
+  /** The dialog is dismissible from keyboard as well as its close button. */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.error) this.dismissError();
+  }
+
+  dismissError(): void {
+    this.error = '';
+    this.previousFocus?.focus();
+    this.previousFocus = null;
+  }
+
+  /** Legacy document questions named health documents use the new worker form. */
+  isHealthDocumentsQuestion(question: SurveyQuestion): boolean {
+    return question.type === 'health_documents' ||
+      (question.type === 'document' && (
+        /وثائق?.*صح|صح.*وثائق?/u.test(question.label) ||
+        /health[_-]?documents?/i.test(question.id)
+      ));
+  }
+
+  getMonthLabel(month: string): string {
+    if (!/^\d{4}-\d{2}$/.test(month)) return month;
+    const [year, monthNumber] = month.split('-').map(Number);
+    return new Intl.DateTimeFormat('ar-YE', { month: 'long', year: 'numeric' })
+      .format(new Date(Date.UTC(year, monthNumber - 1, 1, 12)));
+  }
+
+  workersFor(questionId: string): FormArray<FormGroup> {
+    return this.form.get([questionId, 'workers']) as FormArray<FormGroup>;
+  }
+
+  addWorker(questionId: string, worker?: Partial<HealthDocumentWorker>): void {
+    this.workersFor(questionId).push(this.createWorkerGroup(worker));
+  }
+
+  removeWorker(questionId: string, index: number): void {
+    this.workersFor(questionId).removeAt(index);
+  }
+
+  async open(item?: RequiredSurvey): Promise<void> {
+    if (!item) return;
+    this.active = item.survey;
+    this.activeMonth = item.month;
+    this.copiedFromMonth = null;
+    this.showLicenseQrNotice = item.survey.questions.some(question =>
+      question.type === 'document' && !this.isHealthDocumentsQuestion(question)
+    );
+
     const controls: Record<string, FormGroup> = {};
-    for (const question of survey.questions) {
-      if (question.type === 'document') {
+    for (const question of item.survey.questions) {
+      if (this.isHealthDocumentsQuestion(question)) {
+        controls[question.id] = this.fb.group({
+          workers: this.fb.array<FormGroup>([], question.required ? Validators.required : [])
+        });
+      } else if (question.type === 'document') {
         controls[question.id] = this.fb.group({
           documentNumber: ['', question.required ? Validators.required : []],
           expiryDate: ['', question.required ? Validators.required : []]
@@ -79,41 +148,120 @@ export class BranchSurveysComponent implements OnInit {
       }
     }
     this.form = this.fb.group(controls);
-    const response = await this.service.getResponse(survey.id, this.branchId);
-    if (response?.answers) this.form.patchValue(response.answers);
+
+    // A draft in the requested month always wins over an older submitted answer.
+    const current = await this.service.getResponse(item.survey.id, this.branchId, item.month);
+    if (current?.answers) {
+      this.applyAnswers(current.answers);
+      this.copiedFromMonth = current.prefilledFromMonth ?? null;
+      return;
+    }
+
+    const previous = await this.service.getPreviousSubmittedResponse(
+      item.survey.id,
+      this.branchId,
+      item.month
+    );
+    if (previous?.answers) {
+      this.applyAnswers(previous.answers);
+      this.copiedFromMonth = previous.month;
+    }
   }
 
   async save(submitted: boolean): Promise<void> {
-    if (!this.active || this.saving) return;
+    if (!this.active || !this.activeMonth || this.saving) return;
     this.error = '';
     this.success = '';
     if (submitted) this.applyConditionalReasonValidation();
     if (submitted && this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error = 'أكمل جميع الحقول المطلوبة قبل إرسال الاستبيان.';
+      this.showError(this.getValidationError());
       return;
     }
+
     this.saving = true;
     try {
       const user = await this.auth.getCurrentUser();
       await this.service.save(
         this.branchId,
         this.active,
+        this.activeMonth,
         this.form.getRawValue() as SurveyAnswers,
         submitted,
-        user?.uid ?? ''
+        user?.uid ?? '',
+        this.copiedFromMonth ?? undefined
       );
       this.success = submitted ? 'تم إرسال الاستبيان بنجاح.' : 'تم حفظ المسودة.';
       if (submitted) {
-        this.surveys = this.surveys.filter(item => item.id !== this.active?.id);
-        if (!this.surveys.length) await this.navigateAfterCompletion();
-        else await this.open(this.surveys[0]);
+        this.requiredSurveys = this.requiredSurveys.filter(item =>
+          item.survey.id !== this.active?.id || item.month !== this.activeMonth
+        );
+        if (!this.requiredSurveys.length) await this.navigateAfterCompletion();
+        else await this.open(this.requiredSurveys[0]);
       }
     } catch (error) {
       console.error('Unable to save survey response:', error);
-      this.error = 'تعذر حفظ الاستبيان، تحقق من الاتصال والصلاحيات ثم حاول مرة أخرى.';
+      this.showError('تعذر حفظ الاستبيان. تحقق من الاتصال والصلاحيات ثم حاول مرة أخرى.');
     } finally {
       this.saving = false;
+    }
+  }
+
+  /** Points to the first missing question, including a worker row where possible. */
+  private getValidationError(): string {
+    for (const question of this.active?.questions ?? []) {
+      const group = this.form.get(question.id);
+      if (!group?.invalid) continue;
+
+      if (this.isHealthDocumentsQuestion(question)) {
+        const workers = this.workersFor(question.id);
+        if (!workers.length) return `أضف عاملًا واحدًا على الأقل في «${question.label}».`;
+        const invalidIndex = workers.controls.findIndex(worker => worker.invalid);
+        if (invalidIndex !== -1) {
+          return `أكمل بيانات العامل ${invalidIndex + 1} في «${question.label}» قبل الإرسال.`;
+        }
+      }
+      return `أكمل السؤال «${question.label}» قبل إرسال الاستبيان.`;
+    }
+    return 'أكمل جميع الحقول المطلوبة قبل إرسال الاستبيان.';
+  }
+
+  private showError(message: string): void {
+    this.previousFocus = typeof document === 'undefined'
+      ? null
+      : document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.error = message;
+    setTimeout(() => this.errorCloseButton?.nativeElement.focus(), 0);
+  }
+
+  private createWorkerGroup(worker?: Partial<HealthDocumentWorker>): FormGroup {
+    return this.fb.group({
+      id: [worker?.id || this.createWorkerId()],
+      fullName: [worker?.fullName ?? '', Validators.required],
+      identityNumber: [worker?.identityNumber ?? '', Validators.required],
+      phoneNumber: [worker?.phoneNumber ?? '', Validators.required],
+      healthCertificateExpiryDate: [worker?.healthCertificateExpiryDate ?? '', Validators.required],
+      educationExpiryDate: [worker?.educationExpiryDate ?? '', Validators.required]
+    });
+  }
+
+  private createWorkerId(): string {
+    return globalThis.crypto?.randomUUID?.() ?? `worker_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
+
+  /** Copies only answers belonging to questions in the current survey version. */
+  private applyAnswers(answers: SurveyAnswers): void {
+    for (const question of this.active?.questions ?? []) {
+      const answer = answers[question.id];
+      if (!answer) continue;
+
+      if (this.isHealthDocumentsQuestion(question)) {
+        const workers = (answer as HealthDocumentsAnswer).workers;
+        if (!Array.isArray(workers)) continue;
+        for (const worker of workers) this.addWorker(question.id, worker);
+      } else {
+        this.form.get(question.id)?.patchValue(answer);
+      }
     }
   }
 
