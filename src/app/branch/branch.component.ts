@@ -1,5 +1,5 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, ElementRef, inject, Inject, PLATFORM_ID, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, Inject, PLATFORM_ID, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
@@ -39,6 +39,7 @@ import { ProductsReaderService } from '../features/inventory/data/products-reade
 import { BranchPreOrdersReaderService } from '../features/branches/data/branch-preorders-reader.service';
 import { OrderDraftStorageService } from '../features/orders/data/order-draft-storage.service';
 import { OrderDraftField, OrderDraftIdentity, OrderDraftRow } from '../features/orders/models/order-draft.models';
+import { SurveyService } from '../features/surveys/services/survey.service';
 
 @Component({
   selector: 'app-branch',
@@ -214,6 +215,8 @@ export class BranchComponent {
   isDraftSaved = false;
   private readonly lockedDraftFields = new Set<string>();
   private readonly unsavedDraftFields = new Set<string>();
+  private surveyCheckTimer?: ReturnType<typeof setInterval>;
+  private checkingSurveys = false;
 
   /** Used by the table to lock only values included in the saved draft. */
   readonly isDraftFieldLocked = (item: any, field: string): boolean =>
@@ -234,7 +237,8 @@ export class BranchComponent {
     private branchPageData: BranchPageDataService,
     private productsReader: ProductsReaderService,
     private preOrdersReader: BranchPreOrdersReaderService,
-    private orderDraftStorage: OrderDraftStorageService
+    private orderDraftStorage: OrderDraftStorageService,
+    private surveyService: SurveyService
   ) {
     this.version = environment.version
 
@@ -530,8 +534,36 @@ export class BranchComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.currentTimestamp = Timestamp.now();
       await this.getBranch();
+      // A branch tab may remain open across a scheduled midnight.
+      this.surveyCheckTimer = setInterval(() => void this.checkScheduledSurveys(), 5 * 60_000);
     }
 
+  }
+
+  @HostListener('document:visibilitychange')
+  onSurveyVisibilityChange(): void {
+    if (document.visibilityState === 'visible') void this.checkScheduledSurveys();
+  }
+
+  @HostListener('window:focus')
+  onSurveyWindowFocus(): void {
+    void this.checkScheduledSurveys();
+  }
+
+  private async checkScheduledSurveys(): Promise<void> {
+    if (this.checkingSurveys || this.isAdmin || !this.branch?.id ||
+        !isPlatformBrowser(this.platformId) || document.visibilityState !== 'visible') return;
+    this.checkingSurveys = true;
+    try {
+      const pending = await this.surveyService.getIncompleteRequiredSurveys(this.branch.id);
+      if (pending.length) {
+        await this.router.navigate(['/branch/surveys'], { queryParams: { returnUrl: '/branch' } });
+      }
+    } catch (error) {
+      console.error('Unable to check scheduled surveys:', error);
+    } finally {
+      this.checkingSurveys = false;
+    }
   }
 
   /// Save
@@ -983,6 +1015,7 @@ export class BranchComponent {
     });
   }
   ngOnDestroy(): void {
+    if (this.surveyCheckTimer) clearInterval(this.surveyCheckTimer);
     if (this.sub) this.sub.unsubscribe();
   }
 

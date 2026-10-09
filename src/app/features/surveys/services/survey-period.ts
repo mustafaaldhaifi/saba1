@@ -1,43 +1,88 @@
-/** Monthly surveys follow the calendar in Yemen, independent of the device timezone. */
-const SURVEY_TIME_ZONE = 'Asia/Aden';
+import type { Survey, SurveySchedule } from '../models/survey.models';
 
-function calendarDate(date: Date): { year: number; month: number; day: number } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: SURVEY_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(date);
-  const part = (name: string) => Number(parts.find(item => item.type === name)?.value);
-  return { year: part('year'), month: part('month'), day: part('day') };
-}
+const DAY_MS = 86_400_000;
 
-export function getCurrentSurveyMonth(date = new Date()): string {
-  const { year, month } = calendarDate(date);
-  return `${year}-${String(month).padStart(2, '0')}`;
-}
-
-/** Opens the current month on its last day, retaining all earlier due months. */
-export function getDueSurveyMonths(startsFrom: string, date = new Date()): string[] {
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(startsFrom)) return [];
-
-  const { year, month, day } = calendarDate(date);
-  const currentMonthIsDue = day === new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const lastDueMonthIndex = year * 12 + month - 1 - (currentMonthIsDue ? 0 : 1);
-  const [startYear, startMonth] = startsFrom.split('-').map(Number);
-  const startMonthIndex = startYear * 12 + startMonth - 1;
-  const months: string[] = [];
-
-  for (let index = startMonthIndex; index <= lastDueMonthIndex; index++) {
-    const dueYear = Math.floor(index / 12);
-    const dueMonth = index % 12 + 1;
-    months.push(`${dueYear}-${String(dueMonth).padStart(2, '0')}`);
+function parseDate(value: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`Invalid survey date: ${value}`);
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    throw new Error(`Invalid survey date: ${value}`);
   }
-  return months;
+  return date;
 }
 
-export function getPreviousSurveyMonth(month: string): string {
-  const [year, monthNumber] = month.split('-').map(Number);
-  const previous = new Date(Date.UTC(year, monthNumber - 2, 1));
-  return `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, '0')}`;
+function dateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function monthEnd(year: number, monthIndex: number): Date {
+  return new Date(Date.UTC(year, monthIndex + 1, 0));
+}
+
+/** Old monthly definitions remain valid without rewriting Firestore documents. */
+export function resolveSurveySchedule(survey: Survey): SurveySchedule {
+  const schedule = survey.schedule ?? {
+    type: 'month_end' as const,
+    startDate: `${survey.startsFrom}-01`,
+    timezone: 'Asia/Aden',
+    missedPolicy: 'latest_only' as const
+  };
+  parseDate(schedule.startDate);
+  if (!['daily', 'weekly', 'month_start', 'month_end'].includes(schedule.type) ||
+      schedule.missedPolicy !== 'latest_only' || !schedule.timezone) {
+    throw new Error(`Invalid schedule for survey ${survey.id}`);
+  }
+  if (schedule.type === 'weekly' && (!Number.isInteger(schedule.weekDay) ||
+      schedule.weekDay! < 1 || schedule.weekDay! > 7)) {
+    throw new Error(`Invalid weekDay for survey ${survey.id}`);
+  }
+  new Intl.DateTimeFormat('en-US', { timeZone: schedule.timezone });
+  return schedule;
+}
+
+export function dateInTimeZone(instant: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(instant);
+  const part = (type: string) => parts.find(item => item.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+/** The latest due occurrence, or null before the first scheduled day. */
+export function latestDueDate(schedule: SurveySchedule, instant = new Date()): string | null {
+  const today = parseDate(dateInTimeZone(instant, schedule.timezone));
+  const start = parseDate(schedule.startDate);
+  if (today < start) return null;
+  let due: Date;
+  switch (schedule.type) {
+    case 'daily':
+      due = today;
+      break;
+    case 'weekly': {
+      const isoDay = today.getUTCDay() || 7;
+      due = new Date(today.getTime() - ((isoDay - schedule.weekDay! + 7) % 7) * DAY_MS);
+      break;
+    }
+    case 'month_start':
+      due = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+      break;
+    case 'month_end': {
+      const currentEnd = monthEnd(today.getUTCFullYear(), today.getUTCMonth());
+      due = today >= currentEnd ? currentEnd :
+        monthEnd(today.getUTCFullYear(), today.getUTCMonth() - 1);
+      break;
+    }
+  }
+  return due >= start ? dateKey(due) : null;
+}
+
+/** The preceding occurrence for a scheduled date. */
+export function previousDueDate(schedule: SurveySchedule, occurrenceDate: string): string {
+  const date = parseDate(occurrenceDate);
+  switch (schedule.type) {
+    case 'daily': return dateKey(new Date(date.getTime() - DAY_MS));
+    case 'weekly': return dateKey(new Date(date.getTime() - 7 * DAY_MS));
+    case 'month_start': return dateKey(new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1)));
+    case 'month_end': return dateKey(monthEnd(date.getUTCFullYear(), date.getUTCMonth() - 1));
+  }
 }

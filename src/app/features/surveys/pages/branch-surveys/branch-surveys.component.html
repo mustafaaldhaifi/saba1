@@ -2,7 +2,7 @@
   <section class="survey-card">
     <header class="survey-header">
       <span class="header-kicker">استبيان الفرع</span>
-      <h1>الاستبيانات الشهرية</h1>
+      <h1>الاستبيانات المطلوبة</h1>
       <p>راجع البيانات المطلوبة ثم أرسل الاستبيان للمتابعة.</p>
     </header>
 
@@ -21,12 +21,12 @@
             <h2>{{ active.title }}</h2>
             <p *ngIf="active.description">{{ active.description }}</p>
           </div>
-          <span class="month-badge">{{ getMonthLabel(activeMonth) }}</span>
+          <span class="month-badge">موعد الاستبيان: {{ getDateLabel(activeOccurrenceDate) }}</span>
         </div>
 
-        <div *ngIf="copiedFromMonth" class="copied-notice" role="status">
+        <div *ngIf="copiedFromDate" class="copied-notice" role="status">
           <span class="notice-mark" aria-hidden="true">i</span>
-          <p>تم جلب بيانات شهر {{ getMonthLabel(copiedFromMonth) }}. راجعها وحدّث ما تغيّر قبل الإرسال.</p>
+          <p>تم جلب بيانات الاستبيان المرسل بتاريخ {{ getDateLabel(copiedFromDate) }}. راجعها وحدّث ما تغيّر قبل الإرسال.</p>
         </div>
 
         <form [formGroup]="form">

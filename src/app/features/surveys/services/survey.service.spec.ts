@@ -1,22 +1,40 @@
-import { getDueSurveyMonths, getPreviousSurveyMonth } from './survey-period';
+import { SurveySchedule } from '../models/survey.models';
+import { latestDueDate, previousDueDate, resolveSurveySchedule } from './survey-period';
 
-describe('monthly survey periods', () => {
+const schedule = (type: SurveySchedule['type'], startDate = '2026-10-09'): SurveySchedule => ({
+  type, startDate, timezone: 'Asia/Riyadh', missedPolicy: 'latest_only'
+});
 
-  it('opens the current month only on its last day in Yemen', () => {
-    expect(getDueSurveyMonths('2026-09', new Date('2026-10-30T20:59:59Z')))
-      .toEqual(['2026-09']);
-    expect(getDueSurveyMonths('2026-09', new Date('2026-10-30T21:00:00Z')))
-      .toEqual(['2026-09', '2026-10']);
+describe('survey scheduling', () => {
+  it('opens a daily occurrence at midnight in the configured timezone', () => {
+    const daily = schedule('daily');
+    expect(latestDueDate(daily, new Date('2026-10-08T20:59:59Z'))).toBeNull();
+    expect(latestDueDate(daily, new Date('2026-10-08T21:00:00Z'))).toBe('2026-10-09');
+    expect(latestDueDate(daily, new Date('2026-10-10T12:00:00Z'))).toBe('2026-10-10');
   });
 
-  it('keeps an unsubmitted month eligible after the next month begins', () => {
-    expect(getDueSurveyMonths('2026-09', new Date('2026-10-01T12:00:00Z')))
-      .toEqual(['2026-09']);
+  it('starts weekly scheduling on the first matching weekday after startDate', () => {
+    const weekly = { ...schedule('weekly'), weekDay: 1 };
+    expect(latestDueDate(weekly, new Date('2026-10-11T12:00:00Z'))).toBeNull();
+    expect(latestDueDate(weekly, new Date('2026-10-11T21:00:00Z'))).toBe('2026-10-12');
+    expect(latestDueDate(weekly, new Date('2026-10-18T12:00:00Z'))).toBe('2026-10-12');
+    expect(latestDueDate(weekly, new Date('2026-10-18T21:00:00Z'))).toBe('2026-10-19');
+    expect(previousDueDate(weekly, '2026-10-19')).toBe('2026-10-12');
   });
 
-  it('handles year boundaries and identifies the immediately previous month', () => {
-    expect(getDueSurveyMonths('2026-12', new Date('2027-01-01T12:00:00Z')))
-      .toEqual(['2026-12']);
-    expect(getPreviousSurveyMonth('2027-01')).toBe('2026-12');
+  it('handles month boundaries and leap year', () => {
+    expect(latestDueDate(schedule('month_start'), new Date('2026-11-01T12:00:00Z'))).toBe('2026-11-01');
+    expect(latestDueDate(schedule('month_end'), new Date('2026-10-30T12:00:00Z'))).toBeNull();
+    expect(latestDueDate(schedule('month_end'), new Date('2026-10-31T12:00:00Z'))).toBe('2026-10-31');
+    expect(previousDueDate(schedule('month_end'), '2028-03-31')).toBe('2028-02-29');
+  });
+
+  it('supports old monthly surveys and rejects invalid schedules', () => {
+    const legacy = resolveSurveySchedule({ id: 'a', title: 'a', status: 'active', startsFrom: '2026-09',
+      targetBranchIds: [], excludedBranchIds: [], version: 1, questions: [] });
+    expect(latestDueDate(legacy, new Date('2026-10-01T12:00:00Z'))).toBe('2026-09-30');
+    expect(() => resolveSurveySchedule({ id: 'a', title: 'a', status: 'active',
+      schedule: { ...schedule('weekly'), weekDay: 8 }, targetBranchIds: [],
+      excludedBranchIds: [], version: 1, questions: [] })).toThrow();
   });
 });

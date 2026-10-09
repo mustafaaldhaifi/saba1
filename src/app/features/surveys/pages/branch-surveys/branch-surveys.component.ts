@@ -12,6 +12,7 @@ import {
   SurveyQuestion
 } from '../../models/survey.models';
 import { SurveyService } from '../../services/survey.service';
+import { latestDueDate, resolveSurveySchedule } from '../../services/survey-period';
 
 @Component({
   selector: 'app-branch-surveys',
@@ -25,8 +26,8 @@ export class BranchSurveysComponent implements OnInit {
 
   requiredSurveys: RequiredSurvey[] = [];
   active?: Survey;
-  activeMonth = '';
-  copiedFromMonth: string | null = null;
+  activeOccurrenceDate = '';
+  copiedFromDate: string | null = null;
   branchId = '';
   loading = true;
   saving = false;
@@ -97,11 +98,11 @@ export class BranchSurveysComponent implements OnInit {
       ));
   }
 
-  getMonthLabel(month: string): string {
-    if (!/^\d{4}-\d{2}$/.test(month)) return month;
-    const [year, monthNumber] = month.split('-').map(Number);
-    return new Intl.DateTimeFormat('ar-YE', { month: 'long', year: 'numeric' })
-      .format(new Date(Date.UTC(year, monthNumber - 1, 1, 12)));
+  getDateLabel(value: string): string {
+    if (!/^\d{4}-\d{2}(-\d{2})?$/.test(value)) return value;
+    const date = value.length === 7 ? `${value}-01` : value;
+    return new Intl.DateTimeFormat('ar-YE', { day: 'numeric', month: 'long', year: 'numeric' })
+      .format(new Date(`${date}T12:00:00Z`));
   }
 
   workersFor(questionId: string): FormArray<FormGroup> {
@@ -119,8 +120,8 @@ export class BranchSurveysComponent implements OnInit {
   async open(item?: RequiredSurvey): Promise<void> {
     if (!item) return;
     this.active = item.survey;
-    this.activeMonth = item.month;
-    this.copiedFromMonth = null;
+    this.activeOccurrenceDate = item.occurrenceDate;
+    this.copiedFromDate = null;
     this.showLicenseQrNotice = item.survey.questions.some(question =>
       question.type === 'document' && !this.isHealthDocumentsQuestion(question)
     );
@@ -149,27 +150,27 @@ export class BranchSurveysComponent implements OnInit {
     }
     this.form = this.fb.group(controls);
 
-    // A draft in the requested month always wins over an older submitted answer.
-    const current = await this.service.getResponse(item.survey.id, this.branchId, item.month);
+    // A draft for this occurrence wins over earlier submitted answers.
+    const current = await this.service.getResponse(item.survey.id, this.branchId, item.occurrenceDate);
     if (current?.answers) {
       this.applyAnswers(current.answers);
-      this.copiedFromMonth = current.prefilledFromMonth ?? null;
+      this.copiedFromDate = current.prefilledFromDate ?? current.prefilledFromMonth ?? null;
       return;
     }
 
     const previous = await this.service.getPreviousSubmittedResponse(
       item.survey.id,
       this.branchId,
-      item.month
+      item.occurrenceDate
     );
     if (previous?.answers) {
       this.applyAnswers(previous.answers);
-      this.copiedFromMonth = previous.month;
+      this.copiedFromDate = previous.occurrenceDate ?? previous.month ?? null;
     }
   }
 
   async save(submitted: boolean): Promise<void> {
-    if (!this.active || !this.activeMonth || this.saving) return;
+    if (!this.active || !this.activeOccurrenceDate || this.saving) return;
     this.error = '';
     this.success = '';
     if (submitted) this.applyConditionalReasonValidation();
@@ -181,20 +182,25 @@ export class BranchSurveysComponent implements OnInit {
 
     this.saving = true;
     try {
+      // Do not submit a stale form after the next scheduled occurrence begins.
+      if (latestDueDate(resolveSurveySchedule(this.active)) !== this.activeOccurrenceDate) {
+        await this.loadSurveys();
+        return;
+      }
       const user = await this.auth.getCurrentUser();
       await this.service.save(
         this.branchId,
         this.active,
-        this.activeMonth,
+        this.activeOccurrenceDate,
         this.form.getRawValue() as SurveyAnswers,
         submitted,
         user?.uid ?? '',
-        this.copiedFromMonth ?? undefined
+        this.copiedFromDate ?? undefined
       );
       this.success = submitted ? 'تم إرسال الاستبيان بنجاح.' : 'تم حفظ المسودة.';
       if (submitted) {
         this.requiredSurveys = this.requiredSurveys.filter(item =>
-          item.survey.id !== this.active?.id || item.month !== this.activeMonth
+          item.survey.id !== this.active?.id || item.occurrenceDate !== this.activeOccurrenceDate
         );
         if (!this.requiredSurveys.length) await this.navigateAfterCompletion();
         else await this.open(this.requiredSurveys[0]);

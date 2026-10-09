@@ -2,6 +2,14 @@ export type SurveyQuestionType = 'document' | 'health_documents' | 'yes_no' | 'n
 export type SurveyStatus = 'active' | 'paused' | 'archived';
 export type SurveyResponseStatus = 'draft' | 'submitted';
 
+export type SurveySchedule = {
+  type: 'daily' | 'weekly' | 'month_start' | 'month_end';
+  startDate: string;
+  weekDay?: number;
+  timezone: string;
+  missedPolicy: 'latest_only';
+};
+
 export interface SurveyQuestion {
   id: string;
   type: SurveyQuestionType;
@@ -15,7 +23,9 @@ export interface Survey {
   title: string;
   description?: string;
   status: SurveyStatus;
-  startsFrom: string;
+  /** Legacy monthly start. New surveys should define schedule instead. */
+  startsFrom?: string;
+  schedule?: SurveySchedule;
   targetBranchIds: string[];
   excludedBranchIds: string[];
   version: number;
@@ -55,14 +65,17 @@ export type SurveyAnswers = Record<string, SurveyAnswer>;
 export interface SurveyResponse {
   surveyId: string;
   branchId: string;
-  month: string;
+  occurrenceDate?: string;
+  /** Legacy response period. */
+  month?: string;
   status: SurveyResponseStatus;
   answers: SurveyAnswers;
+  prefilledFromDate?: string;
   prefilledFromMonth?: string;
 }
 
-/** One survey can have several overdue, independently submitted months. */
+/** Only the latest scheduled occurrence is required. */
 export interface RequiredSurvey {
   survey: Survey;
-  month: string;
+  occurrenceDate: string;
 }
