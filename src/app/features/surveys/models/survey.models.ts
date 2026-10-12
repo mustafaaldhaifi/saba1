@@ -1,6 +1,7 @@
 export type SurveyQuestionType = 'document' | 'health_documents' | 'yes_no' | 'notes';
 export type SurveyStatus = 'active' | 'paused' | 'archived';
 export type SurveyResponseStatus = 'draft' | 'submitted';
+export type SurveyDateCalendar = 'gregorian' | 'hijri';
 
 export type SurveySchedule = {
   type: 'daily' | 'weekly' | 'month_start' | 'month_end';
@@ -35,15 +36,21 @@ export interface Survey {
 export interface DocumentAnswer {
   documentNumber: string;
   expiryDate: string;
+  /** Missing on older answers; those dates were Gregorian. */
+  expiryDateCalendar?: SurveyDateCalendar;
 }
 
 export interface HealthDocumentWorker {
   id: string;
   fullName: string;
+  employeeNumber: string;
+  hasBranchFingerprint: 'yes' | 'no';
   identityNumber: string;
   phoneNumber: string;
   healthCertificateExpiryDate: string;
+  healthCertificateExpiryDateCalendar?: SurveyDateCalendar;
   educationExpiryDate: string;
+  educationExpiryDateCalendar?: SurveyDateCalendar;
 }
 
 export interface HealthDocumentsAnswer {

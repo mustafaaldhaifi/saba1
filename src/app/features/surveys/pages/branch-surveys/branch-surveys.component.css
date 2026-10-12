@@ -78,6 +78,16 @@
   line-height: 1.7;
 }
 .copied-notice p { margin: 0; }
+.expired-warning {
+  margin-top: 20px;
+  padding: 15px 17px;
+  border: 1px solid #efb4aa;
+  border-radius: 11px;
+  color: #9a241b;
+  background: #fff1ee;
+  line-height: 1.7;
+}
+.expired-warning p { margin: 4px 0 0; }
 .notice-mark {
   display: grid;
   flex: 0 0 22px;
@@ -113,7 +123,7 @@
 .question-heading h3 { margin: 2px 0 0; color: #1c3f5b; font-size: 1.08rem; }
 .required-label { display: inline-block; margin-top: 5px; color: #ad4e35; font-size: .79rem; }
 label { display: block; color: #34516a; font-size: .91rem; font-weight: 700; }
-input, textarea {
+input, select, textarea {
   box-sizing: border-box;
   display: block;
   width: 100%;
@@ -126,9 +136,10 @@ input, textarea {
   font: inherit;
   font-weight: 400;
 }
-input:focus, textarea:focus { outline: 2px solid #9bcee9; border-color: #267eae; }
+input:focus, select:focus, textarea:focus { outline: 2px solid #9bcee9; border-color: #267eae; }
 textarea { min-height: 96px; resize: vertical; }
 .document-fields, .worker-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.expiry-date-field { display: grid; gap: 10px; }
 .notes-field, .reason-field { margin-top: 12px; }
 .choices { display: flex; flex-wrap: wrap; gap: 10px; }
 .choices button {

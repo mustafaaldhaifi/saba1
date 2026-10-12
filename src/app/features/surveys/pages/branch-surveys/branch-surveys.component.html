@@ -29,6 +29,11 @@
           <p>تم جلب بيانات الاستبيان المرسل بتاريخ {{ getDateLabel(copiedFromDate) }}. راجعها وحدّث ما تغيّر قبل الإرسال.</p>
         </div>
 
+        <div *ngIf="expiredDates.length" class="expired-warning" role="alert">
+          <strong>توجد تواريخ انتهاء منتهية</strong>
+          <p>{{ expiredDates.join('، ') }}. حدّث البيانات وتواصل مع إدارة التشغيل. لن يُحفظ الاستبيان أو المسودة حتى تُعالج هذه التواريخ.</p>
+        </div>
+
         <form [formGroup]="form">
           <div class="questions-list">
             <section *ngFor="let q of active.questions; let questionIndex = index"
@@ -52,14 +57,50 @@
                     </div>
                     <div class="worker-fields">
                       <label>الاسم الرباعي <input formControlName="fullName" autocomplete="name" required></label>
+                      <label>الرقم الوظيفي <input formControlName="employeeNumber" autocomplete="off" required></label>
+                      <label>هل للموظف بصمة في الفرع؟
+                        <select formControlName="hasBranchFingerprint" required>
+                          <option value="" disabled>اختر الإجابة</option>
+                          <option value="yes">نعم</option>
+                          <option value="no">لا</option>
+                        </select>
+                      </label>
                       <label>رقم الهوية <input formControlName="identityNumber" inputmode="numeric" required></label>
                       <label>رقم الهاتف <input formControlName="phoneNumber" type="tel" inputmode="tel" required></label>
-                      <label>تاريخ انتهاء الشهادة الصحية
-                        <input formControlName="healthCertificateExpiryDate" type="date" required>
-                      </label>
-                      <label>تاريخ انتهاء شهادة التثقيف
-                        <input formControlName="educationExpiryDate" type="date" required>
-                      </label>
+                      <div class="expiry-date-field">
+                        <label>تقويم الشهادة الصحية
+                          <select formControlName="healthCertificateExpiryDateCalendar"
+                            (change)="worker.get('healthCertificateExpiryDate')?.reset('')">
+                            <option value="gregorian">ميلادي</option>
+                            <option value="hijri">هجري</option>
+                          </select>
+                        </label>
+                        <label>تاريخ انتهاء الشهادة الصحية
+                          <input *ngIf="worker.get('healthCertificateExpiryDateCalendar')?.value === 'hijri'; else healthGregorian"
+                            formControlName="healthCertificateExpiryDate" type="text" inputmode="numeric"
+                            placeholder="مثال: 1448-05-10" dir="ltr" required>
+                          <ng-template #healthGregorian>
+                            <input formControlName="healthCertificateExpiryDate" type="date" required>
+                          </ng-template>
+                        </label>
+                      </div>
+                      <div class="expiry-date-field">
+                        <label>تقويم شهادة التثقيف
+                          <select formControlName="educationExpiryDateCalendar"
+                            (change)="worker.get('educationExpiryDate')?.reset('')">
+                            <option value="gregorian">ميلادي</option>
+                            <option value="hijri">هجري</option>
+                          </select>
+                        </label>
+                        <label>تاريخ انتهاء شهادة التثقيف
+                          <input *ngIf="worker.get('educationExpiryDateCalendar')?.value === 'hijri'; else educationGregorian"
+                            formControlName="educationExpiryDate" type="text" inputmode="numeric"
+                            placeholder="مثال: 1448-05-10" dir="ltr" required>
+                          <ng-template #educationGregorian>
+                            <input formControlName="educationExpiryDate" type="date" required>
+                          </ng-template>
+                        </label>
+                      </div>
                     </div>
                   </section>
                 </div>
@@ -73,9 +114,23 @@
                     <label>رقم الوثيقة
                       <input formControlName="documentNumber" placeholder="أدخل رقم الوثيقة">
                     </label>
-                    <label>تاريخ الانتهاء
-                      <input formControlName="expiryDate" type="date">
-                    </label>
+                    <div class="expiry-date-field">
+                      <label>التقويم
+                        <select formControlName="expiryDateCalendar"
+                          (change)="form.get(q.id + '.expiryDate')?.reset('')">
+                          <option value="gregorian">ميلادي</option>
+                          <option value="hijri">هجري</option>
+                        </select>
+                      </label>
+                      <label>تاريخ الانتهاء
+                        <input *ngIf="form.get(q.id + '.expiryDateCalendar')?.value === 'hijri'; else documentGregorian"
+                          formControlName="expiryDate" type="text" inputmode="numeric"
+                          placeholder="مثال: 1448-05-10" dir="ltr">
+                        <ng-template #documentGregorian>
+                          <input formControlName="expiryDate" type="date">
+                        </ng-template>
+                      </label>
+                    </div>
                   </div>
                   <ng-container *ngSwitchCase="'yes_no'">
                     <div class="choices" role="group" [attr.aria-label]="q.label">

@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import {
   HealthDocumentWorker,
@@ -13,6 +14,7 @@ import {
 } from '../../models/survey.models';
 import { SurveyService } from '../../services/survey.service';
 import { latestDueDate, resolveSurveySchedule } from '../../services/survey-period';
+import { isExpiredSurveyDate } from '../../services/survey-expiry';
 
 @Component({
   selector: 'app-branch-surveys',
@@ -21,7 +23,7 @@ import { latestDueDate, resolveSurveySchedule } from '../../services/survey-peri
   templateUrl: './branch-surveys.component.html',
   styleUrl: './branch-surveys.component.css'
 })
-export class BranchSurveysComponent implements OnInit {
+export class BranchSurveysComponent implements OnInit, OnDestroy {
   @ViewChild('errorCloseButton') private errorCloseButton?: ElementRef<HTMLButtonElement>;
 
   requiredSurveys: RequiredSurvey[] = [];
@@ -33,9 +35,11 @@ export class BranchSurveysComponent implements OnInit {
   saving = false;
   error = '';
   success = '';
+  expiredDates: string[] = [];
   showLicenseQrNotice = false;
   form!: FormGroup;
   private previousFocus: HTMLElement | null = null;
+  private formChanges?: Subscription;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -47,6 +51,10 @@ export class BranchSurveysComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadSurveys();
+  }
+
+  ngOnDestroy(): void {
+    this.formChanges?.unsubscribe();
   }
 
   /** Reloads the pending survey list after a temporary read failure. */
@@ -119,6 +127,8 @@ export class BranchSurveysComponent implements OnInit {
 
   async open(item?: RequiredSurvey): Promise<void> {
     if (!item) return;
+    this.formChanges?.unsubscribe();
+    this.expiredDates = [];
     this.active = item.survey;
     this.activeOccurrenceDate = item.occurrenceDate;
     this.copiedFromDate = null;
@@ -135,8 +145,9 @@ export class BranchSurveysComponent implements OnInit {
       } else if (question.type === 'document') {
         controls[question.id] = this.fb.group({
           documentNumber: ['', question.required ? Validators.required : []],
+          expiryDateCalendar: ['gregorian'],
           expiryDate: ['', question.required ? Validators.required : []]
-        });
+        }, { validators: this.expiryDateValidator('expiryDate', 'expiryDateCalendar') });
       } else if (question.type === 'yes_no') {
         controls[question.id] = this.fb.group({
           value: ['', question.required ? Validators.required : []],
@@ -155,6 +166,7 @@ export class BranchSurveysComponent implements OnInit {
     if (current?.answers) {
       this.applyAnswers(current.answers);
       this.copiedFromDate = current.prefilledFromDate ?? current.prefilledFromMonth ?? null;
+      this.watchExpiredDates();
       return;
     }
 
@@ -167,12 +179,18 @@ export class BranchSurveysComponent implements OnInit {
       this.applyAnswers(previous.answers);
       this.copiedFromDate = previous.occurrenceDate ?? previous.month ?? null;
     }
+    this.watchExpiredDates();
   }
 
   async save(submitted: boolean): Promise<void> {
     if (!this.active || !this.activeOccurrenceDate || this.saving) return;
     this.error = '';
     this.success = '';
+    this.refreshExpiredDates();
+    if (this.expiredDates.length) {
+      this.showError(this.expiredDateMessage());
+      return;
+    }
     if (submitted) this.applyConditionalReasonValidation();
     if (submitted && this.form.invalid) {
       this.form.markAllAsTouched();
@@ -224,8 +242,14 @@ export class BranchSurveysComponent implements OnInit {
         if (!workers.length) return `أضف عاملًا واحدًا على الأقل في «${question.label}».`;
         const invalidIndex = workers.controls.findIndex(worker => worker.invalid);
         if (invalidIndex !== -1) {
+          if (workers.at(invalidIndex).hasError('invalidExpiryDate')) {
+            return `صحح تاريخ انتهاء العامل ${invalidIndex + 1} في «${question.label}» بصيغة سنة-شهر-يوم.`;
+          }
           return `أكمل بيانات العامل ${invalidIndex + 1} في «${question.label}» قبل الإرسال.`;
         }
+      }
+      if (group.hasError('invalidExpiryDate')) {
+        return `صحح تاريخ الانتهاء في «${question.label}» بصيغة سنة-شهر-يوم.`;
       }
       return `أكمل السؤال «${question.label}» قبل إرسال الاستبيان.`;
     }
@@ -240,15 +264,82 @@ export class BranchSurveysComponent implements OnInit {
     setTimeout(() => this.errorCloseButton?.nativeElement.focus(), 0);
   }
 
+  private watchExpiredDates(): void {
+    this.refreshExpiredDates();
+    this.formChanges = this.form.valueChanges.subscribe(() => this.refreshExpiredDates());
+    if (this.expiredDates.length) this.showError(this.expiredDateMessage());
+  }
+
+  private refreshExpiredDates(): void {
+    if (!this.active || !this.form) {
+      this.expiredDates = [];
+      return;
+    }
+    const timeZone = resolveSurveySchedule(this.active).timezone;
+    const expired: string[] = [];
+    for (const question of this.active.questions) {
+      if (this.isHealthDocumentsQuestion(question)) {
+        this.workersFor(question.id).controls.forEach((worker, index) => {
+          const dates = [
+            ['healthCertificateExpiryDate', 'healthCertificateExpiryDateCalendar', 'الشهادة الصحية'],
+            ['educationExpiryDate', 'educationExpiryDateCalendar', 'شهادة التثقيف']
+          ] as const;
+          for (const [dateField, calendarField, label] of dates) {
+            if (isExpiredSurveyDate(worker.get(dateField)?.value ?? '',
+              worker.get(calendarField)?.value, timeZone)) {
+              expired.push(`العامل ${index + 1}: ${label}`);
+            }
+          }
+        });
+      } else if (question.type === 'document') {
+        const group = this.form.get(question.id);
+        if (isExpiredSurveyDate(group?.get('expiryDate')?.value ?? '',
+          group?.get('expiryDateCalendar')?.value, timeZone)) {
+          expired.push(question.label);
+        }
+      }
+    }
+    this.expiredDates = expired;
+  }
+
+  private expiredDateMessage(): string {
+    return `توجد تواريخ انتهاء منتهية في: ${this.expiredDates.join('، ')}. حدّث البيانات وتواصل مع إدارة التشغيل. لا يمكن حفظ المسودة أو إرسال الاستبيان قبل معالجة هذه التواريخ.`;
+  }
+
   private createWorkerGroup(worker?: Partial<HealthDocumentWorker>): FormGroup {
     return this.fb.group({
       id: [worker?.id || this.createWorkerId()],
       fullName: [worker?.fullName ?? '', Validators.required],
+      employeeNumber: [worker?.employeeNumber ?? '', Validators.required],
+      hasBranchFingerprint: [worker?.hasBranchFingerprint ?? '', Validators.required],
       identityNumber: [worker?.identityNumber ?? '', Validators.required],
       phoneNumber: [worker?.phoneNumber ?? '', Validators.required],
+      healthCertificateExpiryDateCalendar: [worker?.healthCertificateExpiryDateCalendar ?? 'gregorian'],
       healthCertificateExpiryDate: [worker?.healthCertificateExpiryDate ?? '', Validators.required],
+      educationExpiryDateCalendar: [worker?.educationExpiryDateCalendar ?? 'gregorian'],
       educationExpiryDate: [worker?.educationExpiryDate ?? '', Validators.required]
-    });
+    }, { validators: [
+      this.expiryDateValidator('healthCertificateExpiryDate', 'healthCertificateExpiryDateCalendar'),
+      this.expiryDateValidator('educationExpiryDate', 'educationExpiryDateCalendar')
+    ] });
+  }
+
+  /** Preserve the chosen calendar; validate the typed date without converting it. */
+  private expiryDateValidator(dateField: string, calendarField: string): ValidatorFn {
+    return (group: AbstractControl): ValidationErrors | null => {
+      const value = group.get(dateField)?.value;
+      if (!value) return null; // Required fields are checked separately.
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      if (!match) return { invalidExpiryDate: true };
+      const [year, month, day] = match.slice(1).map(Number);
+      if (month < 1 || month > 12 || day < 1) return { invalidExpiryDate: true };
+      if (group.get(calendarField)?.value === 'hijri') {
+        return day <= 30 ? null : { invalidExpiryDate: true };
+      }
+      const gregorian = new Date(Date.UTC(year, month - 1, day));
+      return gregorian.getUTCFullYear() === year && gregorian.getUTCMonth() + 1 === month &&
+        gregorian.getUTCDate() === day ? null : { invalidExpiryDate: true };
+    };
   }
 
   private createWorkerId(): string {
