@@ -1563,13 +1563,16 @@ isChangeStatus2(): boolean {
     for (const row of rows) {
       if (Array.isArray(row.lockedFields)) {
         for (const field of row.lockedFields) {
-          this.lockedDraftFields.add(this.draftFieldKey(row.rowId, field));
+          // Older drafts may list a field that the user left empty. Empty fields
+          // must remain editable so the order can be completed and submitted.
+          if (this.hasDraftValue(row[field])) {
+            this.lockedDraftFields.add(this.draftFieldKey(row.rowId, field));
+          }
         }
       } else {
         // Compatibility with drafts saved before field-level locking was introduced.
         for (const field of fields) {
-          const value = row[field];
-          if (value !== null && value !== undefined && value !== '' && value !== false) {
+          if (this.hasDraftValue(row[field])) {
             this.lockedDraftFields.add(this.draftFieldKey(row.rowId, field));
           }
         }
@@ -1595,7 +1598,8 @@ isChangeStatus2(): boolean {
       const rowId = String(row.productId ?? row.id ?? '');
       result.set(rowId, fields.filter(field => {
         const key = this.draftFieldKey(rowId, field);
-        return this.lockedDraftFields.has(key) || this.unsavedDraftFields.has(key);
+        return this.hasDraftValue(row[field]) &&
+          (this.lockedDraftFields.has(key) || this.unsavedDraftFields.has(key));
       }));
     }
     return result;
@@ -1603,6 +1607,11 @@ isChangeStatus2(): boolean {
 
   private draftFieldKey(rowId: string, field: string): string {
     return `${rowId}:${field}`;
+  }
+
+  /** Zero is a valid order value; blank, null and unchecked defaults are not locked. */
+  private hasDraftValue(value: unknown): boolean {
+    return value !== null && value !== undefined && value !== '' && value !== false;
   }
   /// Other
   async logout(): Promise<void> {
