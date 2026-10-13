@@ -59,6 +59,27 @@
   background: linear-gradient(135deg, #f7c948, #e9a91b);
 }
 
+.action-hint {
+  margin: 8px 12px 0;
+  padding: 10px 13px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.incomplete-hint {
+  border: 1px solid #f1c27d;
+  color: #7a4308;
+  background: #fff7e8;
+}
+
+.saved-hint {
+  border: 1px solid #a9d5bd;
+  color: #185c3b;
+  background: #edf9f2;
+}
+
 @media (max-width: 600px) {
   .order-actions {
     grid-template-columns: 1fr;

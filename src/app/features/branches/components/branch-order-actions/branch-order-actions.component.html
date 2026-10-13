@@ -1,14 +1,14 @@
 <div class="order-actions" dir="rtl">
   <ng-container *ngIf="hasEmptyProduct && !isAddingOrder; else sendOrder">
     <button class="action-button products-button" type="button" (click)="saveNewProductsRequested.emit()"
-      *ngIf="isOrderComplete" [disabled]="isLoading">
+      [disabled]="isLoading || !isOrderComplete">
       حفظ كميات المنتجات الجديدة
     </button>
   </ng-container>
 
   <ng-template #sendOrder>
     <button class="action-button send-button" type="button" (click)="sendOrderRequested.emit()"
-      *ngIf="isOrderComplete" [disabled]="isLoading">
+      [disabled]="isLoading || !isOrderComplete">
       إرسال الطلب
     </button>
   </ng-template>
@@ -18,8 +18,16 @@
     حفظ التعديلات
   </button>
 
-  <button class="action-button draft-button" type="button" *ngIf="canSaveDraft && !isDraftSaved"
-    (click)="saveDraftRequested.emit()" [disabled]="isLoading">
-    حفظ كمسودة
+  <button class="action-button draft-button" type="button" *ngIf="canSaveDraft"
+    (click)="saveDraftRequested.emit()" [disabled]="isLoading || isDraftSaved">
+    {{ isDraftSaved ? 'تم حفظ المسودة' : 'حفظ كمسودة' }}
   </button>
 </div>
+
+<p class="action-hint incomplete-hint" *ngIf="!isOrderComplete && (isAddingOrder || hasEmptyProduct)" dir="rtl" role="status">
+  أكمل الحقول الفارغة المطلوبة ليتفعّل زر الإرسال.
+</p>
+
+<p class="action-hint saved-hint" *ngIf="isDraftSaved" dir="rtl" role="status">
+  حُفظت القيم المدخلة. الحقول الفارغة تبقى مفتوحة لإكمالها، وبعد تعديلها يمكنك حفظ المسودة مرة أخرى.
+</p>
