@@ -40,6 +40,7 @@ import { BranchPreOrdersReaderService } from '../features/branches/data/branch-p
 import { OrderDraftStorageService } from '../features/orders/data/order-draft-storage.service';
 import { OrderDraftField, OrderDraftIdentity, OrderDraftRow } from '../features/orders/models/order-draft.models';
 import { SurveyService } from '../features/surveys/services/survey.service';
+import { ExpiredSurveyDocument } from '../features/surveys/services/survey-expiry';
 
 @Component({
   selector: 'app-branch',
@@ -217,6 +218,9 @@ export class BranchComponent {
   private readonly unsavedDraftFields = new Set<string>();
   private surveyCheckTimer?: ReturnType<typeof setInterval>;
   private checkingSurveys = false;
+  private checkingExpiryWarnings = false;
+  expiryWarnings: ExpiredSurveyDocument[] = [];
+  expiryWarningsError = false;
 
   /** Used by the table to lock only values included in the saved draft. */
   readonly isDraftFieldLocked = (item: any, field: string): boolean =>
@@ -534,20 +538,43 @@ export class BranchComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.currentTimestamp = Timestamp.now();
       await this.getBranch();
+      await this.refreshExpiryWarnings();
       // A branch tab may remain open across a scheduled midnight.
-      this.surveyCheckTimer = setInterval(() => void this.checkScheduledSurveys(), 5 * 60_000);
+      this.surveyCheckTimer = setInterval(() => {
+        void this.checkScheduledSurveys();
+        void this.refreshExpiryWarnings();
+      }, 5 * 60_000);
     }
 
   }
 
   @HostListener('document:visibilitychange')
   onSurveyVisibilityChange(): void {
-    if (document.visibilityState === 'visible') void this.checkScheduledSurveys();
+    if (document.visibilityState === 'visible') {
+      void this.checkScheduledSurveys();
+      void this.refreshExpiryWarnings();
+    }
   }
 
   @HostListener('window:focus')
   onSurveyWindowFocus(): void {
     void this.checkScheduledSurveys();
+    void this.refreshExpiryWarnings();
+  }
+
+  private async refreshExpiryWarnings(): Promise<void> {
+    if (this.checkingExpiryWarnings || !this.branch?.id ||
+        !isPlatformBrowser(this.platformId) || document.visibilityState !== 'visible') return;
+    this.checkingExpiryWarnings = true;
+    try {
+      this.expiryWarnings = await this.surveyService.getBranchExpiryWarnings(this.branch.id);
+      this.expiryWarningsError = false;
+    } catch (error) {
+      console.error('Unable to load branch document expiry warnings:', error);
+      this.expiryWarningsError = true;
+    } finally {
+      this.checkingExpiryWarnings = false;
+    }
   }
 
   private async checkScheduledSurveys(): Promise<void> {

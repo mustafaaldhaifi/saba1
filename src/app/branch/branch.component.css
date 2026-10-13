@@ -1,4 +1,22 @@
 /* General Table Styling */
+.branch-expiry-alert, .branch-expiry-error {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  box-sizing: border-box;
+  padding: 16px 22px;
+  border-bottom: 2px solid #b64828;
+  color: #71230f;
+  background: #fff0df;
+  box-shadow: 0 6px 20px rgba(82, 36, 16, .16);
+  line-height: 1.6;
+}
+.branch-expiry-alert strong { display: block; font-size: 1.1rem; }
+.branch-expiry-alert p { margin: 4px 0 8px; }
+.branch-expiry-alert ul { max-height: 180px; overflow-y: auto; margin: 0; padding-inline-start: 23px; }
+.branch-expiry-alert li + li { margin-top: 4px; }
+.branch-expiry-error { background: #fff7ed; }
+
 * {
   font-weight: bold;
 }

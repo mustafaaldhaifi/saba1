@@ -14,7 +14,7 @@ import {
 } from '../../models/survey.models';
 import { SurveyService } from '../../services/survey.service';
 import { latestDueDate, resolveSurveySchedule } from '../../services/survey-period';
-import { isExpiredSurveyDate } from '../../services/survey-expiry';
+import { findExpiredSurveyDocuments, isHealthDocumentsQuestion } from '../../services/survey-expiry';
 
 @Component({
   selector: 'app-branch-surveys',
@@ -25,6 +25,7 @@ import { isExpiredSurveyDate } from '../../services/survey-expiry';
 })
 export class BranchSurveysComponent implements OnInit, OnDestroy {
   @ViewChild('errorCloseButton') private errorCloseButton?: ElementRef<HTMLButtonElement>;
+  @ViewChild('expiryCloseButton') private expiryCloseButton?: ElementRef<HTMLButtonElement>;
 
   requiredSurveys: RequiredSurvey[] = [];
   active?: Survey;
@@ -34,6 +35,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   loading = true;
   saving = false;
   error = '';
+  expiryNotice = '';
   success = '';
   expiredDates: string[] = [];
   showLicenseQrNotice = false;
@@ -89,6 +91,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.error) this.dismissError();
+    else if (this.expiryNotice) this.dismissExpiryNotice();
   }
 
   dismissError(): void {
@@ -97,13 +100,15 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.previousFocus = null;
   }
 
+  dismissExpiryNotice(): void {
+    this.expiryNotice = '';
+    this.previousFocus?.focus();
+    this.previousFocus = null;
+  }
+
   /** Legacy document questions named health documents use the new worker form. */
   isHealthDocumentsQuestion(question: SurveyQuestion): boolean {
-    return question.type === 'health_documents' ||
-      (question.type === 'document' && (
-        /وثائق?.*صح|صح.*وثائق?/u.test(question.label) ||
-        /health[_-]?documents?/i.test(question.id)
-      ));
+    return isHealthDocumentsQuestion(question);
   }
 
   getDateLabel(value: string): string {
@@ -187,10 +192,6 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.error = '';
     this.success = '';
     this.refreshExpiredDates();
-    if (this.expiredDates.length) {
-      this.showError(this.expiredDateMessage());
-      return;
-    }
     if (submitted) this.applyConditionalReasonValidation();
     if (submitted && this.form.invalid) {
       this.form.markAllAsTouched();
@@ -216,6 +217,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
         this.copiedFromDate ?? undefined
       );
       this.success = submitted ? 'تم إرسال الاستبيان بنجاح.' : 'تم حفظ المسودة.';
+      if (this.expiredDates.length) this.showExpiryNotice();
       if (submitted) {
         this.requiredSurveys = this.requiredSurveys.filter(item =>
           item.survey.id !== this.active?.id || item.occurrenceDate !== this.activeOccurrenceDate
@@ -267,7 +269,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   private watchExpiredDates(): void {
     this.refreshExpiredDates();
     this.formChanges = this.form.valueChanges.subscribe(() => this.refreshExpiredDates());
-    if (this.expiredDates.length) this.showError(this.expiredDateMessage());
+    if (this.expiredDates.length) this.showExpiryNotice();
   }
 
   private refreshExpiredDates(): void {
@@ -275,35 +277,17 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       this.expiredDates = [];
       return;
     }
-    const timeZone = resolveSurveySchedule(this.active).timezone;
-    const expired: string[] = [];
-    for (const question of this.active.questions) {
-      if (this.isHealthDocumentsQuestion(question)) {
-        this.workersFor(question.id).controls.forEach((worker, index) => {
-          const dates = [
-            ['healthCertificateExpiryDate', 'healthCertificateExpiryDateCalendar', 'الشهادة الصحية'],
-            ['educationExpiryDate', 'educationExpiryDateCalendar', 'شهادة التثقيف']
-          ] as const;
-          for (const [dateField, calendarField, label] of dates) {
-            if (isExpiredSurveyDate(worker.get(dateField)?.value ?? '',
-              worker.get(calendarField)?.value, timeZone)) {
-              expired.push(`العامل ${index + 1}: ${label}`);
-            }
-          }
-        });
-      } else if (question.type === 'document') {
-        const group = this.form.get(question.id);
-        if (isExpiredSurveyDate(group?.get('expiryDate')?.value ?? '',
-          group?.get('expiryDateCalendar')?.value, timeZone)) {
-          expired.push(question.label);
-        }
-      }
-    }
-    this.expiredDates = expired;
+    this.expiredDates = findExpiredSurveyDocuments(
+      this.active, this.form.getRawValue() as SurveyAnswers
+    ).map(document => `${document.label} (${document.expiryDate} ${document.calendar === 'hijri' ? 'هجري' : 'ميلادي'})`);
   }
 
-  private expiredDateMessage(): string {
-    return `توجد تواريخ انتهاء منتهية في: ${this.expiredDates.join('، ')}. حدّث البيانات وتواصل مع إدارة التشغيل. لا يمكن حفظ المسودة أو إرسال الاستبيان قبل معالجة هذه التواريخ.`;
+  private showExpiryNotice(): void {
+    this.previousFocus = typeof document === 'undefined'
+      ? null
+      : document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.expiryNotice = `توجد وثائق منتهية في: ${this.expiredDates.join('، ')}. يمكنك حفظ الاستبيان، لكن يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.`;
+    setTimeout(() => this.expiryCloseButton?.nativeElement.focus(), 0);
   }
 
   private createWorkerGroup(worker?: Partial<HealthDocumentWorker>): FormGroup {

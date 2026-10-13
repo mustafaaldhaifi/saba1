@@ -1,4 +1,17 @@
 <!-- Loading Overlay -->
+<section *ngIf="expiryWarnings.length" class="branch-expiry-alert" dir="rtl" role="alert">
+    <strong>تنبيه: توجد {{ expiryWarnings.length }} وثائق أو شهادات منتهية في الفرع</strong>
+    <p>يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.</p>
+    <ul>
+        <li *ngFor="let warning of expiryWarnings">
+            {{ warning.surveyTitle }} — {{ warning.label }}: انتهت في {{ warning.expiryDate }}
+            ({{ warning.calendar === 'hijri' ? 'هجري' : 'ميلادي' }})
+        </li>
+    </ul>
+</section>
+<div *ngIf="expiryWarningsError" class="branch-expiry-error" dir="rtl" role="alert">
+    تعذر تحديث تنبيهات انتهاء الوثائق. تحقق من الاتصال ثم أعد تحميل الصفحة.
+</div>
 <div class="loading-overlay" *ngIf="isLoading">
     <div class="spinner"></div>
 </div>

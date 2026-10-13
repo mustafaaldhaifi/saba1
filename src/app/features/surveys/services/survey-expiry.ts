@@ -1,4 +1,24 @@
-import type { SurveyDateCalendar } from '../models/survey.models';
+import type {
+  DocumentAnswer, HealthDocumentsAnswer, Survey, SurveyAnswers,
+  SurveyDateCalendar, SurveyQuestion
+} from '../models/survey.models';
+import { resolveSurveySchedule } from './survey-period';
+
+export interface ExpiredSurveyDocument {
+  surveyId: string;
+  surveyTitle: string;
+  label: string;
+  expiryDate: string;
+  calendar: SurveyDateCalendar;
+}
+
+export function isHealthDocumentsQuestion(question: SurveyQuestion): boolean {
+  return question.type === 'health_documents' ||
+    (question.type === 'document' && (
+      /وثائق?.*صح|صح.*وثائق?/u.test(question.label) ||
+      /health[_-]?documents?/i.test(question.id)
+    ));
+}
 
 /** Compare a date to today in its own calendar, without changing the stored value. */
 export function isExpiredSurveyDate(
@@ -20,4 +40,45 @@ export function isExpiredSurveyDate(
   const part = (type: string) => parts.find(item => item.type === type)?.value ?? '';
   const today = `${part('year').padStart(4, '0')}-${part('month').padStart(2, '0')}-${part('day').padStart(2, '0')}`;
   return value < today; // Expiry today remains valid through the end of the day.
+}
+
+/** Shared by the survey form and branch-page alerts. */
+export function findExpiredSurveyDocuments(
+  survey: Survey,
+  answers: SurveyAnswers,
+  now = new Date()
+): ExpiredSurveyDocument[] {
+  const timeZone = resolveSurveySchedule(survey).timezone;
+  const expired: ExpiredSurveyDocument[] = [];
+  const add = (label: string, value: string, calendar?: SurveyDateCalendar): void => {
+    if (isExpiredSurveyDate(value, calendar, timeZone, now)) {
+      expired.push({
+        surveyId: survey.id,
+        surveyTitle: survey.title,
+        label,
+        expiryDate: value,
+        calendar: calendar ?? 'gregorian'
+      });
+    }
+  };
+
+  for (const question of survey.questions) {
+    const answer = answers[question.id];
+    if (!answer) continue;
+    if (isHealthDocumentsQuestion(question)) {
+      const workers = (answer as HealthDocumentsAnswer).workers;
+      if (!Array.isArray(workers)) continue;
+      workers.forEach((worker, index) => {
+        const name = worker.fullName?.trim() || `العامل ${index + 1}`;
+        add(`${name} — الشهادة الصحية`, worker.healthCertificateExpiryDate,
+          worker.healthCertificateExpiryDateCalendar);
+        add(`${name} — شهادة التثقيف`, worker.educationExpiryDate,
+          worker.educationExpiryDateCalendar);
+      });
+    } else if (question.type === 'document') {
+      const document = answer as DocumentAnswer;
+      add(question.label, document.expiryDate, document.expiryDateCalendar);
+    }
+  }
+  return expired;
 }

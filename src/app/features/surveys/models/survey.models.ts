@@ -77,6 +77,7 @@ export interface SurveyResponse {
   month?: string;
   status: SurveyResponseStatus;
   answers: SurveyAnswers;
+  surveySnapshot?: Pick<Survey, 'title' | 'version' | 'questions' | 'schedule' | 'startsFrom'>;
   prefilledFromDate?: string;
   prefilledFromMonth?: string;
 }

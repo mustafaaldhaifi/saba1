@@ -3,6 +3,7 @@ import { collection, doc, getDoc, getDocs, query, setDoc, Timestamp, where } fro
 import { FirebaseAppService } from '../../../core/firebase/firebase-app.service';
 import { RequiredSurvey, Survey, SurveyAnswers, SurveyResponse } from '../models/survey.models';
 import { latestDueDate, resolveSurveySchedule } from './survey-period';
+import { ExpiredSurveyDocument, findExpiredSurveyDocuments } from './survey-expiry';
 
 @Injectable({ providedIn: 'root' })
 export class SurveyService {
@@ -86,6 +87,53 @@ export class SurveyService {
       )[0] ?? null;
   }
 
+  /** Prefer the latest submitted response; use a draft only before first submission. */
+  async getBranchExpiryWarnings(branchId: string): Promise<ExpiredSurveyDocument[]> {
+    const snapshot = await getDocs(query(
+      collection(this.firebase.db, 'surveyResponses'), where('branchId', '==', branchId)
+    ));
+    const latest = new Map<string, SurveyResponse>();
+    const period = (response: SurveyResponse): string =>
+      response.occurrenceDate ?? `${response.month ?? '0000-00'}-31`;
+    for (const document of snapshot.docs) {
+      const response = document.data() as SurveyResponse;
+      if (!response.surveyId || !response.answers) continue;
+      const existing = latest.get(response.surveyId);
+      if (!existing ||
+          (response.status === 'submitted' && existing.status !== 'submitted') ||
+          (response.status === existing.status && period(response) > period(existing))) {
+        latest.set(response.surveyId, response);
+      }
+    }
+
+    const warnings = await Promise.all([...latest].map(async ([surveyId, response]) => {
+      let survey: Survey | null = null;
+      try {
+        const surveyDoc = await getDoc(doc(this.firebase.db, 'surveys', surveyId));
+        if (surveyDoc.exists()) survey = { ...surveyDoc.data(), id: surveyDoc.id } as Survey;
+      } catch (error) {
+        // A historical response can still be inspected from its saved snapshot.
+        if (!response.surveySnapshot) throw error;
+      }
+      if (!survey && response.surveySnapshot) {
+        survey = {
+          id: surveyId,
+          title: response.surveySnapshot.title,
+          version: response.surveySnapshot.version,
+          questions: response.surveySnapshot.questions,
+          schedule: response.surveySnapshot.schedule,
+          startsFrom: response.surveySnapshot.startsFrom ?? '2000-01',
+          status: 'archived', targetBranchIds: [], excludedBranchIds: []
+        };
+      }
+      return survey ? findExpiredSurveyDocuments({
+        ...survey,
+        questions: response.surveySnapshot?.questions ?? survey.questions
+      }, response.answers) : [];
+    }));
+    return warnings.flat();
+  }
+
   async save(
     branchId: string,
     survey: Survey,
@@ -107,7 +155,11 @@ export class SurveyService {
       status: submitted ? 'submitted' : 'draft',
       answers,
       ...(prefilledFromDate ? { prefilledFromDate } : {}),
-      surveySnapshot: { title: survey.title, version: survey.version, questions: survey.questions },
+      surveySnapshot: {
+        title: survey.title, version: survey.version, questions: survey.questions,
+        ...(survey.schedule ? { schedule: survey.schedule } : {}),
+        ...(survey.startsFrom ? { startsFrom: survey.startsFrom } : {})
+      },
       updatedAt: now,
       ...(submitted ? { submittedAt: now, submittedBy: userId } : {})
     }, { merge: true });

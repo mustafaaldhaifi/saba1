@@ -31,7 +31,7 @@
 
         <div *ngIf="expiredDates.length" class="expired-warning" role="alert">
           <strong>توجد تواريخ انتهاء منتهية</strong>
-          <p>{{ expiredDates.join('، ') }}. حدّث البيانات وتواصل مع إدارة التشغيل. لن يُحفظ الاستبيان أو المسودة حتى تُعالج هذه التواريخ.</p>
+          <p>{{ expiredDates.join('، ') }}. يمكنك حفظ المسودة أو إرسال الاستبيان، لكن يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.</p>
         </div>
 
         <form [formGroup]="form">
@@ -176,6 +176,16 @@
     <button type="button" class="primary-button notice-confirm" (click)="showLicenseQrNotice = false">
       فهمت، متابعة
     </button>
+  </section>
+</div>
+
+<div *ngIf="expiryNotice" class="error-backdrop" dir="rtl" role="alertdialog"
+  aria-modal="true" aria-labelledby="expiry-dialog-title" aria-describedby="expiry-dialog-message">
+  <section class="error-dialog expiry-dialog">
+    <span class="error-icon" aria-hidden="true">!</span>
+    <h2 id="expiry-dialog-title">تنبيه: وثائق منتهية</h2>
+    <p id="expiry-dialog-message">{{ expiryNotice }}</p>
+    <button #expiryCloseButton type="button" class="error-close-button" (click)="dismissExpiryNotice()">فهمت</button>
   </section>
 </div>
 
