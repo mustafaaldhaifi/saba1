@@ -75,7 +75,7 @@
         [canSaveDraft]="ordersToAdd.length > 0 || ordersToUpdate.length > 0"
         [isDraftSaved]="isDraftSaved"
         (saveNewProductsRequested)="addOrders(true)"
-        (sendOrderRequested)="addOrders()"
+        (sendOrderRequested)="submitOrder()"
         (saveUpdatesRequested)="saveUpdates()"
         (saveDraftRequested)="saveOrderDraft()">
     </app-branch-order-actions>

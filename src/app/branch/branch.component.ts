@@ -1267,24 +1267,31 @@ export class BranchComponent {
     }
   }
   isFullFilled(): boolean {
-    if (this.ordersToUpdate.length > 0 || this.ordersToAdd.length == 0) {
-      return false
-    }
-    // Check if combinedData exists and is an array
+    // Preserve the existing monthly flow; its quantities are handled separately.
     if (this.selectedType && this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU') {
-      const a = this.combinedData.every((d: any) => {
-        return this.isPositiveNumber(d.qntF);
-      });
-      return a
+      if (this.ordersToUpdate.length > 0 || this.ordersToAdd.length === 0) return false;
+      return this.combinedData.every((d: any) => this.isPositiveNumber(d.qntF));
     }
+
+    // A restored draft can contain edits to existing order rows. Those rows
+    // are submitted through the existing update flow, not `addOrders()`.
+    // Keep the send action unavailable unless there is a real pending write.
+    const hasNewOrders = this.ordersToAdd.length > 0;
+    const hasSavableUpdates = this.ordersToUpdate.length > 0 &&
+      this.isPreSent && this.isUpdateEnabled();
+    if (!hasNewOrders && !hasSavableUpdates) return false;
+
+    // New-product rows continue to use their existing dedicated save action.
+    // Do not let the send button silently ignore a mix of additions/updates.
+    if (hasNewOrders && this.ordersToUpdate.length > 0) return false;
     // console.log(this.ordersToAdd);
     // console.log(this.combinedData);
-    if (this.checkIfHasEmptyOrder() === false && this.isToAddMode == false) {
+    if (this.checkIfHasEmptyOrder() === false && this.isToAddMode == false && !hasSavableUpdates) {
       return false;
     }
 
 
-    if (!this.ordersToAdd || !Array.isArray(this.combinedData)) {
+    if (!Array.isArray(this.combinedData)) {
       return false;
     }
 
@@ -1294,6 +1301,18 @@ export class BranchComponent {
     });
     // console.log(a);
     return a
+  }
+
+  /** Sends new rows or persists edits to an already submitted order. */
+  submitOrder(): void {
+    if (this.ordersToAdd.length > 0) {
+      void this.addOrders();
+      return;
+    }
+
+    if (this.ordersToUpdate.length > 0 && this.isPreSent && this.isUpdateEnabled()) {
+      void this.saveUpdates();
+    }
   }
   isNumber(value: any): boolean {
     // Check for both number type and numeric string values
