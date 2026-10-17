@@ -1,5 +1,5 @@
 import { Survey } from '../models/survey.models';
-import { findExpiredSurveyDocuments, isExpiredSurveyDate } from './survey-expiry';
+import { findExpiredSurveyDocuments, findMissingSurveyDocuments, isExpiredSurveyDate } from './survey-expiry';
 
 describe('survey expiry dates', () => {
   it('compares Gregorian dates in the survey timezone', () => {
@@ -39,5 +39,33 @@ describe('survey expiry dates', () => {
     expect(found.map(item => item.label)).toEqual(['رخصة المحل', 'أحمد — الشهادة الصحية']);
     expect(found[0].calendar).toBe('gregorian');
     expect(found[1].calendar).toBe('hijri');
+  });
+
+  it('reports explicitly missing documents and worker certificates, but not legacy answers', () => {
+    const survey: Survey = {
+      id: 'survey-2', title: 'وثائق الفرع', status: 'active', version: 1,
+      targetBranchIds: [], excludedBranchIds: [],
+      schedule: { type: 'daily', startDate: '2026-01-01', timezone: 'Asia/Riyadh', missedPolicy: 'latest_only' },
+      questions: [
+        { id: 'license', type: 'document', label: 'رخصة المحل', required: true },
+        { id: 'workers', type: 'health_documents', label: 'وثائق صحية', required: true }
+      ]
+    };
+    const answers = {
+      license: { status: 'missing' as const, documentNumber: '', expiryDate: '' },
+      workers: { workers: [
+        { id: 'w1', fullName: 'أحمد', employeeNumber: '1', hasBranchFingerprint: 'yes' as const,
+          identityNumber: '1', phoneNumber: '1', healthCertificateStatus: 'missing' as const,
+          healthCertificateExpiryDate: '', educationExpiryDate: '2027-01-01' },
+        { id: 'w2', fullName: 'سعيد', employeeNumber: '2', hasBranchFingerprint: 'no' as const,
+          identityNumber: '2', phoneNumber: '2', healthCertificateExpiryDate: '2027-01-01',
+          educationExpiryDate: '2027-01-01' }
+      ] }
+    };
+
+    expect(findMissingSurveyDocuments(survey, answers).map(item => item.label)).toEqual([
+      'رخصة المحل — الوثيقة غير موجودة', 'أحمد — لا توجد لديه شهادة صحية'
+    ]);
+    expect(findExpiredSurveyDocuments(survey, answers, new Date('2026-10-10T12:00:00Z'))).toEqual([]);
   });
 });

@@ -1,11 +1,16 @@
 <!-- Loading Overlay -->
 <section *ngIf="expiryWarnings.length" class="branch-expiry-alert" dir="rtl" role="alert">
-    <strong>تنبيه: توجد {{ expiryWarnings.length }} وثائق أو شهادات منتهية في الفرع</strong>
+    <strong>تنبيه: توجد {{ expiryWarnings.length }} وثائق أو شهادات تحتاج متابعة</strong>
     <p>يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.</p>
     <ul>
         <li *ngFor="let warning of expiryWarnings">
-            {{ warning.surveyTitle }} — {{ warning.label }}: انتهت في {{ warning.expiryDate }}
-            ({{ warning.calendar === 'hijri' ? 'هجري' : 'ميلادي' }})
+            <ng-container *ngIf="warning.kind === 'missing'; else expiredWarning">
+                {{ warning.surveyTitle }} — {{ warning.label }}
+            </ng-container>
+            <ng-template #expiredWarning>
+                {{ warning.surveyTitle }} — {{ warning.label }}: انتهت في {{ warning.expiryDate }}
+                ({{ warning.calendar === 'hijri' ? 'هجري' : 'ميلادي' }})
+            </ng-template>
         </li>
     </ul>
 </section>

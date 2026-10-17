@@ -8,8 +8,9 @@ export interface ExpiredSurveyDocument {
   surveyId: string;
   surveyTitle: string;
   label: string;
-  expiryDate: string;
-  calendar: SurveyDateCalendar;
+  expiryDate?: string;
+  calendar?: SurveyDateCalendar;
+  kind?: 'expired' | 'missing';
 }
 
 export function isHealthDocumentsQuestion(question: SurveyQuestion): boolean {
@@ -70,15 +71,57 @@ export function findExpiredSurveyDocuments(
       if (!Array.isArray(workers)) continue;
       workers.forEach((worker, index) => {
         const name = worker.fullName?.trim() || `العامل ${index + 1}`;
-        add(`${name} — الشهادة الصحية`, worker.healthCertificateExpiryDate,
-          worker.healthCertificateExpiryDateCalendar);
-        add(`${name} — شهادة التثقيف`, worker.educationExpiryDate,
-          worker.educationExpiryDateCalendar);
+        if (worker.healthCertificateStatus !== 'missing') {
+          add(`${name} — الشهادة الصحية`, worker.healthCertificateExpiryDate,
+            worker.healthCertificateExpiryDateCalendar);
+        }
+        if (worker.educationCertificateStatus !== 'missing') {
+          add(`${name} — شهادة التثقيف`, worker.educationExpiryDate,
+            worker.educationExpiryDateCalendar);
+        }
       });
     } else if (question.type === 'document') {
       const document = answer as DocumentAnswer;
-      add(question.label, document.expiryDate, document.expiryDateCalendar);
+      if (document.status !== 'missing') add(question.label, document.expiryDate, document.expiryDateCalendar);
     }
   }
   return expired;
+}
+
+/** Finds explicitly missing documents and worker certificates. Legacy answers
+ * without a status remain available and therefore do not generate warnings. */
+export function findMissingSurveyDocuments(
+  survey: Survey,
+  answers: SurveyAnswers
+): ExpiredSurveyDocument[] {
+  const missing: ExpiredSurveyDocument[] = [];
+  for (const question of survey.questions) {
+    const answer = answers[question.id];
+    if (!answer) continue;
+    if (isHealthDocumentsQuestion(question)) {
+      const workers = (answer as HealthDocumentsAnswer).workers;
+      if (!Array.isArray(workers)) continue;
+      workers.forEach((worker, index) => {
+        const name = worker.fullName?.trim() || `العامل ${index + 1}`;
+        if (worker.healthCertificateStatus === 'missing') {
+          missing.push({
+            surveyId: survey.id, surveyTitle: survey.title,
+            label: `${name} — لا توجد لديه شهادة صحية`, kind: 'missing'
+          });
+        }
+        if (worker.educationCertificateStatus === 'missing') {
+          missing.push({
+            surveyId: survey.id, surveyTitle: survey.title,
+            label: `${name} — شهادة التثقيف غير موجودة`, kind: 'missing'
+          });
+        }
+      });
+    } else if (question.type === 'document' && (answer as DocumentAnswer).status === 'missing') {
+      missing.push({
+        surveyId: survey.id, surveyTitle: survey.title,
+        label: `${question.label} — الوثيقة غير موجودة`, kind: 'missing'
+      });
+    }
+  }
+  return missing;
 }

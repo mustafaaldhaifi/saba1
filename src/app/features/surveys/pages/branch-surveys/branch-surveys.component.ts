@@ -38,6 +38,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   expiryNotice = '';
   success = '';
   expiredDates: string[] = [];
+  missingDocuments: string[] = [];
   showLicenseQrNotice = false;
   form!: FormGroup;
   private previousFocus: HTMLElement | null = null;
@@ -134,6 +135,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     if (!item) return;
     this.formChanges?.unsubscribe();
     this.expiredDates = [];
+    this.missingDocuments = [];
     this.active = item.survey;
     this.activeOccurrenceDate = item.occurrenceDate;
     this.copiedFromDate = null;
@@ -149,10 +151,12 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
         });
       } else if (question.type === 'document') {
         controls[question.id] = this.fb.group({
-          documentNumber: ['', question.required ? Validators.required : []],
+          status: ['available'],
+          documentNumber: [''],
           expiryDateCalendar: ['gregorian'],
-          expiryDate: ['', question.required ? Validators.required : []]
+          expiryDate: ['']
         }, { validators: this.expiryDateValidator('expiryDate', 'expiryDateCalendar') });
+        this.configureDocumentStatus(controls[question.id], question.required);
       } else if (question.type === 'yes_no') {
         controls[question.id] = this.fb.group({
           value: ['', question.required ? Validators.required : []],
@@ -280,6 +284,26 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.expiredDates = findExpiredSurveyDocuments(
       this.active, this.form.getRawValue() as SurveyAnswers
     ).map(document => `${document.label} (${document.expiryDate} ${document.calendar === 'hijri' ? 'هجري' : 'ميلادي'})`);
+
+    const answers = this.form.getRawValue() as SurveyAnswers;
+    this.missingDocuments = [];
+    for (const question of this.active.questions) {
+      const answer = answers[question.id] as any;
+      if (!answer) continue;
+      if (this.isHealthDocumentsQuestion(question) && Array.isArray(answer.workers)) {
+        answer.workers.forEach((worker: any, index: number) => {
+          const workerName = worker.fullName?.trim() || `العامل ${index + 1}`;
+          if (worker.healthCertificateStatus === 'missing') {
+            this.missingDocuments.push(`${workerName} — لا توجد لديه شهادة صحية`);
+          }
+          if (worker.educationCertificateStatus === 'missing') {
+            this.missingDocuments.push(`${workerName} — شهادة التثقيف غير موجودة`);
+          }
+        });
+      } else if (question.type === 'document' && answer.status === 'missing') {
+        this.missingDocuments.push(`${question.label} — الوثيقة غير موجودة`);
+      }
+    }
   }
 
   private showExpiryNotice(): void {
@@ -291,21 +315,71 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   }
 
   private createWorkerGroup(worker?: Partial<HealthDocumentWorker>): FormGroup {
-    return this.fb.group({
+    const group = this.fb.group({
       id: [worker?.id || this.createWorkerId()],
       fullName: [worker?.fullName ?? '', Validators.required],
       employeeNumber: [worker?.employeeNumber ?? '', Validators.required],
       hasBranchFingerprint: [worker?.hasBranchFingerprint ?? '', Validators.required],
       identityNumber: [worker?.identityNumber ?? '', Validators.required],
       phoneNumber: [worker?.phoneNumber ?? '', Validators.required],
+      healthCertificateStatus: [worker?.healthCertificateStatus ?? 'available'],
       healthCertificateExpiryDateCalendar: [worker?.healthCertificateExpiryDateCalendar ?? 'gregorian'],
-      healthCertificateExpiryDate: [worker?.healthCertificateExpiryDate ?? '', Validators.required],
+      healthCertificateExpiryDate: [worker?.healthCertificateExpiryDate ?? ''],
+      educationCertificateStatus: [worker?.educationCertificateStatus ?? 'available'],
       educationExpiryDateCalendar: [worker?.educationExpiryDateCalendar ?? 'gregorian'],
-      educationExpiryDate: [worker?.educationExpiryDate ?? '', Validators.required]
+      educationExpiryDate: [worker?.educationExpiryDate ?? '']
     }, { validators: [
       this.expiryDateValidator('healthCertificateExpiryDate', 'healthCertificateExpiryDateCalendar'),
       this.expiryDateValidator('educationExpiryDate', 'educationExpiryDateCalendar')
     ] });
+    this.configureWorkerCertificateStatus(group, 'healthCertificateStatus', 'healthCertificateExpiryDate');
+    this.configureWorkerCertificateStatus(group, 'educationCertificateStatus', 'educationExpiryDate');
+    return group;
+  }
+
+  setDocumentStatus(questionId: string, status: 'available' | 'missing'): void {
+    const group = this.form.get(questionId) as FormGroup | null;
+    if (!group) return;
+    group.get('status')?.setValue(status);
+    this.configureDocumentStatus(group, !!this.active?.questions.find(question => question.id === questionId)?.required);
+    if (status === 'missing') {
+      group.patchValue({ documentNumber: '', expiryDate: '' });
+    }
+    group.updateValueAndValidity();
+  }
+
+  setWorkerCertificateStatus(
+    worker: FormGroup,
+    statusField: 'healthCertificateStatus' | 'educationCertificateStatus',
+    dateField: 'healthCertificateExpiryDate' | 'educationExpiryDate',
+    status: 'available' | 'missing'
+  ): void {
+    worker.get(statusField)?.setValue(status);
+    const date = worker.get(dateField);
+    if (status === 'missing') date?.reset('');
+    date?.setValidators(status === 'available' ? Validators.required : []);
+    date?.updateValueAndValidity({ emitEvent: false });
+    worker.updateValueAndValidity();
+    this.refreshExpiredDates();
+  }
+
+  private configureDocumentStatus(group: FormGroup, required: boolean): void {
+    const missing = group.get('status')?.value === 'missing';
+    const validators = required && !missing ? [Validators.required] : [];
+    group.get('documentNumber')?.setValidators(validators);
+    group.get('expiryDate')?.setValidators(validators);
+    group.get('documentNumber')?.updateValueAndValidity({ emitEvent: false });
+    group.get('expiryDate')?.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private configureWorkerCertificateStatus(
+    group: FormGroup,
+    statusField: 'healthCertificateStatus' | 'educationCertificateStatus',
+    dateField: 'healthCertificateExpiryDate' | 'educationExpiryDate'
+  ): void {
+    const available = group.get(statusField)?.value !== 'missing';
+    group.get(dateField)?.setValidators(available ? Validators.required : []);
+    group.get(dateField)?.updateValueAndValidity({ emitEvent: false });
   }
 
   /** Preserve the chosen calendar; validate the typed date without converting it. */

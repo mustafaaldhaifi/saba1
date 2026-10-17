@@ -2,6 +2,7 @@ export type SurveyQuestionType = 'document' | 'health_documents' | 'yes_no' | 'n
 export type SurveyStatus = 'active' | 'paused' | 'archived';
 export type SurveyResponseStatus = 'draft' | 'submitted';
 export type SurveyDateCalendar = 'gregorian' | 'hijri';
+export type SurveyDocumentStatus = 'available' | 'missing';
 
 export type SurveySchedule = {
   type: 'daily' | 'weekly' | 'month_start' | 'month_end';
@@ -34,6 +35,8 @@ export interface Survey {
 }
 
 export interface DocumentAnswer {
+  /** Missing on legacy answers; those documents are treated as available. */
+  status?: SurveyDocumentStatus;
   documentNumber: string;
   expiryDate: string;
   /** Missing on older answers; those dates were Gregorian. */
@@ -47,8 +50,12 @@ export interface HealthDocumentWorker {
   hasBranchFingerprint: 'yes' | 'no';
   identityNumber: string;
   phoneNumber: string;
+  /** Missing on legacy answers; those certificates are treated as available. */
+  healthCertificateStatus?: SurveyDocumentStatus;
   healthCertificateExpiryDate: string;
   healthCertificateExpiryDateCalendar?: SurveyDateCalendar;
+  /** Missing on legacy answers; those certificates are treated as available. */
+  educationCertificateStatus?: SurveyDocumentStatus;
   educationExpiryDate: string;
   educationExpiryDateCalendar?: SurveyDateCalendar;
 }

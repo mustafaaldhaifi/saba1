@@ -3,7 +3,7 @@ import { collection, doc, getDoc, getDocs, query, setDoc, Timestamp, where } fro
 import { FirebaseAppService } from '../../../core/firebase/firebase-app.service';
 import { RequiredSurvey, Survey, SurveyAnswers, SurveyResponse } from '../models/survey.models';
 import { latestDueDate, resolveSurveySchedule } from './survey-period';
-import { ExpiredSurveyDocument, findExpiredSurveyDocuments } from './survey-expiry';
+import { ExpiredSurveyDocument, findExpiredSurveyDocuments, findMissingSurveyDocuments } from './survey-expiry';
 
 @Injectable({ providedIn: 'root' })
 export class SurveyService {
@@ -126,10 +126,15 @@ export class SurveyService {
           status: 'archived', targetBranchIds: [], excludedBranchIds: []
         };
       }
-      return survey ? findExpiredSurveyDocuments({
+      if (!survey) return [];
+      const responseSurvey = {
         ...survey,
         questions: response.surveySnapshot?.questions ?? survey.questions
-      }, response.answers) : [];
+      };
+      return [
+        ...findExpiredSurveyDocuments(responseSurvey, response.answers),
+        ...findMissingSurveyDocuments(responseSurvey, response.answers)
+      ];
     }));
     return warnings.flat();
   }

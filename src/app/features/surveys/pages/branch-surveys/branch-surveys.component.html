@@ -34,6 +34,12 @@
           <p>{{ expiredDates.join('، ') }}. يمكنك حفظ المسودة أو إرسال الاستبيان، لكن يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.</p>
         </div>
 
+        <div *ngIf="missingDocuments.length" class="expired-warning" role="alert">
+          <strong>تنبيه: توجد وثائق أو شهادات غير موجودة</strong>
+          <ul><li *ngFor="let item of missingDocuments">{{ item }}</li></ul>
+          <p>يمكنك إكمال الاستبيان، وسيظهر هذا التنبيه في صفحة الفرع.</p>
+        </div>
+
         <form [formGroup]="form">
           <div class="questions-list">
             <section *ngFor="let q of active.questions; let questionIndex = index"
@@ -67,7 +73,14 @@
                       </label>
                       <label>رقم الهوية <input formControlName="identityNumber" inputmode="numeric" required></label>
                       <label>رقم الهاتف <input formControlName="phoneNumber" type="tel" inputmode="tel" required></label>
-                      <div class="expiry-date-field">
+                      <label>حالة الشهادة الصحية
+                        <select formControlName="healthCertificateStatus"
+                          (change)="setWorkerCertificateStatus(worker, 'healthCertificateStatus', 'healthCertificateExpiryDate', $any($event.target).value)">
+                          <option value="available">متوفرة</option>
+                          <option value="missing">غير موجودة</option>
+                        </select>
+                      </label>
+                      <div class="expiry-date-field" *ngIf="worker.get('healthCertificateStatus')?.value !== 'missing'">
                         <label>تقويم الشهادة الصحية
                           <select formControlName="healthCertificateExpiryDateCalendar"
                             (change)="worker.get('healthCertificateExpiryDate')?.reset('')">
@@ -84,7 +97,14 @@
                           </ng-template>
                         </label>
                       </div>
-                      <div class="expiry-date-field">
+                      <label>حالة شهادة التثقيف
+                        <select formControlName="educationCertificateStatus"
+                          (change)="setWorkerCertificateStatus(worker, 'educationCertificateStatus', 'educationExpiryDate', $any($event.target).value)">
+                          <option value="available">متوفرة</option>
+                          <option value="missing">غير موجودة</option>
+                        </select>
+                      </label>
+                      <div class="expiry-date-field" *ngIf="worker.get('educationCertificateStatus')?.value !== 'missing'">
                         <label>تقويم شهادة التثقيف
                           <select formControlName="educationExpiryDateCalendar"
                             (change)="worker.get('educationExpiryDate')?.reset('')">
@@ -111,6 +131,14 @@
               <ng-template #standardQuestion>
                 <ng-container [ngSwitch]="q.type">
                   <div *ngSwitchCase="'document'" class="document-fields">
+                    <label>حالة الوثيقة
+                      <select formControlName="status"
+                        (change)="setDocumentStatus(q.id, $any($event.target).value)">
+                        <option value="available">متوفرة</option>
+                        <option value="missing">غير موجودة</option>
+                      </select>
+                    </label>
+                    <ng-container *ngIf="form.get(q.id + '.status')?.value !== 'missing'">
                     <label>رقم الوثيقة
                       <input formControlName="documentNumber" placeholder="أدخل رقم الوثيقة">
                     </label>
@@ -131,6 +159,7 @@
                         </ng-template>
                       </label>
                     </div>
+                    </ng-container>
                   </div>
                   <ng-container *ngSwitchCase="'yes_no'">
                     <div class="choices" role="group" [attr.aria-label]="q.label">
