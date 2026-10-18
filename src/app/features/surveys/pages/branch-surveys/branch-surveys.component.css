@@ -88,6 +88,36 @@
   line-height: 1.7;
 }
 .expired-warning p { margin: 4px 0 0; }
+.survey-alert-list {
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: survey-warning-order;
+}
+.survey-alert-list li {
+  position: relative;
+  min-height: 28px;
+  padding-block: 3px;
+  padding-inline-start: 38px;
+  counter-increment: survey-warning-order;
+}
+.survey-alert-list li::before {
+  content: counter(survey-warning-order);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 2px;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid #b64828;
+  border-radius: 50%;
+  color: #fff;
+  background: #b64828;
+  font-size: .8rem;
+  font-weight: 700;
+}
+.dialog-alert-list { text-align: right; }
 .notice-mark {
   display: grid;
   flex: 0 0 22px;

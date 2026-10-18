@@ -30,12 +30,18 @@
         </div>
 
         <div *ngIf="expiredDates.length" class="expired-warning" role="alert">
-          <strong>توجد تواريخ وثائق منتهية </strong>
- <p>جميع الوثائق المذكورة في الاستبيان إلزامية وتحت مسؤولية إدارة الفرع ويجب المتابعة مع التشغيل بشكل يومي حتى توفيرها أو تحديثها        </div>
+          <strong>توجد تواريخ وثائق منتهية</strong>
+          <ol class="survey-alert-list">
+            <li *ngFor="let item of expiredDates">{{ item }}</li>
+          </ol>
+          <p>جميع الوثائق المذكورة في الاستبيان إلزامية وتحت مسؤولية إدارة الفرع، ويجب المتابعة مع التشغيل بشكل يومي حتى توفيرها أو تحديثها.</p>
+        </div>
 
         <div *ngIf="missingDocuments.length" class="expired-warning" role="alert">
           <strong>تنبيه: توجد وثائق أو شهادات غير موجودة</strong>
-          <ul><li *ngFor="let item of missingDocuments">{{ item }}</li></ul>
+          <ol class="survey-alert-list">
+            <li *ngFor="let item of missingDocuments">{{ item }}</li>
+          </ol>
           <p>يمكنك إكمال الاستبيان، وسيظهر هذا التنبيه في صفحة الفرع.</p>
         </div>
 
@@ -213,6 +219,9 @@
     <span class="error-icon" aria-hidden="true">!</span>
     <h2 id="expiry-dialog-title">تنبيه: وثائق منتهية</h2>
     <p id="expiry-dialog-message">{{ expiryNotice }}</p>
+    <ol class="survey-alert-list dialog-alert-list">
+      <li *ngFor="let item of expiredDates">{{ item }}</li>
+    </ol>
     <button #expiryCloseButton type="button" class="error-close-button" (click)="dismissExpiryNotice()">فهمت</button>
   </section>
 </div>

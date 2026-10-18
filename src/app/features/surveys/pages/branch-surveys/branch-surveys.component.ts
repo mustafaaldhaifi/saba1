@@ -272,7 +272,11 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
 
   private watchExpiredDates(): void {
     this.refreshExpiredDates();
-    this.formChanges = this.form.valueChanges.subscribe(() => this.refreshExpiredDates());
+    this.formChanges = this.form.valueChanges.subscribe(() => {
+      const hadExpiredDates = this.expiredDates.length > 0;
+      this.refreshExpiredDates();
+      if (!hadExpiredDates && this.expiredDates.length > 0) this.showExpiryNotice();
+    });
     if (this.expiredDates.length) this.showExpiryNotice();
   }
 
@@ -312,7 +316,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.previousFocus = typeof document === 'undefined'
       ? null
       : document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    this.expiryNotice = `توجد وثائق منتهية في: ${this.expiredDates.join('، ')}. يمكنك حفظ الاستبيان، لكن يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.`;
+    this.expiryNotice = 'يمكنك حفظ الاستبيان، لكن يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.';
     setTimeout(() => this.expiryCloseButton?.nativeElement.focus(), 0);
   }
 
