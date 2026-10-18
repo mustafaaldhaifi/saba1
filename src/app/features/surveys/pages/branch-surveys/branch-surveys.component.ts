@@ -39,6 +39,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   success = '';
   expiredDates: string[] = [];
   missingDocuments: string[] = [];
+  invalidDates: string[] = [];
   showLicenseQrNotice = false;
   form!: FormGroup;
   private previousFocus: HTMLElement | null = null;
@@ -136,6 +137,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.formChanges?.unsubscribe();
     this.expiredDates = [];
     this.missingDocuments = [];
+    this.invalidDates = [];
     this.active = item.survey;
     this.activeOccurrenceDate = item.occurrenceDate;
     this.copiedFromDate = null;
@@ -196,6 +198,10 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.error = '';
     this.success = '';
     this.refreshExpiredDates();
+    if (this.invalidDates.length) {
+      this.showError(`صيغة التاريخ غير صحيحة في: ${this.invalidDates.join('، ')}. استخدم أرقامًا إنجليزية وشرطة بهذا الشكل: YYYY-MM-DD، مثال: 1448-05-10.`);
+      return;
+    }
     if (submitted) this.applyConditionalReasonValidation();
     if (submitted && this.form.invalid) {
       this.form.markAllAsTouched();
@@ -291,12 +297,16 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
 
     const answers = this.form.getRawValue() as SurveyAnswers;
     this.missingDocuments = [];
+    this.invalidDates = [];
     for (const question of this.active.questions) {
       const answer = answers[question.id] as any;
       if (!answer) continue;
       if (this.isHealthDocumentsQuestion(question) && Array.isArray(answer.workers)) {
         answer.workers.forEach((worker: any, index: number) => {
           const workerName = worker.fullName?.trim() || `العامل ${index + 1}`;
+          if (this.workersFor(question.id).at(index)?.hasError('invalidExpiryDate')) {
+            this.invalidDates.push(`${workerName} — ${question.label}`);
+          }
           if (worker.healthCertificateStatus === 'missing') {
             this.missingDocuments.push(`${workerName} — لا توجد لديه شهادة صحية`);
           }
@@ -308,6 +318,9 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
         this.missingDocuments.push(`${question.label} — الوثيقة غير موجودة`);
       } else if (question.type === 'yes_no' && answer.value === 'no') {
         this.missingDocuments.push(`${question.label} — غير متوفر`);
+      }
+      if (question.type === 'document' && this.form.get(question.id)?.hasError('invalidExpiryDate')) {
+        this.invalidDates.push(question.label);
       }
     }
   }

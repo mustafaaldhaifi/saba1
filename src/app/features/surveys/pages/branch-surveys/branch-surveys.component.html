@@ -29,6 +29,14 @@
           <p>تم جلب بيانات الاستبيان المرسل بتاريخ {{ getDateLabel(copiedFromDate) }}. راجعها وحدّث ما تغيّر قبل الإرسال.</p>
         </div>
 
+        <div *ngIf="invalidDates.length" class="expired-warning format-warning" role="alert">
+          <strong>صيغة التاريخ غير صحيحة؛ لن يُحفظ الاستبيان حتى تصحيحها</strong>
+          <ol class="survey-alert-list">
+            <li *ngFor="let item of invalidDates">{{ item }}</li>
+          </ol>
+          <p>اكتب التاريخ بأرقام إنجليزية وشرطة فقط بهذا الشكل: YYYY-MM-DD، مثال: 1448-05-10.</p>
+        </div>
+
         <div *ngIf="expiredDates.length" class="expired-warning" role="alert">
           <strong>توجد تواريخ وثائق منتهية</strong>
           <ol class="survey-alert-list">

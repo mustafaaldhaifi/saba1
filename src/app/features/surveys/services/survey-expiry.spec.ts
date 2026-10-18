@@ -14,6 +14,8 @@ describe('survey expiry dates', () => {
     expect(isExpiredSurveyDate('1448-04-28', 'hijri', 'Asia/Riyadh', now)).toBeTrue();
     expect(isExpiredSurveyDate('1448-04-29', 'hijri', 'Asia/Riyadh', now)).toBeFalse();
     expect(isExpiredSurveyDate('1448-05-01', 'hijri', 'Asia/Riyadh', now)).toBeFalse();
+    expect(isExpiredSurveyDate('١٤٤٨/٠٤/٢٨', 'hijri', 'Asia/Riyadh', now)).toBeFalse();
+    expect(isExpiredSurveyDate('1448-4-28', 'hijri', 'Asia/Riyadh', now)).toBeFalse();
   });
 
   it('does not treat an incomplete date as expired before form validation', () => {
