@@ -13,8 +13,38 @@
 }
 .branch-expiry-alert strong { display: block; font-size: 1.1rem; }
 .branch-expiry-alert p { margin: 4px 0 8px; }
-.branch-expiry-alert ul { max-height: 180px; overflow-y: auto; margin: 0; padding-inline-start: 23px; }
-.branch-expiry-alert li + li { margin-top: 4px; }
+.branch-expiry-alert-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: warning-order;
+}
+.branch-expiry-alert-list li {
+  position: relative;
+  min-height: 30px;
+  padding-block: 4px;
+  padding-inline-start: 42px;
+  counter-increment: warning-order;
+}
+.branch-expiry-alert-list li::before {
+  content: counter(warning-order);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 3px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #b64828;
+  border-radius: 50%;
+  color: #fff;
+  background: #b64828;
+  font-size: .85rem;
+  font-weight: 700;
+}
+.branch-expiry-alert-list li + li { margin-top: 4px; }
 .branch-expiry-error { background: #fff7ed; }
 
 * {

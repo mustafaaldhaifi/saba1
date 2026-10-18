@@ -2,7 +2,7 @@
 <section *ngIf="expiryWarnings.length" class="branch-expiry-alert" dir="rtl" role="alert">
     <strong>تنبيه: توجد {{ expiryWarnings.length }} وثائق أو شهادات تحتاج متابعة</strong>
     <p>يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.</p>
-    <ul>
+    <ol class="branch-expiry-alert-list">
         <li *ngFor="let warning of expiryWarnings">
             <ng-container *ngIf="warning.kind !== 'expired'; else expiredWarning">
                 {{ warning.surveyTitle }} — {{ warning.label }}
@@ -12,7 +12,7 @@
                 <span *ngIf="warning.calendar === 'hijri'">(هجري)</span>
             </ng-template>
         </li>
-    </ul>
+    </ol>
 </section>
 <div *ngIf="expiryWarningsError" class="branch-expiry-error" dir="rtl" role="alert">
     تعذر تحديث تنبيهات انتهاء الوثائق. تحقق من الاتصال ثم أعد تحميل الصفحة.
