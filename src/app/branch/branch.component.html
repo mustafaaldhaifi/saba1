@@ -4,12 +4,12 @@
     <p>يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.</p>
     <ul>
         <li *ngFor="let warning of expiryWarnings">
-            <ng-container *ngIf="warning.kind === 'missing'; else expiredWarning">
+            <ng-container *ngIf="warning.kind !== 'expired'; else expiredWarning">
                 {{ warning.surveyTitle }} — {{ warning.label }}
             </ng-container>
             <ng-template #expiredWarning>
                 {{ warning.surveyTitle }} — {{ warning.label }}: انتهت في {{ warning.expiryDate }}
-                ({{ warning.calendar === 'hijri' ? 'هجري' : 'ميلادي' }})
+                <span *ngIf="warning.calendar === 'hijri'">(هجري)</span>
             </ng-template>
         </li>
     </ul>

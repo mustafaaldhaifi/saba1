@@ -1,5 +1,5 @@
 import { Survey } from '../models/survey.models';
-import { findExpiredSurveyDocuments, findMissingSurveyDocuments, isExpiredSurveyDate } from './survey-expiry';
+import { findExpiredSurveyDocuments, findMissingSurveyDocuments, findSurveyWarnings, isExpiredSurveyDate } from './survey-expiry';
 
 describe('survey expiry dates', () => {
   it('compares Gregorian dates in the survey timezone', () => {
@@ -67,5 +67,26 @@ describe('survey expiry dates', () => {
       'رخصة المحل — الوثيقة غير موجودة', 'أحمد — لا توجد لديه شهادة صحية'
     ]);
     expect(findExpiredSurveyDocuments(survey, answers, new Date('2026-10-10T12:00:00Z'))).toEqual([]);
+  });
+
+  it('keeps expired and missing warnings in question order and marks negative answers unavailable', () => {
+    const survey: Survey = {
+      id: 'survey-3', title: 'متابعة الفرع', status: 'active', version: 1,
+      targetBranchIds: [], excludedBranchIds: [],
+      schedule: { type: 'daily', startDate: '2026-01-01', timezone: 'Asia/Riyadh', missedPolicy: 'latest_only' },
+      questions: [
+        { id: 'license', type: 'document', label: 'الرخصة', required: true },
+        { id: 'availability', type: 'yes_no', label: 'توفر الجهاز', required: true }
+      ]
+    };
+    const warnings = findSurveyWarnings(survey, {
+      license: { documentNumber: '1', expiryDate: '2026-01-01' },
+      availability: { value: 'no' }
+    }, new Date('2026-10-10T12:00:00Z'));
+
+    expect(warnings.map(item => item.label)).toEqual([
+      'الرخصة', 'توفر الجهاز — غير متوفر'
+    ]);
+    expect(warnings.map(item => item.kind)).toEqual(['expired', 'unavailable']);
   });
 });

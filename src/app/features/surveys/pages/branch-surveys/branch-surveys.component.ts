@@ -283,7 +283,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     }
     this.expiredDates = findExpiredSurveyDocuments(
       this.active, this.form.getRawValue() as SurveyAnswers
-    ).map(document => `${document.label} (${document.expiryDate} ${document.calendar === 'hijri' ? 'هجري' : 'ميلادي'})`);
+    ).map(document => `${document.label} (${document.expiryDate}${document.calendar === 'hijri' ? ' هجري' : ''})`);
 
     const answers = this.form.getRawValue() as SurveyAnswers;
     this.missingDocuments = [];
@@ -302,6 +302,8 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
         });
       } else if (question.type === 'document' && answer.status === 'missing') {
         this.missingDocuments.push(`${question.label} — الوثيقة غير موجودة`);
+      } else if (question.type === 'yes_no' && answer.value === 'no') {
+        this.missingDocuments.push(`${question.label} — غير متوفر`);
       }
     }
   }
