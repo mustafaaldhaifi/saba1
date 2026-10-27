@@ -45,6 +45,7 @@
   font-weight: 700;
 }
 .branch-expiry-alert-list li + li { margin-top: 4px; }
+.branch-expiry-days { display: inline-block; margin-inline-start: 6px; padding: 1px 8px; border-radius: 999px; color: #7c2d12; background: #fed7aa; font-size: .85rem; }
 .branch-expiry-error { background: #fff7ed; }
 
 * {

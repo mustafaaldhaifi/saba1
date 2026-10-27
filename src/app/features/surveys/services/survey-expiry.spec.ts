@@ -1,5 +1,5 @@
 import { Survey } from '../models/survey.models';
-import { findExpiredSurveyDocuments, findMissingSurveyDocuments, findSurveyWarnings, isExpiredSurveyDate } from './survey-expiry';
+import { findExpiredSurveyDocuments, findMissingSurveyDocuments, findSurveyWarnings, isExpiredSurveyDate, upcomingSurveyExpiryDays } from './survey-expiry';
 
 describe('survey expiry dates', () => {
   it('compares Gregorian dates in the survey timezone', () => {
@@ -20,6 +20,28 @@ describe('survey expiry dates', () => {
 
   it('does not treat an incomplete date as expired before form validation', () => {
     expect(isExpiredSurveyDate('', 'hijri', 'Asia/Riyadh')).toBeFalse();
+  });
+
+  it('warns for dates with fewer than 30 days remaining in either calendar', () => {
+    const now = new Date('2026-10-10T12:00:00Z');
+    expect(upcomingSurveyExpiryDays('2026-10-10', 'gregorian', 'Asia/Riyadh', now)).toBe(0);
+    expect(upcomingSurveyExpiryDays('2026-11-08', 'gregorian', 'Asia/Riyadh', now)).toBe(29);
+    expect(upcomingSurveyExpiryDays('2026-11-09', 'gregorian', 'Asia/Riyadh', now)).toBeNull();
+    expect(upcomingSurveyExpiryDays('1448-04-29', 'hijri', 'Asia/Riyadh', now)).toBe(0);
+    expect(upcomingSurveyExpiryDays('1448-05-01', 'hijri', 'Asia/Riyadh', now)).toBe(2);
+  });
+
+  it('includes an approaching document in branch warnings with its remaining days', () => {
+    const survey: Survey = {
+      id: 'survey-near', title: 'وثائق الفرع', status: 'active', version: 1,
+      targetBranchIds: [], excludedBranchIds: [],
+      schedule: { type: 'daily', startDate: '2026-01-01', timezone: 'Asia/Riyadh', missedPolicy: 'latest_only' },
+      questions: [{ id: 'license', type: 'document', label: 'رخصة المحل', required: true }]
+    };
+    const warnings = findSurveyWarnings(survey, {
+      license: { documentNumber: '123', expiryDate: '2026-10-25' }
+    }, new Date('2026-10-10T12:00:00Z'));
+    expect(warnings.map(item => [item.kind, item.daysRemaining])).toEqual([['expiring_soon', 15]]);
   });
 
   it('identifies expired document and worker dates with their own calendars', () => {

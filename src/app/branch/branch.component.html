@@ -4,12 +4,19 @@
     <p>يرجى تحديث الوثائق والتواصل مع إدارة التشغيل.</p>
     <ol class="branch-expiry-alert-list">
         <li *ngFor="let warning of expiryWarnings">
-            <ng-container *ngIf="warning.kind !== 'expired'; else expiredWarning">
-                {{ warning.surveyTitle }} — {{ warning.label }}
+            <ng-container *ngIf="warning.kind === 'expiring_soon'; else otherWarning">
+                {{ warning.surveyTitle }} — {{ warning.label }}: تنتهي في {{ warning.expiryDate }}
+                <span *ngIf="warning.calendar === 'hijri'">(هجري)</span>
+                <span class="branch-expiry-days">{{ warning.daysRemaining === 0 ? 'تنتهي اليوم' : 'متبقي ' + warning.daysRemaining + ' يوم' }}</span>
             </ng-container>
-            <ng-template #expiredWarning>
+            <ng-template #otherWarning>
+              <ng-container *ngIf="warning.kind !== 'expired'; else expiredWarning">
+                {{ warning.surveyTitle }} — {{ warning.label }}
+              </ng-container>
+              <ng-template #expiredWarning>
                 {{ warning.surveyTitle }} — {{ warning.label }}: انتهت في {{ warning.expiryDate }}
                 <span *ngIf="warning.calendar === 'hijri'">(هجري)</span>
+              </ng-template>
             </ng-template>
         </li>
     </ol>

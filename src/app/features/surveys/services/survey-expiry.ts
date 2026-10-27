@@ -10,7 +10,8 @@ export interface ExpiredSurveyDocument {
   label: string;
   expiryDate?: string;
   calendar?: SurveyDateCalendar;
-  kind?: 'expired' | 'missing' | 'unavailable';
+  kind?: 'expired' | 'expiring_soon' | 'missing' | 'unavailable';
+  daysRemaining?: number;
 }
 
 export function isHealthDocumentsQuestion(question: SurveyQuestion): boolean {
@@ -43,6 +44,35 @@ export function isExpiredSurveyDate(
   return value < today; // Expiry today remains valid through the end of the day.
 }
 
+/** Returns 0–29 for dates expiring today or within the next 29 days. */
+export function upcomingSurveyExpiryDays(
+  value: string,
+  calendar: SurveyDateCalendar | undefined,
+  timeZone: string,
+  now = new Date()
+): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const todayParts = new Intl.DateTimeFormat('en-US-u-ca-gregory', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(now);
+  const part = (type: string) => Number(todayParts.find(item => item.type === type)?.value);
+  const start = Date.UTC(part('year'), part('month') - 1, part('day'));
+  const formatter = new Intl.DateTimeFormat(
+    calendar === 'hijri' ? 'en-US-u-ca-islamic-umalqura' : 'en-US-u-ca-gregory',
+    { timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }
+  );
+  if (calendar === 'hijri' && formatter.resolvedOptions().calendar !== 'islamic-umalqura') {
+    throw new Error('Umm al-Qura calendar is unavailable');
+  }
+  for (let days = 0; days < 30; days += 1) {
+    const parts = formatter.formatToParts(new Date(start + days * 86_400_000));
+    const field = (type: string) => parts.find(item => item.type === type)?.value ?? '';
+    const candidate = `${field('year').padStart(4, '0')}-${field('month').padStart(2, '0')}-${field('day').padStart(2, '0')}`;
+    if (candidate === value) return days;
+  }
+  return null;
+}
+
 /** Shared by the survey form and branch-page alerts. */
 export function findExpiredSurveyDocuments(
   survey: Survey,
@@ -69,6 +99,17 @@ export function findSurveyWarnings(
         expiryDate: value,
         calendar: calendar ?? 'gregorian',
         kind: 'expired'
+      });
+    } else {
+      const daysRemaining = upcomingSurveyExpiryDays(value, calendar, timeZone, now);
+      if (daysRemaining !== null) warnings.push({
+        surveyId: survey.id,
+        surveyTitle: survey.title,
+        label,
+        expiryDate: value,
+        calendar: calendar ?? 'gregorian',
+        kind: 'expiring_soon',
+        daysRemaining
       });
     }
   };
