@@ -25,6 +25,8 @@ export interface Survey {
   title: string;
   description?: string;
   status: SurveyStatus;
+  kind?: 'documents' | 'inventory';
+  inventory?: { typeId: string };
   /** Legacy monthly start. New surveys should define schedule instead. */
   startsFrom?: string;
   schedule?: SurveySchedule;
@@ -84,9 +86,20 @@ export interface SurveyResponse {
   month?: string;
   status: SurveyResponseStatus;
   answers: SurveyAnswers;
+  inventoryAnswers?: Record<string, InventorySurveyAnswer>;
   surveySnapshot?: Pick<Survey, 'title' | 'version' | 'questions' | 'schedule' | 'startsFrom'>;
   prefilledFromDate?: string;
   prefilledFromMonth?: string;
+}
+
+export interface InventorySurveyAnswer {
+  productName: string;
+  expectedQuantity: number;
+  actualQuantity: number | null;
+  difference: number | null;
+  reason: string;
+  referenceDate: string;
+  appliedSurplus?: number;
 }
 
 /** Only the latest scheduled occurrence is required. */

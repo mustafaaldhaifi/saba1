@@ -7,6 +7,7 @@ export interface InventoryProduct {
   name: string;
   unit: string;
   unitF?: string;
+  isSales?: boolean | string;
 }
 
 /**

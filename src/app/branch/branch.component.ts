@@ -1711,23 +1711,7 @@ isChangeStatus2(): boolean {
     // const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
     // const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // last day of month
 
-    const q = query(
-      collection(this.apiService.db, collectionNames.dailyReportsDates),
-      where("branchId", "==", this.branch.id),
-      where("typeId", "==", this.selectedType.id),
-      // where("date", ">=", Timestamp.fromDate(startOfMonth)),
-      // where("date", "<=", Timestamp.fromDate(endOfMonth)),
-    );
-
-    const snapshot = await getDocs(q);
-    this.dailyReportsDates = snapshot.docs.map(doc => ({
-      id: doc.id,
-      typeId: doc.data()['typeId'],
-      branchId: doc.data()['branchId'],
-      date: doc.data()['date'],
-      note: doc.data()['note'],
-
-    })).sort((a, b) => b.date.seconds - a.date.seconds);
+    this.dailyReportsDates = await this.dailyReportService.getReportDates(this.branch.id, this.selectedType.id, this.apiService);
     this.dailyReportsDates1 = this.dailyReportsDates
 
     // const tempRef = doc(this.apiService.db, 'temp', 'serverTime');
@@ -1748,7 +1732,7 @@ isChangeStatus2(): boolean {
     );
 
     this.filteredLocalReports = this.dailyReportService.getLocalData().filter((localReport: any) =>
-      serverDatesKeys.includes(localReport.date)
+      localReport.branchId !== this.branch.id || localReport.typeId !== this.selectedType.id || serverDatesKeys.includes(localReport.date)
     );
 
     this.dailyReportService.saveToLocal(this.filteredLocalReports)
@@ -3368,6 +3352,7 @@ isChangeStatus2(): boolean {
         firestoreTimestamp
       );
       await batch.commit();
+      this.dailyReportService.invalidateReportCache(this.branch.id, this.selectedType.id, this.dateToAddInDaily || new Date());
       // this.dailyReportService.addDataToLocal(dailyReportToSaveLocally, this.dailyReportService.getDateKey(this.dateToAddInDaily!), this.selectedType.id, this.branch.id)
       alert("يعطيك العافية تم التحديث بنجاح")
       window.location.reload();

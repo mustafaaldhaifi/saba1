@@ -10,6 +10,7 @@ export class DailyReportsService {
 
   private name = 'dailyReport';
   private data: any[] = [];
+  private dateCache = new Map<string, { expiresAt: number; value: any[] }>();
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -35,6 +36,37 @@ export class DailyReportsService {
 
   getDataFromLocal(typeId: string, branchId: string, date: string) {
     return this.data.find((item: any) => item.typeId === typeId && item.branchId == branchId && item.date == date);
+  }
+
+  /**
+   * Shares the list of recorded inventory days between surveys and daily inventory.
+   * 1. Return a recent branch/type entry when available.
+   * 2. Read and cache the dates otherwise.
+   */
+  async getReportDates(branchId: string, typeId: string, apiService: ApiService): Promise<any[]> {
+    // STEP 1: Check the scoped, short-lived cache.
+    const key = `${branchId}__${typeId}`;
+    const cached = this.dateCache.get(key);
+    if (cached && Date.now() < cached.expiresAt) return cached.value;
+    // STEP 2: Read recorded dates only when needed.
+    const snapshot = await getDocs(query(
+      collection(apiService.db, collectionNames.dailyReportsDates),
+      where('branchId', '==', branchId), where('typeId', '==', typeId)
+    ));
+    const value = snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+      .sort((left: any, right: any) => right.date.seconds - left.date.seconds);
+    this.dateCache.set(key, { value, expiresAt: Date.now() + 60_000 });
+    return value;
+  }
+
+  invalidateReportCache(branchId: string, typeId: string, date: Date): void {
+    this.dateCache.delete(`${branchId}__${typeId}`);
+    const day = this.getDateKey(date);
+    this.saveToLocal(this.data.filter(item => !(item.branchId === branchId && item.typeId === typeId && item.date === day)));
+  }
+
+  invalidateReportDates(branchId: string, typeId: string): void {
+    this.dateCache.delete(`${branchId}__${typeId}`);
   }
 
 
@@ -89,7 +121,7 @@ export class DailyReportsService {
 
   updateDataInLocal(data: any, date: string, typeId: any, branchId: string) {
     const index = this.data.findIndex(
-      (item: any) => item.city == typeId && item.branchId == branchId
+      (item: any) => item.typeId == typeId && item.branchId == branchId && item.date == date
     );
 
     const now = new Date();

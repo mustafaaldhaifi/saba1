@@ -7,6 +7,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import {
   HealthDocumentWorker,
   HealthDocumentsAnswer,
+  InventorySurveyAnswer,
   RequiredSurvey,
   Survey,
   SurveyAnswers,
@@ -42,6 +43,8 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   invalidDates: string[] = [];
   showLicenseQrNotice = false;
   form!: FormGroup;
+  inventoryRows: Array<{ id: string; name: string; expectedQuantity: number }> = [];
+  inventoryReferenceDate = '';
   private previousFocus: HTMLElement | null = null;
   private formChanges?: Subscription;
 
@@ -141,6 +144,12 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.active = item.survey;
     this.activeOccurrenceDate = item.occurrenceDate;
     this.copiedFromDate = null;
+    this.inventoryRows = [];
+    this.inventoryReferenceDate = '';
+    if (item.survey.kind === 'inventory') {
+      await this.openInventory(item);
+      return;
+    }
     this.showLicenseQrNotice = item.survey.questions.some(question =>
       question.type === 'document' && !this.isHealthDocumentsQuestion(question)
     );
@@ -193,10 +202,52 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.watchExpiredDates();
   }
 
+  /**
+   * Prepares the product survey from the latest daily inventory.
+   * 1. Load the shared cached product and report data.
+   * 2. Build quantity and reason controls for each countable product.
+   * 3. Restore only the current draft's entered values.
+   */
+  private async openInventory(item: RequiredSurvey): Promise<void> {
+    // STEP 1: Fetch the latest baseline for products that are not direct sales.
+    const baseline = await this.service.getInventoryBaseline(this.branchId, item.survey.inventory?.typeId ?? '5');
+    this.inventoryRows = baseline.products;
+    this.inventoryReferenceDate = baseline.date;
+    if (!baseline.date || !baseline.products.length) {
+      this.showError('لا يوجد جرد يومي حديث يحتوي أصنافًا قابلة للجرد لهذا الفرع.');
+    }
+
+    // STEP 2: Make actual quantity mandatory and keep reasons conditional.
+    const controls: Record<string, FormGroup> = {};
+    for (const product of baseline.products) {
+      controls[product.id] = this.fb.group({ actualQuantity: [null, [Validators.required, Validators.min(0)]], reason: [''] });
+    }
+    this.form = this.fb.group(controls);
+
+    // STEP 3: Restore a draft only when it refers to the same daily report.
+    const current = await this.service.getResponse(item.survey.id, this.branchId, item.occurrenceDate);
+    for (const product of baseline.products) {
+      const answer = current?.inventoryAnswers?.[product.id];
+      if (answer?.referenceDate === baseline.date) {
+        controls[product.id].patchValue({ actualQuantity: answer.actualQuantity, reason: answer.reason });
+      }
+    }
+  }
+
+  inventoryDifference(product: { id: string; expectedQuantity: number }): number | null {
+    const value = this.form?.get([product.id, 'actualQuantity'])?.value;
+    if (value === null || value === '' || !Number.isFinite(Number(value))) return null;
+    return Number(value) - product.expectedQuantity;
+  }
+
   async save(submitted: boolean): Promise<void> {
     if (!this.active || !this.activeOccurrenceDate || this.saving) return;
     this.error = '';
     this.success = '';
+    if (this.active.kind === 'inventory') {
+      await this.saveInventory(submitted);
+      return;
+    }
     this.refreshExpiredDates();
     if (this.invalidDates.length) {
       this.showError(`صيغة التاريخ غير صحيحة في: ${this.invalidDates.join('، ')}. استخدم أرقامًا إنجليزية وشرطة بهذا الشكل: YYYY-MM-DD، مثال: 1448-05-10.`);
@@ -238,6 +289,59 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Unable to save survey response:', error);
       this.showError('تعذر حفظ الاستبيان. تحقق من الاتصال والصلاحيات ثم حاول مرة أخرى.');
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  /**
+   * Saves a product count with its fixed daily reference.
+   * 1. Validate quantities and conditional reasons.
+   * 2. Submit with an atomic surplus adjustment, or save a draft without one.
+   * 3. Continue to the next required survey after submission.
+   */
+  private async saveInventory(submitted: boolean): Promise<void> {
+    // STEP 1: Reject incomplete counts and unexplained differences.
+    if (!this.active || !this.inventoryReferenceDate || !this.inventoryRows.length) return;
+    this.error = '';
+    const inventoryAnswers: Record<string, InventorySurveyAnswer> = {};
+    for (const product of this.inventoryRows) {
+      const value = this.form.get(product.id)?.value;
+      const actual = value?.actualQuantity === null || value?.actualQuantity === '' ? null : Number(value.actualQuantity);
+      const difference = actual === null ? null : actual - product.expectedQuantity;
+      const reason = difference === 0 ? '' : String(value?.reason ?? '').trim();
+      if (submitted && (actual === null || !Number.isFinite(actual) || actual < 0 || (difference !== 0 && !reason))) {
+        this.showError(`أكمل العدد الفعلي وسبب الفارق للصنف «${product.name}».`);
+        return;
+      }
+      inventoryAnswers[product.id] = {
+        productName: product.name, expectedQuantity: product.expectedQuantity,
+        actualQuantity: actual, difference, reason, referenceDate: this.inventoryReferenceDate
+      };
+    }
+    // STEP 2: Keep the same occurrence and response ID as document surveys.
+    this.saving = true;
+    try {
+      if (latestDueDate(resolveSurveySchedule(this.active)) !== this.activeOccurrenceDate) {
+        await this.loadSurveys();
+        return;
+      }
+      const user = await this.auth.getCurrentUser();
+      if (submitted) {
+        await this.service.submitInventoryResponse(this.branchId, this.active, this.activeOccurrenceDate, inventoryAnswers, user?.uid ?? '');
+      } else {
+        await this.service.save(this.branchId, this.active, this.activeOccurrenceDate, {}, false, user?.uid ?? '', undefined, inventoryAnswers);
+      }
+      this.success = submitted ? 'تم إرسال جرد الأصناف بنجاح.' : 'تم حفظ المسودة.';
+      // STEP 3: Advance only after the response was submitted successfully.
+      if (submitted) {
+        this.requiredSurveys = this.requiredSurveys.filter(item => item.survey.id !== this.active?.id || item.occurrenceDate !== this.activeOccurrenceDate);
+        if (this.requiredSurveys.length) await this.open(this.requiredSurveys[0]);
+        else await this.navigateAfterCompletion();
+      }
+    } catch (error) {
+      console.error('Unable to save inventory survey:', error);
+      this.showError(error instanceof Error ? error.message : 'تعذر حفظ جرد الأصناف. تحقق من الاتصال ثم حاول مرة أخرى.');
     } finally {
       this.saving = false;
     }
