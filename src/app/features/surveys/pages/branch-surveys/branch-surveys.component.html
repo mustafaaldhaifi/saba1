@@ -60,7 +60,7 @@
               <table class="inventory-table"><thead><tr><th>الصنف</th><th>الموجود الفعلي</th><th>الفارق</th><th>سبب الفارق</th></tr></thead>
                 <tbody><tr *ngFor="let product of inventoryRows" [formGroupName]="product.id">
                   <td>{{ product.name }}</td>
-                  <td><input type="number" min="0" step="any" formControlName="actualQuantity" [attr.aria-label]="'الموجود الفعلي: ' + product.name"></td>
+                  <td><input style="width: 70px;" type="number" min="0" step="any" formControlName="actualQuantity" [attr.aria-label]="'الموجود الفعلي: ' + product.name"></td>
                   <td [class.inventory-negative]="inventoryDifference(product)! < 0" [class.inventory-positive]="inventoryDifference(product)! > 0">{{ inventoryDifference(product) ?? '—' }}</td>
                   <td><input *ngIf="inventoryDifference(product) !== null && inventoryDifference(product) !== 0" formControlName="reason" [placeholder]="inventoryDifference(product)! < 0 ? 'سبب النقص' : 'سبب الزيادة'" [attr.aria-label]="'سبب الفارق: ' + product.name"><span *ngIf="inventoryDifference(product) === 0">—</span></td>
                 </tr></tbody>
