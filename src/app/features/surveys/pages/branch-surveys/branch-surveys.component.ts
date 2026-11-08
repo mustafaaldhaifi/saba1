@@ -14,7 +14,6 @@ import {
   SurveyQuestion
 } from '../../models/survey.models';
 import { SurveyService } from '../../services/survey.service';
-import { latestDueDate, resolveSurveySchedule } from '../../services/survey-period';
 import { findExpiredSurveyDocuments, isHealthDocumentsQuestion } from '../../services/survey-expiry';
 
 @Component({
@@ -36,6 +35,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   loading = true;
   saving = false;
   error = '';
+  restricted = false;
   expiryNotice = '';
   success = '';
   expiredDates: string[] = [];
@@ -64,10 +64,15 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.formChanges?.unsubscribe();
   }
 
-  /** Reloads the pending survey list after a temporary read failure. */
+  /**
+   * Opens the next survey or shows the missed-deadline restriction.
+   * 1. Resolve the signed-in branch and its current access state.
+   * 2. Show the restriction, open the required survey, or continue to the branch.
+   */
   async loadSurveys(): Promise<void> {
     this.loading = true;
     this.error = '';
+    this.restricted = false;
     try {
       const user = await this.auth.getCurrentUser();
       if (!user) throw new Error('Unauthenticated user');
@@ -76,8 +81,17 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // STEP 1: Read the branch's deadline and administrator-grant state.
       this.branchId = await this.service.getBranchId((user.email ?? '').split('@')[0]);
-      this.requiredSurveys = await this.service.getIncompleteRequiredSurveys(this.branchId);
+      const access = await this.service.getBranchSurveyState(this.branchId);
+      // STEP 2: Keep a restricted branch on this page until its missed survey is reopened.
+      if (access.blocked) {
+        this.active = undefined;
+        this.requiredSurveys = [];
+        this.restricted = true;
+        return;
+      }
+      this.requiredSurveys = access.required;
       if (!this.requiredSurveys.length) {
         await this.navigateAfterCompletion();
         return;
@@ -240,6 +254,12 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     return Number(value) - product.expectedQuantity;
   }
 
+  /**
+   * Saves a document survey after local validation and access revalidation.
+   * 1. Validate the visible form and conditional answers.
+   * 2. Save the named occurrence; refresh the restriction if its deadline passed.
+   * 3. Continue to the next survey after a successful submission.
+   */
   async save(submitted: boolean): Promise<void> {
     if (!this.active || !this.activeOccurrenceDate || this.saving) return;
     this.error = '';
@@ -248,6 +268,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       await this.saveInventory(submitted);
       return;
     }
+    // STEP 1: Reject incomplete or malformed answers before the write.
     this.refreshExpiredDates();
     if (this.invalidDates.length) {
       this.showError(`صيغة التاريخ غير صحيحة في: ${this.invalidDates.join('، ')}. استخدم أرقامًا إنجليزية وشرطة بهذا الشكل: YYYY-MM-DD، مثال: 1448-05-10.`);
@@ -262,11 +283,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
 
     this.saving = true;
     try {
-      // Do not submit a stale form after the next scheduled occurrence begins.
-      if (latestDueDate(resolveSurveySchedule(this.active)) !== this.activeOccurrenceDate) {
-        await this.loadSurveys();
-        return;
-      }
+      // STEP 2: The service rechecks the named occurrence, including an administrator grant.
       const user = await this.auth.getCurrentUser();
       await this.service.save(
         this.branchId,
@@ -279,6 +296,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       );
       this.success = submitted ? 'تم إرسال الاستبيان بنجاح.' : 'تم حفظ المسودة.';
       if (this.expiredDates.length) this.showExpiryNotice();
+      // STEP 3: Leave the page only after the response was saved.
       if (submitted) {
         this.requiredSurveys = this.requiredSurveys.filter(item =>
           item.survey.id !== this.active?.id || item.occurrenceDate !== this.activeOccurrenceDate
@@ -288,7 +306,8 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Unable to save survey response:', error);
-      this.showError('تعذر حفظ الاستبيان. تحقق من الاتصال والصلاحيات ثم حاول مرة أخرى.');
+      if (error instanceof Error && error.message.startsWith('تم تقييد حسابك')) await this.loadSurveys();
+      else this.showError(error instanceof Error ? error.message : 'تعذر حفظ الاستبيان. حاول مرة أخرى.');
     } finally {
       this.saving = false;
     }
@@ -297,7 +316,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   /**
    * Saves a product count with its fixed daily reference.
    * 1. Validate quantities and conditional reasons.
-   * 2. Submit with an atomic surplus adjustment, or save a draft without one.
+   * 2. Recheck occurrence access and submit with an atomic surplus adjustment, or save a draft.
    * 3. Continue to the next required survey after submission.
    */
   private async saveInventory(submitted: boolean): Promise<void> {
@@ -322,10 +341,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     // STEP 2: Keep the same occurrence and response ID as document surveys.
     this.saving = true;
     try {
-      if (latestDueDate(resolveSurveySchedule(this.active)) !== this.activeOccurrenceDate) {
-        await this.loadSurveys();
-        return;
-      }
+      // NOTE: The service rechecks the named occurrence, including an administrator grant.
       const user = await this.auth.getCurrentUser();
       if (submitted) {
         await this.service.submitInventoryResponse(this.branchId, this.active, this.activeOccurrenceDate, inventoryAnswers, user?.uid ?? '');
@@ -341,7 +357,8 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Unable to save inventory survey:', error);
-      this.showError(error instanceof Error ? error.message : 'تعذر حفظ جرد الأصناف. تحقق من الاتصال ثم حاول مرة أخرى.');
+      if (error instanceof Error && error.message.startsWith('تم تقييد حسابك')) await this.loadSurveys();
+      else this.showError(error instanceof Error ? error.message : 'تعذر حفظ جرد الأصناف. تحقق من الاتصال ثم حاول مرة أخرى.');
     } finally {
       this.saving = false;
     }

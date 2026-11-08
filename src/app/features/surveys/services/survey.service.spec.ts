@@ -1,5 +1,5 @@
 import { SurveySchedule } from '../models/survey.models';
-import { latestDueDate, previousDueDate, resolveSurveySchedule } from './survey-period';
+import { expiredDueDates, latestDueDate, previousDueDate, resolveSurveySchedule } from './survey-period';
 
 const schedule = (type: SurveySchedule['type'], startDate = '2026-10-09'): SurveySchedule => ({
   type, startDate, timezone: 'Asia/Riyadh', missedPolicy: 'latest_only'
@@ -11,6 +11,21 @@ describe('survey scheduling', () => {
     expect(latestDueDate(daily, new Date('2026-10-08T20:59:59Z'))).toBeNull();
     expect(latestDueDate(daily, new Date('2026-10-08T21:00:00Z'))).toBe('2026-10-09');
     expect(latestDueDate(daily, new Date('2026-10-10T12:00:00Z'))).toBe('2026-10-10');
+  });
+
+  it('waits until the configured local time before opening a new occurrence', () => {
+    const daily = { ...schedule('daily'), startTime: '09:30' };
+    expect(latestDueDate(daily, new Date('2026-10-09T06:29:00Z'))).toBeNull();
+    expect(latestDueDate(daily, new Date('2026-10-09T06:30:00Z'))).toBe('2026-10-09');
+    expect(latestDueDate(daily, new Date('2026-10-10T06:29:00Z'))).toBe('2026-10-09');
+  });
+
+  it('keeps expired dates only when end-of-day closure was enabled', () => {
+    const survey = { id: 'a', title: 'a', status: 'active' as const, targetBranchIds: [], excludedBranchIds: [],
+      version: 1, questions: [], schedule: { ...schedule('daily'), endOfDay: true } };
+    expect(expiredDueDates(survey, new Date('2026-10-11T20:59:00Z'))).toEqual(['2026-10-09', '2026-10-10']);
+    expect(expiredDueDates({ ...survey, schedule: { ...schedule('daily'), endOfDay: false } },
+      new Date('2026-10-11T21:00:00Z'))).toEqual([]);
   });
 
   it('starts weekly scheduling on the first matching weekday after startDate', () => {

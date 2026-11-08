@@ -9,8 +9,8 @@
     <div class="survey-body">
       <p *ngIf="loading" class="state-message">جارٍ تحميل الاستبيان…</p>
       <p *ngIf="success" class="success-message" role="status">{{ success }}</p>
-      <div *ngIf="!loading && !active" class="empty-state">
-        <p>لم نتمكن من عرض الاستبيان الآن.</p>
+      <div *ngIf="!loading && !active" class="empty-state" [attr.role]="restricted ? 'alert' : null">
+        <p>{{ restricted ? 'تم تقييد حسابك لعدم الالتزام بمواعيد الإدخال. تواصل مع الإدارة لفتح التقييد لتعبئة الاستبيان.' : 'لم نتمكن من عرض الاستبيان الآن.' }}</p>
         <button type="button" class="retry-button" (click)="loadSurveys()">إعادة المحاولة</button>
       </div>
 

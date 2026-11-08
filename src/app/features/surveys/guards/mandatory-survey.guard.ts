@@ -4,7 +4,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { SurveyService } from '../services/survey.service';
 
 /**
- * Requires branch accounts to complete the current mandatory surveys.
+ * Requires branch accounts to complete due surveys and honors missed-day restrictions.
  * Administrators opening a selected branch from the dashboard bypass surveys.
  */
 export const mandatorySurveyGuard: CanActivateFn = async (_route, state) => {
@@ -21,9 +21,9 @@ export const mandatorySurveyGuard: CanActivateFn = async (_route, state) => {
 
     const account = (user.email ?? '').split('@')[0];
     const branchId = await surveys.getBranchId(account);
-    const requiredSurveys = await surveys.getIncompleteRequiredSurveys(branchId);
+    const access = await surveys.getBranchSurveyState(branchId);
 
-    return requiredSurveys.length
+    return access.blocked || access.required.length
       ? router.createUrlTree(['/branch/surveys'], { queryParams: { returnUrl: state.url } })
       : true;
   } catch {

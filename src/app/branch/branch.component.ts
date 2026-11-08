@@ -543,7 +543,7 @@ export class BranchComponent {
       this.surveyCheckTimer = setInterval(() => {
         void this.checkScheduledSurveys();
         void this.refreshExpiryWarnings();
-      }, 5 * 60_000);
+      }, 60_000);
     }
 
   }
@@ -582,8 +582,8 @@ export class BranchComponent {
         !isPlatformBrowser(this.platformId) || document.visibilityState !== 'visible') return;
     this.checkingSurveys = true;
     try {
-      const pending = await this.surveyService.getIncompleteRequiredSurveys(this.branch.id);
-      if (pending.length) {
+      const access = await this.surveyService.getBranchSurveyState(this.branch.id);
+      if (access.blocked || access.required.length) {
         await this.router.navigate(['/branch/surveys'], { queryParams: { returnUrl: '/branch' } });
       }
     } catch (error) {

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { collection, doc, getDoc, getDocs, query, runTransaction, serverTimestamp, setDoc, Timestamp, where } from 'firebase/firestore';
 import { FirebaseAppService } from '../../../core/firebase/firebase-app.service';
 import { RequiredSurvey, Survey, SurveyAnswers, SurveyResponse } from '../models/survey.models';
-import { latestDueDate, resolveSurveySchedule } from './survey-period';
+import { expiredDueDates, latestDueDate, resolveSurveySchedule } from './survey-period';
 import { ExpiredSurveyDocument, findSurveyWarnings } from './survey-expiry';
 import { ProductsReaderService } from '../../inventory/data/products-reader.service';
 import { DailyReportsService } from '../../../dailyReports.service';
@@ -59,14 +59,17 @@ export class SurveyService {
 
   /**
    * Submits a product survey and applies positive differences to the latest daily inventory.
-   * 1. Read the latest report and its related stock documents from the server.
-   * 2. Recheck the reference, response status, and closing balances in a transaction.
-   * 3. Increase the count column and dependent balances, then submit the response atomically.
+   * 1. Check the branch's current or reopened occurrence access.
+   * 2. Read the latest report and related stock documents from the server.
+   * 3. Recheck the reference, response status, and closing balances in a transaction.
+   * 4. Apply surplus and submit the response atomically.
    */
   async submitInventoryResponse(
     branchId: string, survey: Survey, occurrenceDate: string,
     inventoryAnswers: Record<string, InventorySurveyAnswer>, userId: string
   ): Promise<void> {
+    // STEP 1: Refuse an expired occurrence without an active administrative grant.
+    await this.ensureOccurrenceAccess(branchId, survey.id, occurrenceDate);
     const typeId = survey.inventory?.typeId ?? '5';
     const entries = Object.entries(inventoryAnswers);
     if (!entries.length || entries.some(([, answer]) =>
@@ -228,12 +231,19 @@ export class SurveyService {
     return result.docs[0].id;
   }
 
-  /** latest_only never carries older missed occurrences into the new period. */
-  async getIncompleteRequiredSurveys(branchId: string): Promise<RequiredSurvey[]> {
-    const snapshot = await getDocs(query(
+  /**
+   * Resolves the oldest missed deadline before considering the current occurrence.
+   * 1. Read active surveys, branch answers, and administrator grants.
+   * 2. Find expired unanswered dates from schedules with end-of-day closure.
+   * 3. Return the blocked date, reopened date, or current required surveys.
+   */
+  async getBranchSurveyState(branchId: string): Promise<{ blocked: RequiredSurvey | null; required: RequiredSurvey[] }> {
+    // STEP 1: Read the persisted response and grant state for this branch.
+    const [snapshot, responses, overrides] = await Promise.all([getDocs(query(
       collection(this.firebase.db, 'surveys'),
       where('status', '==', 'active')
-    ));
+    )), getDocs(query(collection(this.firebase.db, 'surveyResponses'), where('branchId', '==', branchId))),
+    getDocs(query(collection(this.firebase.db, 'surveyAccessOverrides'), where('branchId', '==', branchId)))]);
     const surveys = snapshot.docs
       .map(document => ({ ...document.data(), id: document.id } as Survey))
       .filter(survey =>
@@ -241,17 +251,48 @@ export class SurveyService {
         !survey.excludedBranchIds?.includes(branchId)
       );
 
+    const surveyById = new Map(surveys.map(survey => [survey.id, survey]));
+    const submitted = new Set(responses.docs.filter(item => item.data()['status'] === 'submitted')
+      .map(item => {
+        const data = item.data();
+        const survey = surveyById.get(data['surveyId']);
+        const month = data['month'] as string | undefined;
+        const legacyDate = month && survey && resolveSurveySchedule(survey).type === 'month_end'
+          ? new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).toISOString().slice(0, 10)
+          : `${month}-01`;
+        return `${data['surveyId']}__${data['occurrenceDate'] ?? legacyDate}`;
+      }));
+    const grants = new Map(overrides.docs.map(item => [item.id, item.data()['expiresAt'] as Timestamp | undefined]));
+    // STEP 2: Earlier unanswered deadlines remain binding after a new day begins.
+    const missed = surveys.flatMap(survey => expiredDueDates(survey)
+      .filter(date => !submitted.has(`${survey.id}__${date}`))
+      .map(occurrenceDate => ({ survey, occurrenceDate })))
+      .sort((left, right) => left.occurrenceDate.localeCompare(right.occurrenceDate));
+    if (missed.length) {
+      const first = missed[0];
+      const grant = grants.get(this.buildResponseId(first.survey.id, branchId, first.occurrenceDate));
+      return grant?.toDate && grant.toDate() > new Date()
+        ? { blocked: null, required: [first] } : { blocked: first, required: [] };
+    }
+    // STEP 3: Preserve the existing mandatory current-occurrence behavior.
     const candidates = surveys.flatMap(survey => {
       const occurrenceDate = latestDueDate(resolveSurveySchedule(survey));
-      return occurrenceDate ? [{ survey, occurrenceDate }] : [];
+      return occurrenceDate && !submitted.has(`${survey.id}__${occurrenceDate}`) ? [{ survey, occurrenceDate }] : [];
     });
-    const responses = await Promise.all(candidates.map(item =>
-      this.getResponse(item.survey.id, branchId, item.occurrenceDate)
-    ));
+    return { blocked: null, required: candidates.sort((left, right) => left.occurrenceDate.localeCompare(right.occurrenceDate)) };
+  }
 
-    return candidates
-      .filter((_item, index) => responses[index]?.status !== 'submitted')
-      .sort((left, right) => left.occurrenceDate.localeCompare(right.occurrenceDate));
+  async getIncompleteRequiredSurveys(branchId: string): Promise<RequiredSurvey[]> {
+    return (await this.getBranchSurveyState(branchId)).required;
+  }
+
+  /** Rechecks branch access immediately before any response write. */
+  private async ensureOccurrenceAccess(branchId: string, surveyId: string, occurrenceDate: string): Promise<void> {
+    const state = await this.getBranchSurveyState(branchId);
+    if (state.blocked) throw new Error('تم تقييد حسابك لعدم الالتزام بمواعيد الإدخال. تواصل مع الإدارة لفتح التقييد.');
+    if (!state.required.some(item => item.survey.id === surveyId && item.occurrenceDate === occurrenceDate)) {
+      throw new Error('لم يعد موعد هذا الاستبيان متاحًا. حدّث الصفحة.');
+    }
   }
 
   async getResponse(surveyId: string, branchId: string, occurrenceDate: string): Promise<SurveyResponse | null> {
@@ -351,6 +392,7 @@ export class SurveyService {
     prefilledFromDate?: string,
     inventoryAnswers?: Record<string, InventorySurveyAnswer>
   ): Promise<void> {
+    await this.ensureOccurrenceAccess(branchId, survey.id, occurrenceDate);
     const now = Timestamp.now();
     await setDoc(doc(
       this.firebase.db,

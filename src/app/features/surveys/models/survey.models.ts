@@ -7,6 +7,9 @@ export type SurveyDocumentStatus = 'available' | 'missing';
 export type SurveySchedule = {
   type: 'daily' | 'weekly' | 'month_start' | 'month_end';
   startDate: string;
+  startTime?: string;
+  endOfDay?: boolean;
+  endDate?: string;
   weekDay?: number;
   timezone: string;
   missedPolicy: 'latest_only';
@@ -30,6 +33,7 @@ export interface Survey {
   /** Legacy monthly start. New surveys should define schedule instead. */
   startsFrom?: string;
   schedule?: SurveySchedule;
+  scheduleHistory?: SurveySchedule[];
   targetBranchIds: string[];
   excludedBranchIds: string[];
   version: number;
