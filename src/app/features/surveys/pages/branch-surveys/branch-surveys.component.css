@@ -259,6 +259,8 @@ button:focus-visible { outline: 3px solid #8ac8eb; outline-offset: 2px; }
 .notice-dialog, .error-dialog {
   box-sizing: border-box;
   width: min(440px, 100%);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
   padding: 30px;
   border-radius: 18px;
   background: #fff;
@@ -267,6 +269,7 @@ button:focus-visible { outline: 3px solid #8ac8eb; outline-offset: 2px; }
 }
 .notice-dialog h2, .error-dialog h2 { margin: 13px 0 8px; color: #173d60; }
 .notice-dialog p, .error-dialog p { margin: 0; color: #566b7e; line-height: 1.8; }
+#error-dialog-message { white-space: pre-line; overflow-wrap: anywhere; text-align: right; }
 .qr-icon, .error-icon {
   display: grid;
   place-items: center;

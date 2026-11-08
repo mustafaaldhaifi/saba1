@@ -10,6 +10,7 @@ import { ApiService } from '../../../api.service';
 import { InventorySurveyAnswer } from '../models/survey.models';
 import { collectionNames } from '../../../Shareds';
 
+
 @Injectable({ providedIn: 'root' })
 export class SurveyService {
   constructor(
@@ -18,6 +19,7 @@ export class SurveyService {
     private readonly dailyReports: DailyReportsService,
     private readonly api: ApiService
   ) {}
+
 
   /**
    * Loads stocktaking products and their latest daily balances.
@@ -108,9 +110,24 @@ export class SurveyService {
       const productId = opening.data()['productId'];
       openingByProduct.set(productId, [...(openingByProduct.get(productId) ?? []), opening]);
     }
-    if (entries.some(([id]) => reportByProduct.get(id)?.length !== 1) ||
-        surplus.some(([id]) => openingByProduct.get(id)?.length !== 1)) {
-      throw new Error('بيانات الجرد أو الرصيد الافتتاحي غير مكتملة. لا يمكن تطبيق الفائض.');
+    const invalidReports = entries.filter(([id]) => reportByProduct.get(id)?.length !== 1)
+      .map(([id, answer]) => `${answer.productName} (${reportByProduct.get(id)?.length ?? 0} سجل جرد)`);
+    const invalidOpeningStocks = surplus.filter(([id]) => openingByProduct.get(id)?.length !== 1)
+      .map(([id, answer]) => {
+        const duplicates = openingByProduct.get(id) ?? [];
+        if (!duplicates.length) return `${answer.productName} [${id}]: لا يوجد رصيد افتتاحي`;
+        const details = duplicates.map(opening => {
+          const data = opening.data();
+          const createdAt = data['createdAt'];
+          const date = createdAt instanceof Timestamp ? createdAt.toDate().toLocaleString('ar-YE') : 'غير مسجل';
+          return `المعرّف: ${opening.id}، الرصيد: ${data['openingStockQnt'] ?? 'غير مسجل'}، الإنشاء: ${date}`;
+        });
+        return `${answer.productName} [${id}] (${duplicates.length} أرصدة افتتاحية):\n${details.join('\n')}`;
+      });
+    if (invalidReports.length || invalidOpeningStocks.length) {
+      throw new Error(`بيانات الجرد أو الرصيد الافتتاحي غير مكتملة. الأصناف:\n${[
+        ...invalidReports, ...invalidOpeningStocks
+      ].join('\n')}. لا يمكن تطبيق الفائض.`);
     }
     const updateMarker = surplus.length
       ? await this.dailyReports.getLastupdate(branchId, Timestamp.fromDate(start), this.api) : null;
