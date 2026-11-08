@@ -60,29 +60,35 @@
       <h6 class="text-primary fw-bold mb-3 border-top pt-3">فتح التواريخ</h6>
 
       <!-- اختيار التاريخ -->
-      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <input type="date" class="form-control w-auto" [(ngModel)]="date3"
+      <div class="open-date-form mb-2">
+        <input type="date" class="form-control" [(ngModel)]="date3"
           [class.is-invalid]="!isDateValid() && date3" />
-        <button class="btn btn-success" (click)="addOpenDate()" *ngIf="isDateValid()">
+        <button class="btn btn-success" type="button" (click)="addOpenDate()" [disabled]="isLoading || !isDateValid()">
           <i class="fas fa-plus me-1"></i> إضافة
         </button>
       </div>
 
       <!-- تحذير التاريخ -->
       <div *ngIf="!isDateValid() && date3" class="text-danger small mb-3">
-        الرجاء اختيار تاريخ صحيح في المستقبل
+        الرجاء اختيار تاريخ صحيح
       </div>
+      <div *ngIf="openDateMessage" class="text-danger small mb-3" role="alert">{{ openDateMessage }}</div>
 
       <!-- التواريخ المفتوحة -->
-      <div class="d-flex flex-wrap gap-2">
-        <button *ngFor="let item of datesToAdd" class="btn btn-outline-primary position-relative pe-4"
-          (click)="onSelectdDateOpenDate(item.createdAt)">
-          {{ item.createdAt.toDate() | date: 'mediumDate' }}
-          <span class="position-absolute top-50 end-0 translate-middle-y me-2"
-            (click)="deleteOpenDate(item.id); $event.stopPropagation()" title="حذف التاريخ">
-            <i class="fas fa-trash-alt text-danger"></i>
-          </span>
-        </button>
+      <div class="open-date-list" *ngIf="datesToAdd.length" dir="rtl">
+        <div *ngFor="let item of datesToAdd" class="open-date-item"
+          [class.is-selected]="selectedDate?.toMillis() === item.createdAt.toMillis()">
+          <button type="button" class="open-date-select" (click)="onSelectdDateOpenDate(item.createdAt)"
+            [attr.aria-label]="'اختيار تاريخ ' + (item.createdAt.toDate() | date: 'mediumDate')">
+            <i class="far fa-calendar-alt" aria-hidden="true"></i>
+            <span>{{ item.createdAt.toDate() | date: 'mediumDate' }}</span>
+          </button>
+          <button type="button" class="open-date-delete" (click)="deleteOpenDate(item.id)"
+            [disabled]="isLoading" [attr.aria-label]="'حذف تاريخ ' + (item.createdAt.toDate() | date: 'mediumDate')"
+            title="حذف التاريخ">
+            <i class="fas fa-trash-alt" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
 
     </div>

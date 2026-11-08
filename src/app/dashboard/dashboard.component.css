@@ -393,6 +393,17 @@ thead .fixed-column {
 }
 
 /* Custom styles for the date selection component */
+.open-date-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.open-date-form .form-control { width: 190px; max-width: 100%; }
+.open-date-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.open-date-item { display: flex; align-items: stretch; border: 1px solid #c8d7eb; border-radius: 10px; background: #fff; overflow: hidden; }
+.open-date-item.is-selected { border-color: #0d6efd; background: #eef5ff; }
+.open-date-select, .open-date-delete { border: 0; background: transparent; cursor: pointer; }
+.open-date-select { display: flex; align-items: center; gap: 8px; padding: 9px 12px; color: #0b5ed7; font-weight: 600; }
+.open-date-delete { padding: 9px 11px; border-right: 1px solid #dce4ef; color: #b42318; }
+.open-date-delete:hover { background: #fff1f0; }
+.open-date-delete:disabled { opacity: .5; cursor: wait; }
+.open-date-select:focus-visible, .open-date-delete:focus-visible { outline: 2px solid #0d6efd; outline-offset: -2px; }
 .date-selection {
   background-color: #f8f9fa;
   border-radius: 8px;

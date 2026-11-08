@@ -292,6 +292,7 @@ export class DashboardComponent implements OnInit {
   }
   async addOpenDate() {
     this.isLoading = true;
+    this.openDateMessage = '';
     try {
       if (!this.date3) throw new Error('No date provided');
       const openDate = await this.dashboardOpenDates.addOpenDate(
@@ -301,9 +302,10 @@ export class DashboardComponent implements OnInit {
       );
       this.date3 = '';
       this.datesToAdd.push(openDate);
+      this.datesToAdd.sort((left, right) => left.createdAt.toMillis() - right.createdAt.toMillis());
     } catch (error) {
       console.error('Error in addOpenDate:', error);
-      throw error;
+      this.openDateMessage = error instanceof Error ? error.message : 'تعذر إضافة التاريخ. حاول مرة أخرى.';
     } finally {
       this.isLoading = false;
     }
@@ -1101,6 +1103,7 @@ export class DashboardComponent implements OnInit {
   }
 
   datesToAdd: DashboardOpenDate[] = [];
+  openDateMessage = '';
   async getDatesToAdd(): Promise<void> {
     this.datesToAdd = await this.dashboardOpenDates.loadOpenDates(
       this.selectedType.id,
