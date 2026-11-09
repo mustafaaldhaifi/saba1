@@ -1,4 +1,10 @@
 /* General Table Styling */
+.pending-opening-stock { margin: 1rem 0; padding: 1rem; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; }
+.pending-opening-stock h3 { margin: 0 0 .4rem; font-size: 1rem; }
+.pending-opening-stock p { margin: 0 0 .75rem; color: #475569; font-weight: 400; }
+.pending-opening-stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; }
+.pending-opening-stock-grid label { display: grid; gap: .35rem; min-width: 0; }
+.pending-opening-stock-grid input { width: 100%; min-width: 0; padding: .5rem; border: 1px solid #94a3b8; border-radius: 6px; }
 .branch-expiry-alert, .branch-expiry-error {
   position: sticky;
   top: 0;

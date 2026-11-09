@@ -129,6 +129,18 @@
 
 
 
+    <section class="pending-opening-stock" *ngIf="hideDailyStockColumnsInTable && pendingOpeningStockRows.length">
+        <h3>إكمال الرصيد الافتتاحي</h3>
+        <p>أدخل الكميات الناقصة ثم احفظ الجرد. يبقى عمودا الموجودة والمتبقي مخفيين من الجدول.</p>
+        <div class="pending-opening-stock-grid">
+            <label *ngFor="let row of pendingOpeningStockRows">
+                <span>{{ row.item.productName }}</span>
+                <input type="number" [(ngModel)]="combinedData[row.index].openingStockQnt"
+                    (blur)="onQuantityChange('openingStockQnt', row.item, row.index)" required>
+            </label>
+        </div>
+    </section>
+
     <app-branch-daily-order-table [context]="dailyTableContext" [hideStockColumns]="hideDailyStockColumnsInTable"></app-branch-daily-order-table>
 
     <!-- <input *ngIf="ifEnabledNoteFiled()" type="text" placeholder="الملاحظة" [(ngModel)]="dialyNote"> -->

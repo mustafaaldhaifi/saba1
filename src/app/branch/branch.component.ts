@@ -54,30 +54,36 @@ export class BranchComponent {
   /** Typed contract exposed to the extracted daily table. */
   readonly dailyTableContext: DailyOrderTableFacade = this;
 
-  /**
-   * Hides stock figures only after the branch has saved every required opening balance.
-   * 1. Keep the administrator and branches without this preference unchanged.
-   * 2. Keep the opening balance input available while any stock row is incomplete.
-   */
+  /** Hides stock columns when the selected branch document enables it. */
   get hideDailyStockColumnsInTable(): boolean {
-    // STEP 1: The setting applies only to the branch's own daily view.
-    if (this.isAdmin || this.branch?.data?.hideDailyStockColumns !== true || !this.combinedData?.length) return false;
+    return this.branch?.data?.hideDailyStockColumns === true;
+  }
 
-    // STEP 2: An unfinished opening balance must stay editable in the table.
-    return this.combinedData.filter((item: any) => !item.isSales).every((item: any) =>
-      item.openingStockId !== -1 && item.openingStockId != null && item.openingStockId !== '' &&
-      item.openingStockQnt != null && item.openingStockQnt !== ''
-    );
+  /**
+   * Lists opening balances that still need input outside the hidden daily table.
+   * 1. Skip historical reports, which cannot accept new opening balances.
+   * 2. Keep incomplete stock rows available for the existing save flow.
+   */
+  get pendingOpeningStockRows(): { item: any; index: number }[] {
+    // STEP 1: The read-only daily report does not need an entry panel.
+    if (this.isReadDailyMode) return [];
+
+    // STEP 2: Preserve access to new or empty opening balances.
+    return this.combinedData.map((item: any, index: number) => ({ item, index }))
+      .filter(({ item }) => !item.isSales && (
+        item.openingStockId === -1 || item.openingStockId == null || item.openingStockId === '' ||
+        item.openingStockQnt == null || item.openingStockQnt === ''
+      ));
   }
 
   /**
    * Prepares a branch PDF without exposing the two hidden stock figures.
-   * 1. Leave administration exports and visible branches unchanged.
+   * 1. Leave exports unchanged for branches without the setting.
    * 2. Copy rows before blanking display values so stored totals and calculations remain intact.
    */
   private dailyRowsForExport(rows: any[]): any[] {
     // STEP 1: Only a branch with the enabled preference needs redaction.
-    if (this.isAdmin || this.branch?.data?.hideDailyStockColumns !== true) return rows;
+    if (this.branch?.data?.hideDailyStockColumns !== true) return rows;
 
     // STEP 2: PDF generation receives copies; live form values are not altered.
     return rows.map((item: any) => ({ ...item, openingStockQnt: '', closeStock: '' }));
@@ -769,10 +775,16 @@ export class BranchComponent {
       this.isLoading = false;
     }
   }
-  /// Get
+  /**
+   * Loads the selected branch and its current order data.
+   * 1. Resolve the authenticated branch or the administrator's selected branch.
+   * 2. Read the current branch record and load order types and products.
+   * 3. Initialize daily or standard order data and its rules.
+   */
   async getBranch() {
     this.isLoading = true;
     try {
+      // STEP 1: Resolve the branch associated with the current account.
       const user = await this.authService.getCurrentUser();
       if (user) {
         if (this.authService.isAdmin(user)) {
@@ -784,13 +796,10 @@ export class BranchComponent {
               if (!parsed || typeof parsed.id !== 'string' || typeof parsed.name !== 'string') {
                 throw new Error('Invalid selected branch.');
               }
-              this.branch = {
-                id: parsed.id,
-                data: {
-                  name: parsed.name,
-                  city: parsed.city
-                }
-              };
+              // NOTE: The dashboard selection is a cached summary without display settings.
+              const branchSnapshot = await getDoc(doc(this.apiService.db, collectionNames.branches, parsed.id));
+              if (!branchSnapshot.exists()) throw new Error('Selected branch no longer exists.');
+              this.branch = { id: branchSnapshot.id, data: branchSnapshot.data() };
               this.isAdmin = true
             } catch (e) {
               console.error('Invalid JSON in localStorage:', e);
@@ -808,11 +817,13 @@ export class BranchComponent {
           if (!this.branch) throw new Error('No branch is linked to this account.');
         }
 
+        // STEP 2: Load the current branch's order context.
         await this.getTypes()
         await this.getProducts()
         await this.getAllowableEdits()
 
 
+        // STEP 3: Prepare the selected order mode and applicable rules.
         if (this.selectedType.id == '5') {
           await this.initDaily()
           // this.getConstraintsOnce();
