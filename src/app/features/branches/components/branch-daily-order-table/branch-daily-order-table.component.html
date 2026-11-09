@@ -4,7 +4,7 @@
                 <thead>
                     <tr vz class="f-h">
                         <th style="position: sticky; left: 0;">الاصناف</th>
-                        <th style="width: 28px;">
+                        <th *ngIf="!hideStockColumns" style="width: 28px;">
                             الموجودة
                         </th>
                         <th>المستلم</th>
@@ -16,7 +16,7 @@
                         <th>تحويل مباشر</th>
                         <th>تحويل % </th>
                         <th>التالف</th>
-                        <th>المتبقي</th>
+                        <th *ngIf="!hideStockColumns">المتبقي</th>
 
                     </tr>
                 </thead>
@@ -75,7 +75,7 @@
                         </td>
 
 
-                        <td>
+                        <td *ngIf="!hideStockColumns">
                             <input [attr.tabindex]=" 1000 + i" *ngIf="!item.isSales"
                                 [disabled]="context.isPositiveNumber(context.combinedData[i].openingStockQnt) && context.combinedData[i].openingStockId != -1 || context.isReadDailyMode === true"
                                 (blur)="context.onQuantityChange('openingStockQnt', item, i)"
@@ -237,7 +237,7 @@
                             </ng-template>
 
                         </td>
-                        <td *ngIf="!item.isSales">
+                        <td *ngIf="!hideStockColumns && !item.isSales">
                             <!-- {{calculateClosingStock(context.combinedData[i])}} -->
                             {{ context.combinedData[i].closeStock}}
                         </td>

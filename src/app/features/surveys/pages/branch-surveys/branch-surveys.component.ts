@@ -45,6 +45,8 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   form!: FormGroup;
   inventoryRows: Array<{ id: string; name: string; expectedQuantity: number }> = [];
   inventoryReferenceDate = '';
+  inventoryCountsLocked = false;
+  inventoryBaselineChanged = false;
   private previousFocus: HTMLElement | null = null;
   private formChanges?: Subscription;
 
@@ -155,11 +157,14 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.expiredDates = [];
     this.missingDocuments = [];
     this.invalidDates = [];
+    this.form = this.fb.group({});
     this.active = item.survey;
     this.activeOccurrenceDate = item.occurrenceDate;
     this.copiedFromDate = null;
     this.inventoryRows = [];
     this.inventoryReferenceDate = '';
+    this.inventoryCountsLocked = false;
+    this.inventoryBaselineChanged = false;
     if (item.survey.kind === 'inventory') {
       await this.openInventory(item);
       return;
@@ -219,39 +224,62 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   /**
    * Prepares the product survey from the latest daily inventory.
    * 1. Load the shared cached product and report data.
-   * 2. Build quantity and reason controls for each countable product.
-   * 3. Restore only the current draft's entered values.
+   * 2. Restore locked counts from the current response or build fresh controls.
+   * 3. Compare the stored reference and leave locked counts read-only.
    */
   private async openInventory(item: RequiredSurvey): Promise<void> {
-    // STEP 1: Fetch the latest baseline for products that are not direct sales.
-    const baseline = await this.service.getInventoryBaseline(this.branchId, item.survey.inventory?.typeId ?? '5');
-    this.inventoryRows = baseline.products;
-    this.inventoryReferenceDate = baseline.date;
-    if (!baseline.date || !baseline.products.length) {
+    // STEP 1: A locked draft must remain visible even if its daily baseline is unavailable.
+    const current = await this.service.getResponse(item.survey.id, this.branchId, item.occurrenceDate);
+    this.inventoryCountsLocked = current?.inventoryCountsLocked === true;
+    let baseline: { date: string; products: Array<{ id: string; name: string; expectedQuantity: number }> };
+    try {
+      baseline = await this.service.getInventoryBaseline(this.branchId, item.survey.inventory?.typeId ?? '5');
+    } catch (error) {
+      if (!this.inventoryCountsLocked) throw error;
+      console.error('Unable to compare locked inventory counts:', error);
+      baseline = { date: '', products: [] };
+    }
+    const lockedAnswers = this.inventoryCountsLocked ? current?.inventoryAnswers ?? {} : {};
+    this.inventoryRows = this.inventoryCountsLocked
+      ? Object.entries(lockedAnswers).map(([id, answer]) => ({ id, name: answer.productName, expectedQuantity: answer.expectedQuantity }))
+      : baseline.products;
+    this.inventoryReferenceDate = this.inventoryCountsLocked
+      ? Object.values(lockedAnswers)[0]?.referenceDate ?? '' : baseline.date;
+    if (!this.inventoryReferenceDate || !this.inventoryRows.length) {
       this.showError('لا يوجد جرد يومي حديث يحتوي أصنافًا قابلة للجرد لهذا الفرع.');
     }
 
-    // STEP 2: Make actual quantity mandatory and keep reasons conditional.
+    // STEP 2: Restore the fixed snapshot even if the current daily report changed.
     const controls: Record<string, FormGroup> = {};
-    for (const product of baseline.products) {
+    for (const product of this.inventoryRows) {
       controls[product.id] = this.fb.group({ actualQuantity: [null, [Validators.required, Validators.min(0)]], reason: [''] });
     }
     this.form = this.fb.group(controls);
 
-    // STEP 3: Restore a draft only when it refers to the same daily report.
-    const current = await this.service.getResponse(item.survey.id, this.branchId, item.occurrenceDate);
-    for (const product of baseline.products) {
+    // STEP 3: Unlocked old drafts are restored only against the same reference date.
+    for (const product of this.inventoryRows) {
       const answer = current?.inventoryAnswers?.[product.id];
-      if (answer?.referenceDate === baseline.date) {
+      if (answer && (this.inventoryCountsLocked || answer.referenceDate === baseline.date)) {
         controls[product.id].patchValue({ actualQuantity: answer.actualQuantity, reason: answer.reason });
       }
+      if (this.inventoryCountsLocked) controls[product.id].get('actualQuantity')?.disable({ emitEvent: false });
     }
+    this.inventoryBaselineChanged = this.inventoryCountsLocked && (
+      baseline.date !== this.inventoryReferenceDate || baseline.products.length !== this.inventoryRows.length ||
+      this.inventoryRows.some(product => baseline.products.find(item => item.id === product.id)?.expectedQuantity !== product.expectedQuantity)
+    );
   }
 
   inventoryDifference(product: { id: string; expectedQuantity: number }): number | null {
     const value = this.form?.get([product.id, 'actualQuantity'])?.value;
     if (value === null || value === '' || !Number.isFinite(Number(value))) return null;
     return Number(value) - product.expectedQuantity;
+  }
+
+  inventoryDifferenceLabel(product: { id: string; expectedQuantity: number }): string {
+    const difference = this.inventoryDifference(product);
+    if (difference === null) return '—';
+    return difference > 0 ? `فائض ${difference}` : difference < 0 ? `عجز ${Math.abs(difference)}` : 'مطابق';
   }
 
   /**
@@ -314,18 +342,70 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Saves a product count with its fixed daily reference.
-   * 1. Validate quantities and conditional reasons.
-   * 2. Recheck occurrence access and submit with an atomic surplus adjustment, or save a draft.
+   * Saves the first-stage counts once before displaying any comparison.
+   * 1. Require a valid quantity for every product.
+   * 2. Confirm that the branch understands the counts cannot be changed.
+   * 3. Persist and lock the counts before enabling the explanations stage.
+   */
+  async lockInventoryCounts(): Promise<void> {
+    // STEP 1: The first stage cannot be saved with a missing or negative count.
+    if (!this.active || this.active.kind !== 'inventory' || this.inventoryCountsLocked || this.saving ||
+        !this.inventoryReferenceDate || !this.inventoryRows.length) return;
+    const inventoryAnswers: Record<string, InventorySurveyAnswer> = {};
+    for (const product of this.inventoryRows) {
+      const raw = this.form.get([product.id, 'actualQuantity'])?.value;
+      const actual = raw === null || raw === '' ? NaN : Number(raw);
+      if (!Number.isFinite(actual) || actual < 0) {
+        this.showError(`أدخل الكمية الموجودة للصنف «${product.name}».`);
+        return;
+      }
+      inventoryAnswers[product.id] = {
+        productName: product.name, expectedQuantity: product.expectedQuantity,
+        actualQuantity: actual, difference: actual - product.expectedQuantity,
+        reason: '', referenceDate: this.inventoryReferenceDate
+      };
+    }
+    // STEP 2: Make the irreversible transition explicit before writing the draft.
+    if (!window.confirm('بعد حفظ الكميات لن تتمكن من تعديلها. هل راجعت جميع الأصناف وتريد المتابعة؟')) return;
+    // STEP 3: The service rejects a concurrent save if another tab locked this response.
+    this.saving = true;
+    this.error = '';
+    this.success = '';
+    try {
+      const user = await this.auth.getCurrentUser();
+      await this.service.saveInventoryCounts(this.branchId, this.active, this.activeOccurrenceDate,
+        inventoryAnswers, user?.uid ?? '');
+      this.inventoryCountsLocked = true;
+      for (const product of this.inventoryRows) {
+        this.form.get([product.id, 'actualQuantity'])?.disable({ emitEvent: false });
+        this.form.get([product.id, 'reason'])?.setValue('', { emitEvent: false });
+      }
+      this.success = 'حُفظت الكميات وثُبّتت. أكمل أسباب الفروقات لإرسال الاستبيان.';
+    } catch (error) {
+      console.error('Unable to lock inventory counts:', error);
+      this.showError(error instanceof Error ? error.message : 'تعذر حفظ الكميات. حاول مرة أخرى.');
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  /**
+   * Saves explanations for a fixed product count or submits the survey.
+   * 1. Read locked counts and validate conditional reasons for submission.
+   * 2. Save reasons as a draft or submit with the existing atomic surplus adjustment.
    * 3. Continue to the next required survey after submission.
    */
   private async saveInventory(submitted: boolean): Promise<void> {
-    // STEP 1: Reject incomplete counts and unexplained differences.
-    if (!this.active || !this.inventoryReferenceDate || !this.inventoryRows.length) return;
+    // STEP 1: Counts must already be locked; changed baselines need administrator review.
+    if (!this.active || !this.inventoryCountsLocked || !this.inventoryReferenceDate || !this.inventoryRows.length) return;
+    if (submitted && this.inventoryBaselineChanged) {
+      this.showError('تغير رصيد الجرد بعد حفظ الكميات. تواصل مع الإدارة لمراجعة الاستبيان.');
+      return;
+    }
     this.error = '';
     const inventoryAnswers: Record<string, InventorySurveyAnswer> = {};
     for (const product of this.inventoryRows) {
-      const value = this.form.get(product.id)?.value;
+      const value = this.form.get(product.id)?.getRawValue();
       const actual = value?.actualQuantity === null || value?.actualQuantity === '' ? null : Number(value.actualQuantity);
       const difference = actual === null ? null : actual - product.expectedQuantity;
       const reason = difference === 0 ? '' : String(value?.reason ?? '').trim();
@@ -346,7 +426,8 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       if (submitted) {
         await this.service.submitInventoryResponse(this.branchId, this.active, this.activeOccurrenceDate, inventoryAnswers, user?.uid ?? '');
       } else {
-        await this.service.save(this.branchId, this.active, this.activeOccurrenceDate, {}, false, user?.uid ?? '', undefined, inventoryAnswers);
+        await this.service.saveInventoryReasons(this.branchId, this.active, this.activeOccurrenceDate,
+          Object.fromEntries(Object.entries(inventoryAnswers).map(([id, answer]) => [id, answer.reason])));
       }
       this.success = submitted ? 'تم إرسال جرد الأصناف بنجاح.' : 'تم حفظ المسودة.';
       // STEP 3: Advance only after the response was submitted successfully.

@@ -54,6 +54,35 @@ export class BranchComponent {
   /** Typed contract exposed to the extracted daily table. */
   readonly dailyTableContext: DailyOrderTableFacade = this;
 
+  /**
+   * Hides stock figures only after the branch has saved every required opening balance.
+   * 1. Keep the administrator and branches without this preference unchanged.
+   * 2. Keep the opening balance input available while any stock row is incomplete.
+   */
+  get hideDailyStockColumnsInTable(): boolean {
+    // STEP 1: The setting applies only to the branch's own daily view.
+    if (this.isAdmin || this.branch?.data?.hideDailyStockColumns !== true || !this.combinedData?.length) return false;
+
+    // STEP 2: An unfinished opening balance must stay editable in the table.
+    return this.combinedData.filter((item: any) => !item.isSales).every((item: any) =>
+      item.openingStockId !== -1 && item.openingStockId != null && item.openingStockId !== '' &&
+      item.openingStockQnt != null && item.openingStockQnt !== ''
+    );
+  }
+
+  /**
+   * Prepares a branch PDF without exposing the two hidden stock figures.
+   * 1. Leave administration exports and visible branches unchanged.
+   * 2. Copy rows before blanking display values so stored totals and calculations remain intact.
+   */
+  private dailyRowsForExport(rows: any[]): any[] {
+    // STEP 1: Only a branch with the enabled preference needs redaction.
+    if (this.isAdmin || this.branch?.data?.hideDailyStockColumns !== true) return rows;
+
+    // STEP 2: PDF generation receives copies; live form values are not altered.
+    return rows.map((item: any) => ({ ...item, openingStockQnt: '', closeStock: '' }));
+  }
+
   /** Applies the type chosen in the presentational branch header. */
   changeOrderType(type: BranchHeaderOrderType): void {
     this.selectedType = type;
@@ -3827,7 +3856,7 @@ isChangeStatus2(): boolean {
     const pdfService = new PdfService();
 
     const formattedDate = `${this.dateToAddInDaily!.getFullYear()}-${String(this.dateToAddInDaily!.getMonth() + 1).padStart(2, '0')}-${String(this.dateToAddInDaily!.getDate()).padStart(2, '0')}`;
-    pdfService.exportPDF5(this.combinedData, formattedDate, this.branch.data.name, this.dialyNote)
+    pdfService.exportPDF5(this.dailyRowsForExport(this.combinedData), formattedDate, this.branch.data.name, this.dialyNote)
     // pdfService.exportPDF5(this.combinedData)
 
 
@@ -3955,8 +3984,15 @@ isChangeStatus2(): boolean {
   }
 
 
+  /**
+   * Exports the selected month of daily reports and remembers the export locally.
+   * 1. Load and combine each requested day's saved report.
+   * 2. Apply branch-only stock visibility to PDF copies and generate the file.
+   * 3. Record the exported month and refresh the available groups.
+   */
   async exportallPdfDaily(date: string, dates: any) {
 
+    // STEP 1: Assemble the saved daily reports for this export.
     this.isLoading = true
     const pdfService = new PdfService();
     let finalData: { date: string, data: any, }[] = [];
@@ -3991,9 +4027,11 @@ isChangeStatus2(): boolean {
     // اطبع النتيجة للتأكد
 
     // إنشاء PDF واحد للشهر كله
-    pdfService.exportMonthlyReport(date, finalData, this.branch.data.name);
+    // STEP 2: Hide stock values only in the branch's PDF data.
+    pdfService.exportMonthlyReport(date, finalData.map(report => ({ ...report, data: this.dailyRowsForExport(report.data) })), this.branch.data.name);
 
 
+    // STEP 3: Remember the exported month for the existing monthly controls.
     /// Start save localy
     const key = 'exportedDailyDates';
 

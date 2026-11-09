@@ -55,14 +55,17 @@
 
         <form [formGroup]="form">
           <div *ngIf="active.kind === 'inventory'" class="inventory-survey">
-            <p class="copied-notice" *ngIf="inventoryReferenceDate">رصيد المقارنة من الجرد اليومي بتاريخ {{ getDateLabel(inventoryReferenceDate) }}.</p>
+            <p class="copied-notice" *ngIf="!inventoryCountsLocked">المرحلة الأولى من ٢: أدخل الكمية الموجودة لكل صنف. بعد حفظ الكميات لن تتمكن من تعديلها.</p>
+            <p class="copied-notice" *ngIf="inventoryCountsLocked">المرحلة الثانية من ٢: الكميات محفوظة ولا يمكن تعديلها. اكتب سبب كل فائض أو عجز ثم أرسل الاستبيان.</p>
+            <p class="expired-warning" role="alert" *ngIf="inventoryBaselineChanged">تغير رصيد الجرد بعد حفظ الكميات. تواصل مع الإدارة لمراجعة الاستبيان قبل الإرسال.</p>
+            <p class="copied-notice" *ngIf="inventoryCountsLocked && inventoryReferenceDate">رصيد المقارنة من الجرد اليومي بتاريخ {{ getDateLabel(inventoryReferenceDate) }}.</p>
             <div class="survey-table-wrap" *ngIf="inventoryRows.length">
-              <table class="inventory-table"><thead><tr><th>الصنف</th><th>الموجود الفعلي</th><th>الفارق</th><th>سبب الفارق</th></tr></thead>
+              <table class="inventory-table" [class.inventory-count-stage]="!inventoryCountsLocked"><thead><tr><th>الصنف</th><th>الموجود الفعلي</th><th *ngIf="inventoryCountsLocked">الفائض أو العجز</th><th *ngIf="inventoryCountsLocked">سبب الفارق</th></tr></thead>
                 <tbody><tr *ngFor="let product of inventoryRows" [formGroupName]="product.id">
                   <td>{{ product.name }}</td>
-                  <td><input style="width: 70px;" type="number" min="0" step="any" formControlName="actualQuantity" [attr.aria-label]="'الموجود الفعلي: ' + product.name"></td>
-                  <td [class.inventory-negative]="inventoryDifference(product)! < 0" [class.inventory-positive]="inventoryDifference(product)! > 0">{{ inventoryDifference(product) ?? '—' }}</td>
-                  <td><input *ngIf="inventoryDifference(product) !== null && inventoryDifference(product) !== 0" formControlName="reason" [placeholder]="inventoryDifference(product)! < 0 ? 'سبب النقص' : 'سبب الزيادة'" [attr.aria-label]="'سبب الفارق: ' + product.name"><span *ngIf="inventoryDifference(product) === 0">—</span></td>
+                  <td><input *ngIf="!inventoryCountsLocked" style="width: 70px;" type="number" min="0" step="any" formControlName="actualQuantity" [attr.aria-label]="'الموجود الفعلي: ' + product.name"><span *ngIf="inventoryCountsLocked">{{ form.get([product.id, 'actualQuantity'])?.value }}</span></td>
+                  <td *ngIf="inventoryCountsLocked" [class.inventory-negative]="inventoryDifference(product)! < 0" [class.inventory-positive]="inventoryDifference(product)! > 0">{{ inventoryDifferenceLabel(product) }}</td>
+                  <td *ngIf="inventoryCountsLocked"><input *ngIf="inventoryDifference(product) !== null && inventoryDifference(product) !== 0" formControlName="reason" [placeholder]="inventoryDifference(product)! < 0 ? 'سبب النقص' : 'سبب الزيادة'" [attr.aria-label]="'سبب الفارق: ' + product.name"><span *ngIf="inventoryDifference(product) === 0">—</span></td>
                 </tr></tbody>
               </table>
             </div>
@@ -210,10 +213,11 @@
           </div>
 
           <footer class="form-actions">
-            <p>جميع الوثائق المذكورة في الاستبيان إلزامية وتحت مسؤولية إدارة الفرع ويجب المتابعة مع التشغيل بشكل يومي حتى توفيرها أو تحديثها</p>
+            <p *ngIf="active.kind !== 'inventory'">جميع الوثائق المذكورة في الاستبيان إلزامية وتحت مسؤولية إدارة الفرع ويجب المتابعة مع التشغيل بشكل يومي حتى توفيرها أو تحديثها</p>
             <div class="action-buttons">
-              <button type="button" class="secondary-button" [disabled]="saving" (click)="save(false)">حفظ مسودة</button>
-              <button type="button" class="primary-button" [disabled]="saving || (active.kind === 'inventory' && !inventoryRows.length)" (click)="save(true)">إرسال الاستبيان</button>
+              <button *ngIf="active.kind === 'inventory' && !inventoryCountsLocked" type="button" class="primary-button" [disabled]="saving || !inventoryRows.length" (click)="lockInventoryCounts()">حفظ الكميات والمتابعة</button>
+              <button *ngIf="active.kind !== 'inventory' || inventoryCountsLocked" type="button" class="secondary-button" [disabled]="saving" (click)="save(false)">{{ active.kind === 'inventory' ? 'حفظ الأسباب كمسودة' : 'حفظ مسودة' }}</button>
+              <button *ngIf="active.kind !== 'inventory' || inventoryCountsLocked" type="button" class="primary-button" [disabled]="saving || (active.kind === 'inventory' && (inventoryBaselineChanged || !inventoryRows.length))" (click)="save(true)">إرسال الاستبيان</button>
             </div>
           </footer>
         </form>

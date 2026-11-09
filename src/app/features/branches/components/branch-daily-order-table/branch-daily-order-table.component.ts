@@ -44,4 +44,5 @@ export interface DailyOrderTableFacade {
 })
 export class BranchDailyOrderTableComponent {
   @Input({ required: true }) context!: DailyOrderTableFacade;
+  @Input() hideStockColumns = false;
 }

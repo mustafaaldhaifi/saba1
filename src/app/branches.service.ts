@@ -105,42 +105,21 @@ export class BranchesService {
     return sorted[0]; // { id, updatedAt }
   }
 
-  async getBranches(city: string, branchUpdates: any, apiService: ApiService): Promise<any[]> {
-    // const city = this.selectedOption;
-    // const typeId = this.selectedType.id;
-
-    const branchesInfo = this.getBranchesFromLocal(city);
-
-    // this.productUpdates = await this.getLastupdate(city, typeId, apiService);
-
-    // console.log("productUpdates2", this.productUpdates);
-    // console.log("branchesInfo", branchesInfo);
-
-
-    const shouldFetchFromServer = !branchesInfo || this.compareDate(branchUpdates.updatedAt, branchesInfo.fetchedAt);
-
-    if (shouldFetchFromServer) {
-      const q = query(
-        collection(apiService.db, "branches"),
-        where("city", '==', city)
-      );
-
-      const snapshot = await getDocs(q);
-
-      const branches = snapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data()['name'],
-        city: doc.data()['city'],
-        order: doc.data()['order'] ?? 1,
-      }));
-
-      this.updateBranchesInLocal(branches, city);
-      console.log("branches get from server");
-      return branches;
-    } else {
-      console.log("branches get from Local");
-      return branchesInfo.branches;
-    }
+  /**
+   * Loads current active branches for a city after administrative changes.
+   * 1. Read the latest list from Firestore without relying on an old cache marker.
+   * 2. Exclude archived branches and refresh the local list.
+   */
+  async getBranches(city: string, _branchUpdates: any, apiService: ApiService): Promise<any[]> {
+    // STEP 1: Branch management does not update the legacy city marker.
+    const snapshot = await getDocs(query(collection(apiService.db, 'branches'), where('city', '==', city)));
+    // STEP 2: Keep archived IDs for history but remove them from current selectors.
+    const branches = snapshot.docs.filter(item => item.data()['status'] !== 'archived').map(item => ({
+      id: item.id, name: item.data()['name'], city: item.data()['city'],
+      order: item.data()['order'] ?? 1,
+    }));
+    this.updateBranchesInLocal(branches, city);
+    return branches;
   }
 
 }

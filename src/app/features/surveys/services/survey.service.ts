@@ -58,6 +58,66 @@ export class SurveyService {
   }
 
   /**
+   * Saves a complete product count once for this branch and occurrence.
+   * 1. Validate the fixed counts and current occurrence access.
+   * 2. Lock counts in the existing response document within a transaction.
+   */
+  async saveInventoryCounts(branchId: string, survey: Survey, occurrenceDate: string,
+    inventoryAnswers: Record<string, InventorySurveyAnswer>, userId: string): Promise<void> {
+    // STEP 1: Only complete, nonnegative counts may become immutable.
+    const entries = Object.values(inventoryAnswers);
+    const referenceDate = entries[0]?.referenceDate;
+    if (!entries.length || entries.some(answer => answer.actualQuantity === null ||
+      !Number.isFinite(answer.actualQuantity) || answer.actualQuantity < 0 ||
+      !Number.isFinite(answer.expectedQuantity) ||
+      answer.difference !== answer.actualQuantity - answer.expectedQuantity ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(answer.referenceDate) || answer.referenceDate !== referenceDate)) {
+      throw new Error('أكمل الكمية الموجودة لكل صنف قبل الحفظ.');
+    }
+    await this.ensureOccurrenceAccess(branchId, survey.id, occurrenceDate);
+    // STEP 2: A second tab or retry cannot replace already locked quantities.
+    const reference = doc(this.firebase.db, 'surveyResponses', this.buildResponseId(survey.id, branchId, occurrenceDate));
+    await runTransaction(this.firebase.db, async transaction => {
+      const existing = await transaction.get(reference);
+      if (existing.data()?.['status'] === 'submitted' || existing.data()?.['inventoryCountsLocked']) {
+        throw new Error('الكميات محفوظة ومقفلة بالفعل. حدّث الصفحة للانتقال إلى مرحلة الأسباب.');
+      }
+      transaction.set(reference, {
+        surveyId: survey.id, branchId, occurrenceDate, status: 'draft', answers: {},
+        inventoryAnswers, inventoryCountsLocked: true, countsLockedAt: serverTimestamp(), countsLockedBy: userId,
+        surveySnapshot: { title: survey.title, version: survey.version, kind: 'inventory', questions: [],
+          ...(survey.schedule ? { schedule: survey.schedule } : {}) },
+        updatedAt: serverTimestamp(), ...(!existing.exists() ? { createdAt: serverTimestamp() } : {})
+      }, { merge: true });
+    });
+  }
+
+  /**
+   * Saves only explanations for a previously locked product count.
+   * 1. Recheck occurrence access and read its response in a transaction.
+   * 2. Preserve every count while updating the editable explanations.
+   */
+  async saveInventoryReasons(branchId: string, survey: Survey, occurrenceDate: string,
+    reasons: Record<string, string>): Promise<void> {
+    // STEP 1: Reasons belong to an existing locked draft for this occurrence.
+    await this.ensureOccurrenceAccess(branchId, survey.id, occurrenceDate);
+    const reference = doc(this.firebase.db, 'surveyResponses', this.buildResponseId(survey.id, branchId, occurrenceDate));
+    await runTransaction(this.firebase.db, async transaction => {
+      const existing = await transaction.get(reference);
+      if (!existing.exists() || !existing.data()['inventoryCountsLocked'] || existing.data()['status'] === 'submitted') {
+        throw new Error('الكميات غير محفوظة أو تم إرسال الاستبيان. حدّث الصفحة.');
+      }
+      // STEP 2: Build the next draft from stored quantities, never from editable form values.
+      const saved = existing.data()['inventoryAnswers'] as Record<string, InventorySurveyAnswer> | undefined;
+      if (!saved || !Object.keys(saved).length) throw new Error('بيانات الكميات المحفوظة غير مكتملة. تواصل مع الإدارة.');
+      const next = Object.fromEntries(Object.entries(saved).map(([id, answer]) => [id, {
+        ...answer, reason: answer.difference === 0 ? '' : String(reasons[id] ?? '').trim()
+      }]));
+      transaction.update(reference, { inventoryAnswers: next, updatedAt: serverTimestamp() });
+    });
+  }
+
+  /**
    * Submits a product survey and applies positive differences to the latest daily inventory.
    * 1. Check the branch's current or reopened occurrence access.
    * 2. Read the latest report and related stock documents from the server.
@@ -82,7 +142,7 @@ export class SurveyService {
       throw new Error('تاريخ الجرد المرجعي غير صحيح. حدّث الاستبيان.');
     }
 
-    // STEP 1: Read server-side document identities; cached baselines are not enough for a write.
+    // STEP 2: Read server-side document identities; cached baselines are not enough for a write.
     const dates = await getDocs(query(
       collection(this.firebase.db, collectionNames.dailyReportsDates),
       where('branchId', '==', branchId), where('typeId', '==', typeId)
@@ -136,12 +196,21 @@ export class SurveyService {
       ? await this.dailyReports.getLastupdate(branchId, Timestamp.fromDate(start), this.api) : null;
     if (surplus.length && !updateMarker) throw new Error('تعذر العثور على علامة تحديث الجرد.');
 
-    // STEP 2: Transaction reads protect the saved reference against concurrent edits or retries.
+    // STEP 3: Transaction reads protect locked quantities and the saved reference.
     const responseRef = doc(this.firebase.db, 'surveyResponses', this.buildResponseId(survey.id, branchId, occurrenceDate));
     const latestRef = doc(this.firebase.db, collectionNames.latestReportUpdate, `${branchId}_${typeId}`);
     try {
       await runTransaction(this.firebase.db, async transaction => {
       const responseDoc = await transaction.get(responseRef);
+      // NOTE: The submitted count must exactly match the locked first-stage snapshot.
+      const locked = responseDoc.data()?.['inventoryAnswers'] as Record<string, InventorySurveyAnswer> | undefined;
+      if (!responseDoc.data()?.['inventoryCountsLocked'] || !locked ||
+          Object.keys(locked).length !== entries.length || entries.some(([id, answer]) =>
+            !locked[id] || locked[id].actualQuantity !== answer.actualQuantity ||
+            locked[id].expectedQuantity !== answer.expectedQuantity ||
+            locked[id].referenceDate !== answer.referenceDate || locked[id].difference !== answer.difference)) {
+        throw new Error('الكميات المحفوظة لا تطابق الاستبيان. حدّث الصفحة؛ لا يمكن تعديلها بعد الحفظ.');
+      }
       const latestDoc = await transaction.get(latestRef);
       const dateDoc = await transaction.get(latest.ref);
       if (responseDoc.data()?.['status'] === 'submitted') throw new Error('تم إرسال الاستبيان مسبقًا؛ لن يُضاف الفائض مرة أخرى.');
@@ -178,7 +247,7 @@ export class SurveyService {
         }
       });
 
-      // STEP 3: Adjust the existing count once and keep all dependent values consistent.
+      // STEP 4: Adjust the existing count once and keep all dependent values consistent.
       const dayKey = referenceDate.slice(-2);
       surplus.forEach(([id, answer], index) => {
         const report = reportDocs[entries.findIndex(([productId]) => productId === id)];
@@ -221,13 +290,25 @@ export class SurveyService {
     return `${surveyId}__${branchId}__${occurrenceDate}`;
   }
 
+  /**
+   * Resolves the signed-in branch without changing its Firestore identity.
+   * 1. Read by immutable login key, then fall back to legacy branch name.
+   * 2. Reject a missing or archived branch before survey access.
+   */
   async getBranchId(accountName: string): Promise<string> {
+    // STEP 1: Display names may change while the email prefix stays fixed.
     const name = accountName.charAt(0).toUpperCase() + accountName.slice(1).toLowerCase();
-    const result = await getDocs(query(
+    const byLogin = await getDocs(query(
       collection(this.firebase.db, 'branches'),
-      where('name', '==', name)
+      where('loginName', '==', name)
     ));
-    if (result.empty) throw new Error('لم يتم العثور على الفرع المرتبط بالحساب.');
+    const result = byLogin.empty ? await getDocs(query(
+      collection(this.firebase.db, 'branches'), where('name', '==', name)
+    )) : byLogin;
+    // STEP 2: Do not grant survey access to archived branches.
+    if (result.empty || result.docs[0].data()['status'] === 'archived') {
+      throw new Error('الفرع غير متاح أو تم تعطيل حسابه.');
+    }
     return result.docs[0].id;
   }
 
@@ -382,6 +463,11 @@ export class SurveyService {
     return warnings.flat();
   }
 
+  /**
+   * Saves a document survey for its current occurrence.
+   * 1. Recheck access and reject inventory responses from this path.
+   * 2. Write the draft or submitted answer under its stable response ID.
+   */
   async save(
     branchId: string,
     survey: Survey,
@@ -389,10 +475,12 @@ export class SurveyService {
     answers: SurveyAnswers,
     submitted: boolean,
     userId: string,
-    prefilledFromDate?: string,
-    inventoryAnswers?: Record<string, InventorySurveyAnswer>
+    prefilledFromDate?: string
   ): Promise<void> {
+    // STEP 1: Inventory counts use the separate one-time lock flow.
+    if (survey.kind === 'inventory') throw new Error('استخدم حفظ الكميات أو الأسباب لاستبيان الأصناف.');
     await this.ensureOccurrenceAccess(branchId, survey.id, occurrenceDate);
+    // STEP 2: Preserve the existing document-survey response shape.
     const now = Timestamp.now();
     await setDoc(doc(
       this.firebase.db,
@@ -404,7 +492,6 @@ export class SurveyService {
       occurrenceDate,
       status: submitted ? 'submitted' : 'draft',
       answers,
-      ...(survey.kind === 'inventory' ? { inventoryAnswers: inventoryAnswers ?? {} } : {}),
       ...(prefilledFromDate ? { prefilledFromDate } : {}),
       surveySnapshot: {
         title: survey.title, version: survey.version, questions: survey.questions,

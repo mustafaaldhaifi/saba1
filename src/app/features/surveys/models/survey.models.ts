@@ -91,6 +91,7 @@ export interface SurveyResponse {
   status: SurveyResponseStatus;
   answers: SurveyAnswers;
   inventoryAnswers?: Record<string, InventorySurveyAnswer>;
+  inventoryCountsLocked?: boolean;
   surveySnapshot?: Pick<Survey, 'title' | 'version' | 'questions' | 'schedule' | 'startsFrom'>;
   prefilledFromDate?: string;
   prefilledFromMonth?: string;

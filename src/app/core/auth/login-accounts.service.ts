@@ -7,9 +7,10 @@ export class LoginAccountsService {
   constructor(private readonly firebase: FirebaseAppService) {}
 
   async getAccountNames(): Promise<string[]> {
-    // Keep the existing branch-name-to-email mapping. Rules must allow this read.
+    // New accounts use an immutable login key; older records use their branch name.
     const snapshot = await getDocs(collection(this.firebase.db, 'branches'));
-    const names = snapshot.docs.map(doc => doc.data()['name'])
+    const names = snapshot.docs.filter(doc => doc.data()['status'] !== 'archived')
+      .map(doc => doc.data()['loginName'] || doc.data()['name'])
       .filter((name): name is string => typeof name === 'string' && !!name.trim());
     return [...new Set([...names, 'Admin'])];
   }
