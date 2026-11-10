@@ -628,8 +628,21 @@ export class BranchComponent {
     }
   }
 
-  /// Save
+  /**
+   * Saves edits to an existing order only after its receipt statuses are complete.
+   * 1. Reject incomplete receipt choices before preparing any writes.
+   * 2. Stage the changed rows and order summary in one batch.
+   * 3. Commit the batch, then clear the local draft on success.
+   */
   async saveUpdates() {
+    // STEP 1: Never mark a previous order complete while a receipt choice is blank.
+    if (this.selectedType?.id !== this.reportMonthlyTypeId && !this.hasCompleteReceiptStatuses()) {
+      alert('أكمل حالة الاستلام لجميع الأصناف المطلوبة قبل حفظ التعديلات.');
+      return;
+    }
+    if (this.ordersToUpdate.length === 0 || !this.isUpdateEnabled()) return;
+
+    // STEP 2: Prepare the changed order rows and summary together.
     this.isLoading = true;
     const batch = writeBatch(this.apiService.db);
     const orderRef = doc(this.apiService.db, collectionNames.orders, this.selectedPreOrder.id);
@@ -681,7 +694,7 @@ export class BranchComponent {
         updatedFromUser: serverTimestamp(),
       };
       batch.update(orderRef, s)
-      // Commit the batch (all updates happen in one command)
+      // STEP 3: Only a committed batch completes the order and clears its draft.
       await batch.commit();
       this.ordersToUpdate = [];
       this.updateOrderDraftAfterSuccessfulWrite();
@@ -1306,7 +1319,14 @@ export class BranchComponent {
       item[field] = null; // Reset to invalid state
     }
   }
+  /**
+   * Checks whether the current order has every field needed for its send action.
+   * 1. Keep the monthly quantity flow separate.
+   * 2. Require a pending write and complete receipt choices for existing orders.
+   * 3. Require quantities on every displayed row.
+   */
   isFullFilled(): boolean {
+    // STEP 1: Monthly orders have their existing quantity-only policy.
     // Preserve the existing monthly flow; its quantities are handled separately.
     if (this.selectedType && this.selectedType.id == 'WbAP06wLDRvZFTYUtkjU') {
       if (this.ordersToUpdate.length > 0 || this.ordersToAdd.length === 0) return false;
@@ -1316,6 +1336,7 @@ export class BranchComponent {
     // A restored draft can contain edits to existing order rows. Those rows
     // are submitted through the existing update flow, not `addOrders()`.
     // Keep the send action unavailable unless there is a real pending write.
+    // STEP 2: Existing orders cannot be completed with blank receipt choices.
     const hasNewOrders = this.ordersToAdd.length > 0;
     const hasSavableUpdates = this.ordersToUpdate.length > 0 &&
       this.isPreSent && this.isUpdateEnabled();
@@ -1336,6 +1357,7 @@ export class BranchComponent {
     }
 
     // Use every() instead of forEach for proper early termination
+    // STEP 3: Quantity fields still have to be filled for all rows.
     const a = this.combinedData.every((d: any) => {
       return this.isPositiveNumber(d.qnt) && this.isPositiveNumber(d.qntF);
     });
@@ -1343,8 +1365,9 @@ export class BranchComponent {
     return a
   }
 
-  /** Sends new rows or persists edits to an already submitted order. */
+  /** Sends a complete new order or persists a validated existing order. */
   submitOrder(): void {
+    if (!this.isFullFilled()) return;
     if (this.ordersToAdd.length > 0) {
       void this.addOrders();
       return;
@@ -1416,8 +1439,35 @@ export class BranchComponent {
     return this.combinedData.some(e => e.id === -1)
   }
 
+  /**
+   * Checks receipt choices for products included in the previous order.
+   * 1. Ignore products added later and rows with no requested quantity.
+   * 2. Require an explicit supported status for every requested row.
+   */
+  hasCompleteReceiptStatuses(): boolean {
+    if (!Array.isArray(this.combinedData)) return false;
 
+    // STEP 1: A new product has no earlier receipt to confirm.
+    const requestedRows = this.combinedData.filter((item: any) =>
+      item.id !== -1 && Number(item.qnt) > 0
+    );
+
+    // STEP 2: Blank and default "0" choices are not completed statuses.
+    return requestedRows.every((item: any) => ['1', '2', '3', '4'].includes(String(item.status)));
+  }
+
+
+  /**
+   * Checks whether an existing order can be completed from its pending edits.
+   * 1. Require explicit receipt choices for all previously requested products.
+   * 2. Preserve the existing repeat-update rules for quantities and order types.
+   */
   isUpdateEnabled(): boolean {
+    // STEP 1: A first update must not bypass receipt-status completeness.
+    if (!this.selectedPreOrder || !Array.isArray(this.combinedData)) return false;
+    if (this.selectedType?.id !== this.reportMonthlyTypeId && !this.hasCompleteReceiptStatuses()) return false;
+
+    // STEP 2: Apply the existing rules for later changes to this order.
     // All items must have status !== "0"
     if (!this.selectedPreOrder.hasOwnProperty('updatedFromUser')) {
       // الكود هنا سيعمل فقط إذا كان الحقل موجوداً فعلياً

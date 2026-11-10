@@ -91,6 +91,9 @@
         (saveUpdatesRequested)="saveUpdates()"
         (saveDraftRequested)="saveOrderDraft()">
     </app-branch-order-actions>
+    <p class="draft-status" *ngIf="isPreSent && !isToAddMode && selectedPreOrder?.status == '0' && !hasCompleteReceiptStatuses()" role="status">
+        أكمل حالة الاستلام لكل صنف طُلب سابقًا قبل إرسال الطلب أو حفظ التعديلات.
+    </p>
     <p class="draft-status" *ngIf="draftSavedAt">
         تم حفظ المسودة محليًا في هذا الجهاز الساعة {{ draftSavedAt | date:'shortTime' }}
     </p>
