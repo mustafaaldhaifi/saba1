@@ -54,9 +54,14 @@ export class BranchComponent {
   /** Typed contract exposed to the extracted daily table. */
   readonly dailyTableContext: DailyOrderTableFacade = this;
 
-  /** Hides stock columns when the selected branch document enables it. */
+  /** Both columns share one choice; older separate settings hide them only when both were hidden. */
   get hideDailyStockColumnsInTable(): boolean {
-    return this.branch?.data?.hideDailyStockColumns === true;
+    const oldChoice = this.branch?.data?.hideDailyStockColumns === true;
+    const openingChoice = this.branch?.data?.hideOpeningStockColumn;
+    const closingChoice = this.branch?.data?.hideClosingStockColumn;
+    const openingHidden = typeof openingChoice === 'boolean' ? openingChoice : oldChoice;
+    const closingHidden = typeof closingChoice === 'boolean' ? closingChoice : oldChoice;
+    return openingHidden && closingHidden;
   }
 
   /**
@@ -77,13 +82,13 @@ export class BranchComponent {
   }
 
   /**
-   * Prepares a branch PDF without exposing the two hidden stock figures.
-   * 1. Leave exports unchanged for branches without the setting.
-   * 2. Copy rows before blanking display values so stored totals and calculations remain intact.
+   * Prepares PDF rows for the shared stock-column setting.
+   * 1. Leave exports unchanged when both figures are visible.
+   * 2. Copy rows and blank both figures without changing stored calculations.
    */
   private dailyRowsForExport(rows: any[]): any[] {
-    // STEP 1: Only a branch with the enabled preference needs redaction.
-    if (this.branch?.data?.hideDailyStockColumns !== true) return rows;
+    // STEP 1: Avoid copying reports with no hidden stock figures.
+    if (!this.hideDailyStockColumnsInTable) return rows;
 
     // STEP 2: PDF generation receives copies; live form values are not altered.
     return rows.map((item: any) => ({ ...item, openingStockQnt: '', closeStock: '' }));
