@@ -4,6 +4,7 @@ import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { AdminBranchViewService } from '../../../branches/data/admin-branch-view.service';
 import {
   HealthDocumentWorker,
   HealthDocumentsAnswer,
@@ -32,6 +33,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   activeOccurrenceDate = '';
   copiedFromDate: string | null = null;
   branchId = '';
+  isAdminBranchView = false;
   loading = true;
   saving = false;
   error = '';
@@ -54,6 +56,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     private readonly fb: FormBuilder,
     private readonly service: SurveyService,
     private readonly auth: AuthService,
+    private readonly adminBranchView: AdminBranchViewService,
     private readonly router: Router,
     private readonly route: ActivatedRoute
   ) {}
@@ -68,7 +71,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
 
   /**
    * Opens the next survey or shows the missed-deadline restriction.
-   * 1. Resolve the signed-in branch and its current access state.
+   * 1. Resolve the signed-in branch or the administrator's selected branch and its access state.
    * 2. Show the restriction, open the required survey, or continue to the branch.
    */
   async loadSurveys(): Promise<void> {
@@ -78,13 +81,17 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     try {
       const user = await this.auth.getCurrentUser();
       if (!user) throw new Error('Unauthenticated user');
-      if (this.auth.isAdmin(user)) {
-        await this.router.navigateByUrl('/branch');
-        return;
+      // STEP 1: Use the selected branch only while its administrator view is in branch mode.
+      this.isAdminBranchView = this.auth.isAdmin(user);
+      if (this.isAdminBranchView) {
+        if (!this.adminBranchView.branchId || this.adminBranchView.adminMode) {
+          await this.router.navigateByUrl('/branch');
+          return;
+        }
+        this.branchId = this.adminBranchView.branchId;
+      } else {
+        this.branchId = await this.service.getBranchId((user.email ?? '').split('@')[0]);
       }
-
-      // STEP 1: Read the branch's deadline and administrator-grant state.
-      this.branchId = await this.service.getBranchId((user.email ?? '').split('@')[0]);
       const access = await this.service.getBranchSurveyState(this.branchId);
       // STEP 2: Keep a restricted branch on this page until its missed survey is reopened.
       if (access.blocked) {
@@ -652,7 +659,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     }
   }
 
-  private navigateAfterCompletion(): Promise<boolean> {
+  navigateAfterCompletion(): Promise<boolean> {
     return this.router.navigateByUrl(this.route.snapshot.queryParamMap.get('returnUrl') || '/branch');
   }
 }

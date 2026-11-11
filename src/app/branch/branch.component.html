@@ -31,8 +31,13 @@
     [version]="version"
     [types]="types"
     [selectedType]="selectedType"
+    [showModeSwitch]="isAdminAccount"
+    [adminMode]="isAdmin"
     (logoutRequested)="logout()"
-    (typeChanged)="changeOrderType($event)">
+    (typeChanged)="changeOrderType($event)"
+    (modeChanged)="setAdminMode($event)"
+    (surveysRequested)="openBranchSurveys()"
+    (dashboardRequested)="returnToDashboard()">
 </app-branch-header>
 <app-branch-date-actions
     [orderDates]="preOrders"

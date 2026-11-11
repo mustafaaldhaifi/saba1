@@ -35,6 +35,7 @@ import { DailyOrderTableFacade } from '../features/branches/components/branch-da
 import { DailyReportTransactionService } from '../features/branches/data/daily-report-transaction.service';
 import { DailyReportCalculatorService } from '../features/inventory/data/daily-report-calculator.service';
 import { BranchPageDataService } from '../features/branches/data/branch-page-data.service';
+import { AdminBranchViewService } from '../features/branches/data/admin-branch-view.service';
 import { ProductsReaderService } from '../features/inventory/data/products-reader.service';
 import { BranchPreOrdersReaderService } from '../features/branches/data/branch-preorders-reader.service';
 import { OrderDraftStorageService } from '../features/orders/data/order-draft-storage.service';
@@ -54,8 +55,9 @@ export class BranchComponent {
   /** Typed contract exposed to the extracted daily table. */
   readonly dailyTableContext: DailyOrderTableFacade = this;
 
-  /** Both columns share one choice; older separate settings hide them only when both were hidden. */
+  /** Branch mode alone applies the shared stock-column setting to the table and exports. */
   get hideDailyStockColumnsInTable(): boolean {
+    if (this.isAdmin) return false;
     const oldChoice = this.branch?.data?.hideDailyStockColumns === true;
     const openingChoice = this.branch?.data?.hideOpeningStockColumn;
     const closingChoice = this.branch?.data?.hideClosingStockColumn;
@@ -156,7 +158,27 @@ export class BranchComponent {
 
   isReadDailyMode: boolean;
 
-  isAdmin = false
+  isAdminAccount = false;
+  isAdmin = false;
+
+  /** Changes the branch presentation while retaining the signed-in administrator account. */
+  setAdminMode(adminMode: boolean): void {
+    if (!this.isAdminAccount) return;
+    this.isAdmin = adminMode;
+    this.adminBranchView.adminMode = adminMode;
+  }
+
+  /** Opens the selected branch's existing survey page from branch mode. */
+  openBranchSurveys(): void {
+    if (this.isAdminAccount && !this.isAdmin) {
+      void this.router.navigate(['/branch/surveys'], { queryParams: { returnUrl: '/branch' } });
+    }
+  }
+
+  /** Returns to the existing dashboard to select another branch. */
+  returnToDashboard(): void {
+    if (this.isAdminAccount) void this.router.navigate(['/dashboard']);
+  }
   dialyNote: any[] = [];
   Object: any;
   fullyFilledMonths: any;
@@ -279,6 +301,7 @@ export class BranchComponent {
     private dailyReportTransactions: DailyReportTransactionService,
     private dailyReportCalculator: DailyReportCalculatorService,
     private branchPageData: BranchPageDataService,
+    private adminBranchView: AdminBranchViewService,
     private productsReader: ProductsReaderService,
     private preOrdersReader: BranchPreOrdersReaderService,
     private orderDraftStorage: OrderDraftStorageService,
@@ -617,11 +640,18 @@ export class BranchComponent {
     }
   }
 
+  /**
+   * Redirects signed-in branch accounts when a scheduled survey requires attention.
+   * 1. Skip background checks for administrators and inactive browser views.
+   * 2. Read survey access and open the existing survey page when needed.
+   */
   private async checkScheduledSurveys(): Promise<void> {
-    if (this.checkingSurveys || this.isAdmin || !this.branch?.id ||
+    // STEP 1: Branch mode on an administrator account remains optional for surveys.
+    if (this.checkingSurveys || this.isAdminAccount || !this.branch?.id ||
         !isPlatformBrowser(this.platformId) || document.visibilityState !== 'visible') return;
     this.checkingSurveys = true;
     try {
+      // STEP 2: Branch accounts retain their existing mandatory survey flow.
       const access = await this.surveyService.getBranchSurveyState(this.branch.id);
       if (access.blocked || access.required.length) {
         await this.router.navigate(['/branch/surveys'], { queryParams: { returnUrl: '/branch' } });
@@ -795,7 +825,7 @@ export class BranchComponent {
   }
   /**
    * Loads the selected branch and its current order data.
-   * 1. Resolve the authenticated branch or the administrator's selected branch.
+   * 1. Resolve the authenticated branch or the administrator's selected branch and display mode.
    * 2. Read the current branch record and load order types and products.
    * 3. Initialize daily or standard order data and its rules.
    */
@@ -818,7 +848,12 @@ export class BranchComponent {
               const branchSnapshot = await getDoc(doc(this.apiService.db, collectionNames.branches, parsed.id));
               if (!branchSnapshot.exists()) throw new Error('Selected branch no longer exists.');
               this.branch = { id: branchSnapshot.id, data: branchSnapshot.data() };
-              this.isAdmin = true
+              this.isAdminAccount = true;
+              // NOTE: Returning from surveys keeps branch mode; a new dashboard selection starts in admin mode.
+              if (this.adminBranchView.branchId !== branchSnapshot.id) {
+                this.adminBranchView.selectBranch(branchSnapshot.id);
+              }
+              this.isAdmin = this.adminBranchView.adminMode;
             } catch (e) {
               console.error('Invalid JSON in localStorage:', e);
               await this.router.navigate(['/dashboard']);

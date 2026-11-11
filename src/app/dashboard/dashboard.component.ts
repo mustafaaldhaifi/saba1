@@ -38,6 +38,7 @@ import { DashboardOrderType, DashboardTypesService } from '../features/dashboard
 import { DashboardSettingsService } from '../features/dashboard/data/dashboard-settings.service';
 import { DashboardOpenDate, DashboardOpenDatesService } from '../features/dashboard/data/dashboard-open-dates.service';
 import { BranchesReaderService } from '../features/branches/data/branches-reader.service';
+import { AdminBranchViewService } from '../features/branches/data/admin-branch-view.service';
 import { ProductsReaderService } from '../features/inventory/data/products-reader.service';
 import { OrdersReaderService } from '../features/orders/data/orders-reader.service';
 import { OrderSubmissionsService } from '../features/orders/data/order-submissions.service';
@@ -100,6 +101,7 @@ export class DashboardComponent implements OnInit {
     console.log(branch);
 
     localStorage.setItem("selectedBranch", JSON.stringify(branch));
+    this.adminBranchView.selectBranch(branch.id);
     this.router.navigate(['/branch']);
   }
 
@@ -450,6 +452,7 @@ export class DashboardComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private router: Router,
+    private adminBranchView: AdminBranchViewService,
     @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
     private productService: ProductsService,

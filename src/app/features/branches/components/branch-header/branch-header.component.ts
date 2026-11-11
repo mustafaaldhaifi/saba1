@@ -18,13 +18,19 @@ export interface BranchHeaderOrderType {
   selector: 'app-branch-header',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './branch-header.component.html'
+  templateUrl: './branch-header.component.html',
+  styleUrl: './branch-header.component.css'
 })
 export class BranchHeaderComponent {
   @Input({ required: true }) version = '';
   @Input() types: BranchHeaderOrderType[] = [];
   @Input() selectedType: BranchHeaderOrderType | null = null;
+  @Input() showModeSwitch = false;
+  @Input() adminMode = false;
 
   @Output() readonly logoutRequested = new EventEmitter<void>();
   @Output() readonly typeChanged = new EventEmitter<BranchHeaderOrderType>();
+  @Output() readonly modeChanged = new EventEmitter<boolean>();
+  @Output() readonly surveysRequested = new EventEmitter<void>();
+  @Output() readonly dashboardRequested = new EventEmitter<void>();
 }

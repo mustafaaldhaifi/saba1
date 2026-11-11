@@ -1,8 +1,28 @@
-<a (click)="logoutRequested.emit()" class="power-off-icon" style="color: red;">
+<a *ngIf="!showModeSwitch" (click)="logoutRequested.emit()" class="power-off-icon" style="color: red;">
   <i class="fas fa-power-off"></i>
 </a>
 
 <h6>{{ version }}</h6>
+
+<div *ngIf="showModeSwitch" class="branch-mode-control" dir="rtl">
+  <span>وضع العرض</span>
+  <span [class.active]="adminMode">وضع الأدمن</span>
+  <button
+    type="button"
+    class="branch-mode-switch"
+    [class.branch-mode-switch--branch]="!adminMode"
+    role="switch"
+    aria-label="وضع الفرع"
+    [attr.aria-checked]="!adminMode"
+    (click)="modeChanged.emit(!adminMode)">
+    <span class="branch-mode-thumb" aria-hidden="true"></span>
+  </button>
+  <span [class.active]="!adminMode">وضع الفرع</span>
+
+  <button type="button" class="branch-dashboard-link" aria-label="العودة إلى لوحة الإدارة" title="العودة إلى لوحة الإدارة" (click)="dashboardRequested.emit()">
+    <i class="fas fa-arrow-right" aria-hidden="true"></i>
+  </button>
+</div>
 
 <div class="dropdown-container mb-3">
   <label for="branch-order-type" class="dropdown-label me-2">Select Type:</label>

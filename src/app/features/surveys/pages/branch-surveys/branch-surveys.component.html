@@ -4,13 +4,14 @@
       <span class="header-kicker">استبيان الفرع</span>
       <h1>الاستبيانات المطلوبة</h1>
       <p>راجع البيانات المطلوبة ثم أرسل الاستبيان للمتابعة.</p>
+      <button *ngIf="isAdminBranchView" type="button" class="retry-button" (click)="navigateAfterCompletion()">العودة إلى الفرع</button>
     </header>
 
     <div class="survey-body">
       <p *ngIf="loading" class="state-message">جارٍ تحميل الاستبيان…</p>
       <p *ngIf="success" class="success-message" role="status">{{ success }}</p>
       <div *ngIf="!loading && !active" class="empty-state" [attr.role]="restricted ? 'alert' : null">
-        <p>{{ restricted ? 'تم تقييد حسابك لعدم الالتزام بمواعيد الإدخال. تواصل مع الإدارة لفتح التقييد لتعبئة الاستبيان.' : 'لم نتمكن من عرض الاستبيان الآن.' }}</p>
+        <p>{{ restricted ? (isAdminBranchView ? 'الفرع مقيّد بسبب استبيان متأخر. افتح التقييد من لوحة الإدارة لإكماله.' : 'تم تقييد حسابك لعدم الالتزام بمواعيد الإدخال. تواصل مع الإدارة لفتح التقييد لتعبئة الاستبيان.') : 'لم نتمكن من عرض الاستبيان الآن.' }}</p>
         <button type="button" class="retry-button" (click)="loadSurveys()">إعادة المحاولة</button>
       </div>
 
