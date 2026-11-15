@@ -154,7 +154,7 @@
     <!-- <input *ngIf="ifEnabledNoteFiled()" type="text" placeholder="الملاحظة" [(ngModel)]="dialyNote"> -->
     <!-- <button (click)="saveDailyNote()"
         *ngIf="selectedDateToAddObject && selectedDateToAddObject.note != dialyNote && isAdmin">حفظ الملاحظة</button> -->
-    <button [disabled]="ifHaveNegativeValue() == true || ifSalesCompleted() == false"
+    <button [disabled]="isLoading || ifHaveNegativeValue() == true || ifSalesCompleted() == false"
         *ngIf="dateToAddInDaily && ifThereisEmptyValue() == false && isReadDailyMode === false"
         (click)="saveDaily()">Save</button>
 

@@ -9,6 +9,7 @@ import { DailyReportsService } from '../../../dailyReports.service';
 import { ApiService } from '../../../api.service';
 import { InventorySurveyAnswer } from '../models/survey.models';
 import { collectionNames } from '../../../Shareds';
+import { SurveyBanService } from './survey-ban.service';
 
 
 @Injectable({ providedIn: 'root' })
@@ -17,7 +18,8 @@ export class SurveyService {
     private readonly firebase: FirebaseAppService,
     private readonly productsReader: ProductsReaderService,
     private readonly dailyReports: DailyReportsService,
-    private readonly api: ApiService
+    private readonly api: ApiService,
+    private readonly bans: SurveyBanService
   ) {}
 
 
@@ -122,7 +124,7 @@ export class SurveyService {
    * 1. Check the branch's current or reopened occurrence access.
    * 2. Read the latest report and related stock documents from the server.
    * 3. Recheck the reference, response status, and closing balances in a transaction.
-   * 4. Apply surplus and submit the response atomically.
+   * 4. Apply surplus, submit the response, and consume a matching attempt atomically.
    */
   async submitInventoryResponse(
     branchId: string, survey: Survey, occurrenceDate: string,
@@ -198,10 +200,22 @@ export class SurveyService {
 
     // STEP 3: Transaction reads protect locked quantities and the saved reference.
     const responseRef = doc(this.firebase.db, 'surveyResponses', this.buildResponseId(survey.id, branchId, occurrenceDate));
+    const attemptRef = doc(this.firebase.db, 'banAttempts', branchId);
     const latestRef = doc(this.firebase.db, collectionNames.latestReportUpdate, `${branchId}_${typeId}`);
     try {
       await runTransaction(this.firebase.db, async transaction => {
       const responseDoc = await transaction.get(responseRef);
+      const attempt = await transaction.get(attemptRef);
+      const branch = await transaction.get(doc(this.firebase.db, 'branches', branchId));
+      if (!branch.exists() || typeof branch.data()['ban'] === 'string') throw new Error('الفرع محظور حاليًا.');
+      const attemptData = attempt.data();
+      let consumesAttempt = false;
+      if (attemptData?.['status'] === 'active') {
+        const source = await transaction.get(doc(this.firebase.db, 'bansHistory', attemptData['sourceBanId']));
+        consumesAttempt = source.data()?.['banItemId'] === `survey_${survey.id}` &&
+          String(source.data()?.['message'] ?? '').endsWith(` بتاريخ ${occurrenceDate}`);
+        if (consumesAttempt && attemptData['expiresAt']?.toDate?.() <= new Date()) throw new Error('انتهت المحاولة الإضافية.');
+      }
       // NOTE: The submitted count must exactly match the locked first-stage snapshot.
       const locked = responseDoc.data()?.['inventoryAnswers'] as Record<string, InventorySurveyAnswer> | undefined;
       if (!responseDoc.data()?.['inventoryCountsLocked'] || !locked ||
@@ -275,6 +289,7 @@ export class SurveyService {
         submittedAt: serverTimestamp(), submittedBy: userId, updatedAt: serverTimestamp(),
         ...(!responseDoc.exists() ? { createdAt: serverTimestamp() } : {})
       }, { merge: true });
+      if (consumesAttempt) transaction.update(attemptRef, { status: 'used', closedAt: serverTimestamp() });
       });
     } finally {
       // NOTE: A rejected stale comparison must also clear the baseline shown on retry.
@@ -314,17 +329,28 @@ export class SurveyService {
 
   /**
    * Resolves the oldest missed deadline before considering the current occurrence.
-   * 1. Read active surveys, branch answers, and administrator grants.
+   * 1. Read the branch's current ban, active surveys, answers, and administrator grants.
    * 2. Find expired unanswered dates from schedules with end-of-day closure.
-   * 3. Return the blocked date, reopened date, or current required surveys.
+   * 3. Record a new missed-survey ban once when no access grant is active.
+   * 4. Return the current restriction or required surveys.
    */
-  async getBranchSurveyState(branchId: string): Promise<{ blocked: RequiredSurvey | null; required: RequiredSurvey[] }> {
+  async getBranchSurveyState(branchId: string): Promise<{ blocked: RequiredSurvey | null; required: RequiredSurvey[]; banMessage: string | null }> {
     // STEP 1: Read the persisted response and grant state for this branch.
-    const [snapshot, responses, overrides] = await Promise.all([getDocs(query(
+    const branch = await getDoc(doc(this.firebase.db, 'branches', branchId));
+    if (!branch.exists()) throw new Error('الفرع غير متاح.');
+    const currentBan = typeof branch.data()['ban'] === 'string' ? branch.data()['ban'] as string : null;
+    if (currentBan) return { blocked: null, required: [], banMessage: currentBan };
+    const [snapshot, responses, overrides, attempt] = await Promise.all([getDocs(query(
       collection(this.firebase.db, 'surveys'),
       where('status', '==', 'active')
     )), getDocs(query(collection(this.firebase.db, 'surveyResponses'), where('branchId', '==', branchId))),
-    getDocs(query(collection(this.firebase.db, 'surveyAccessOverrides'), where('branchId', '==', branchId)))]);
+    getDocs(query(collection(this.firebase.db, 'surveyAccessOverrides'), where('branchId', '==', branchId))),
+    getDoc(doc(this.firebase.db, 'banAttempts', branchId))]);
+    const activeAttempt = attempt.data()?.['status'] === 'active' ? attempt.data() : null;
+    const attemptSource = activeAttempt ? await getDoc(doc(this.firebase.db, 'bansHistory', activeAttempt['sourceBanId'])) : null;
+    if (activeAttempt?.['expiresAt']?.toDate?.() <= new Date()) {
+      return { blocked: null, required: [], banMessage: attemptSource?.data()?.['message'] ?? 'انتهت المحاولة الإضافية. تواصل مع الإدارة.' };
+    }
     const surveys = snapshot.docs
       .map(document => ({ ...document.data(), id: document.id } as Survey))
       .filter(survey =>
@@ -343,24 +369,49 @@ export class SurveyService {
           : `${month}-01`;
         return `${data['surveyId']}__${data['occurrenceDate'] ?? legacyDate}`;
       }));
-    const grants = new Map(overrides.docs.map(item => [item.id, item.data()['expiresAt'] as Timestamp | undefined]));
+    const grants = new Map(overrides.docs.filter(item => !item.data()['cancelledAt'])
+      .map(item => [item.id, item.data()['expiresAt'] as Timestamp | undefined]));
     // STEP 2: Earlier unanswered deadlines remain binding after a new day begins.
     const missed = surveys.flatMap(survey => expiredDueDates(survey)
       .filter(date => !submitted.has(`${survey.id}__${date}`))
       .map(occurrenceDate => ({ survey, occurrenceDate })))
       .sort((left, right) => left.occurrenceDate.localeCompare(right.occurrenceDate));
-    if (missed.length) {
-      const first = missed[0];
-      const grant = grants.get(this.buildResponseId(first.survey.id, branchId, first.occurrenceDate));
-      return grant?.toDate && grant.toDate() > new Date()
-        ? { blocked: null, required: [first] } : { blocked: first, required: [] };
+    if (activeAttempt) {
+      const source = attemptSource?.data();
+      const attemptSurvey = missed.find(item => source?.['banItemId'] === `survey_${item.survey.id}` &&
+        String(source?.['message'] ?? '').endsWith(` بتاريخ ${item.occurrenceDate}`));
+      return { blocked: null, required: attemptSurvey ? [attemptSurvey] : [], banMessage: null };
     }
-    // STEP 3: Preserve the existing mandatory current-occurrence behavior.
+    const history = missed.length ? await getDocs(query(
+      collection(this.firebase.db, 'bansHistory'), where('branchId', '==', branchId)
+    )) : null;
+    const recordedBans = new Set(history?.docs.map(item => item.id) ?? []);
+    const first = missed.find(item => {
+      const grant = grants.get(this.buildResponseId(item.survey.id, branchId, item.occurrenceDate));
+      if (grant?.toDate && grant.toDate() > new Date()) return true;
+      const eventKey = grant?.seconds ? `__grant_${grant.seconds}` : '';
+      return !recordedBans.has(`${branchId}__survey_${item.survey.id}__${item.occurrenceDate}${eventKey}`);
+    });
+    if (first) {
+      const grant = grants.get(this.buildResponseId(first.survey.id, branchId, first.occurrenceDate));
+      if (grant?.toDate && grant.toDate() > new Date()) {
+        return { blocked: null, required: [first], banMessage: null };
+      }
+      // STEP 3: The history ID distinguishes a new missed date or an expired grant from an admin-cleared event.
+      const eventKey = grant?.seconds ? `grant_${grant.seconds}` : '';
+      const banMessage = await this.bans.applyMissedSurveyBan(
+        branchId, first.survey.id, first.survey.title, first.occurrenceDate, eventKey
+      );
+      if (banMessage) return { blocked: first, required: [], banMessage };
+    }
+    // STEP 4: Preserve the existing mandatory current-occurrence behavior.
     const candidates = surveys.flatMap(survey => {
       const occurrenceDate = latestDueDate(resolveSurveySchedule(survey));
-      return occurrenceDate && !submitted.has(`${survey.id}__${occurrenceDate}`) ? [{ survey, occurrenceDate }] : [];
+      const expired = missed.some(item => item.survey.id === survey.id && item.occurrenceDate === occurrenceDate);
+      return occurrenceDate && !expired && !submitted.has(`${survey.id}__${occurrenceDate}`)
+        ? [{ survey, occurrenceDate }] : [];
     });
-    return { blocked: null, required: candidates.sort((left, right) => left.occurrenceDate.localeCompare(right.occurrenceDate)) };
+    return { blocked: null, required: candidates.sort((left, right) => left.occurrenceDate.localeCompare(right.occurrenceDate)), banMessage: null };
   }
 
   async getIncompleteRequiredSurveys(branchId: string): Promise<RequiredSurvey[]> {
@@ -370,7 +421,7 @@ export class SurveyService {
   /** Rechecks branch access immediately before any response write. */
   private async ensureOccurrenceAccess(branchId: string, surveyId: string, occurrenceDate: string): Promise<void> {
     const state = await this.getBranchSurveyState(branchId);
-    if (state.blocked) throw new Error('تم تقييد حسابك لعدم الالتزام بمواعيد الإدخال. تواصل مع الإدارة لفتح التقييد.');
+    if (state.banMessage) throw new Error(state.banMessage);
     if (!state.required.some(item => item.survey.id === surveyId && item.occurrenceDate === occurrenceDate)) {
       throw new Error('لم يعد موعد هذا الاستبيان متاحًا. حدّث الصفحة.');
     }
@@ -467,6 +518,7 @@ export class SurveyService {
    * Saves a document survey for its current occurrence.
    * 1. Recheck access and reject inventory responses from this path.
    * 2. Write the draft or submitted answer under its stable response ID.
+   * 3. Consume a matching general ban attempt only after successful submission.
    */
   async save(
     branchId: string,
@@ -482,11 +534,12 @@ export class SurveyService {
     await this.ensureOccurrenceAccess(branchId, survey.id, occurrenceDate);
     // STEP 2: Preserve the existing document-survey response shape.
     const now = Timestamp.now();
-    await setDoc(doc(
+    const responseRef = doc(
       this.firebase.db,
       'surveyResponses',
       this.buildResponseId(survey.id, branchId, occurrenceDate)
-    ), {
+    );
+    const responseData = {
       surveyId: survey.id,
       branchId,
       occurrenceDate,
@@ -501,7 +554,30 @@ export class SurveyService {
       },
       updatedAt: now,
       ...(submitted ? { submittedAt: now, submittedBy: userId } : {})
-    }, { merge: true });
+    };
+    if (!submitted) {
+      await setDoc(responseRef, responseData, { merge: true });
+      return;
+    }
+    // STEP 3: A retry cannot consume the same granted attempt twice.
+    const attemptRef = doc(this.firebase.db, 'banAttempts', branchId);
+    await runTransaction(this.firebase.db, async transaction => {
+      const [previous, attempt, branch] = await Promise.all([
+        transaction.get(responseRef), transaction.get(attemptRef), transaction.get(doc(this.firebase.db, 'branches', branchId))
+      ]);
+      if (previous.data()?.['status'] === 'submitted') throw new Error('تم إرسال الاستبيان مسبقًا.');
+      if (!branch.exists() || typeof branch.data()['ban'] === 'string') throw new Error('الفرع محظور حاليًا.');
+      const attemptData = attempt.data();
+      let matches = false;
+      if (attemptData?.['status'] === 'active') {
+        const source = await transaction.get(doc(this.firebase.db, 'bansHistory', attemptData['sourceBanId']));
+        matches = source.data()?.['banItemId'] === `survey_${survey.id}` &&
+          String(source.data()?.['message'] ?? '').endsWith(` بتاريخ ${occurrenceDate}`);
+        if (matches && attemptData['expiresAt']?.toDate?.() <= new Date()) throw new Error('انتهت المحاولة الإضافية.');
+      }
+      transaction.set(responseRef, responseData, { merge: true });
+      if (matches) transaction.update(attemptRef, { status: 'used', closedAt: serverTimestamp() });
+    });
   }
 
 }

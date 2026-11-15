@@ -5,8 +5,9 @@ import { AdminBranchViewService } from '../../branches/data/admin-branch-view.se
 import { SurveyService } from '../services/survey.service';
 
 /**
- * Requires branch accounts to complete due surveys and honors missed-day restrictions.
- * Administrators opening a selected branch from the dashboard bypass surveys.
+ * Requires branch accounts to complete due surveys and honors their current ban.
+ * 1. Resolve the signed-in branch while administrators retain their branch view.
+ * 2. Redirect banned branches and those with a required survey to the existing survey page.
  */
 export const mandatorySurveyGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService);
@@ -17,14 +18,15 @@ export const mandatorySurveyGuard: CanActivateFn = async (_route, state) => {
     const user = await auth.getCurrentUser();
     if (!user) return router.createUrlTree(['/login']);
 
-    // The admin is inspecting a branch, not signing in as that branch account.
+    // STEP 1: The admin is inspecting a branch, not signing in as that branch account.
     if (auth.isAdmin(user)) return true;
 
     const account = (user.email ?? '').split('@')[0];
     const branchId = await surveys.getBranchId(account);
     const access = await surveys.getBranchSurveyState(branchId);
 
-    return access.blocked || access.required.length
+    // STEP 2: Use the persisted ban message alongside the current survey requirement.
+    return access.banMessage || access.blocked || access.required.length
       ? router.createUrlTree(['/branch/surveys'], { queryParams: { returnUrl: state.url } })
       : true;
   } catch {

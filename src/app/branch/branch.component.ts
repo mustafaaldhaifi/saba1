@@ -3,7 +3,7 @@ import { Component, ElementRef, HostListener, inject, Inject, PLATFORM_ID, Query
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
-import { addDoc, and, collection, deleteDoc, doc, DocumentReference, getDoc, getDocs, getFirestore, limit, or, orderBy, query, QueryConstraint, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, and, collection, deleteDoc, doc, DocumentReference, getDoc, getDocs, getDocsFromServer, getFirestore, limit, or, orderBy, query, QueryConstraint, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
@@ -643,7 +643,7 @@ export class BranchComponent {
   /**
    * Redirects signed-in branch accounts when a scheduled survey requires attention.
    * 1. Skip background checks for administrators and inactive browser views.
-   * 2. Read survey access and open the existing survey page when needed.
+   * 2. Read survey access and the current ban, then open the existing survey page when needed.
    */
   private async checkScheduledSurveys(): Promise<void> {
     // STEP 1: Branch mode on an administrator account remains optional for surveys.
@@ -653,7 +653,7 @@ export class BranchComponent {
     try {
       // STEP 2: Branch accounts retain their existing mandatory survey flow.
       const access = await this.surveyService.getBranchSurveyState(this.branch.id);
-      if (access.blocked || access.required.length) {
+      if (access.banMessage || access.blocked || access.required.length) {
         await this.router.navigate(['/branch/surveys'], { queryParams: { returnUrl: '/branch' } });
       }
     } catch (error) {
@@ -3354,8 +3354,16 @@ isChangeStatus2(): boolean {
     });
   }
 
+  /**
+   * Saves one daily inventory report and its opening balances.
+   * 1. Prevent overlapping saves and confirm the entered report.
+   * 2. Check new opening balances against current server records.
+   * 3. Queue the report, balance, summary, and update markers in one batch.
+   * 4. Commit the batch, refresh the page, or show a save error.
+   */
   async saveDaily() {
-
+    // STEP 1: A second click must not start another save from the same stale rows.
+    if (this.isLoading) return;
     const confirmed = confirm(`هل انت متأكد من تسجيل جميع الاستلامات`);
     if (!confirmed) {
       return
@@ -3372,13 +3380,29 @@ isChangeStatus2(): boolean {
 
 
     try {
+      // STEP 2: Reject a stale page before it creates another opening balance.
       const { toCreate: openStockToAdd, toUpdate: openStockToUpdate } =
         this.dailyReportTransactions.prepareOpeningStockChanges(
           newCombinedData,
           this.branch.id,
           this.selectedType.id
         );
+      if (openStockToAdd.length) {
+        const existing = await getDocsFromServer(query(
+          collection(this.apiService.db, collectionNames.openingStock),
+          where('branchId', '==', this.branch.id), where('typeId', '==', this.selectedType.id)
+        ));
+        const existingProductIds = new Set(existing.docs.map(stock => stock.data()['productId']));
+        const newProductIds = new Set<string>();
+        for (const stock of openStockToAdd) {
+          if (existingProductIds.has(stock.productId) || newProductIds.has(stock.productId)) {
+            throw new Error('تغير الرصيد الافتتاحي لبعض الأصناف. حدّث الصفحة قبل حفظ الجرد.');
+          }
+          newProductIds.add(stock.productId);
+        }
+      }
 
+      // STEP 3: Queue related inventory writes together.
       const batch = writeBatch(this.apiService.db);
 
 
@@ -3468,7 +3492,8 @@ isChangeStatus2(): boolean {
       this.dailyReportUpdates = await this.dailyReportService.getLastupdate(this.branch.id, Timestamp.fromDate(this.normalizeDate(this.dateToAddInDaily!!)), this.apiService)
       // }
       openStockToAdd.forEach((item: any) => {
-        const summaryRef = doc(collection(this.apiService.db, collectionNames.openingStock));
+        const summaryRef = doc(this.apiService.db, collectionNames.openingStock,
+          `${this.branch.id}_${this.selectedType.id}_${item.productId}`);
         batch.set(summaryRef, item);
       })
       // }
@@ -3481,13 +3506,15 @@ isChangeStatus2(): boolean {
         this.dailyReportUpdates.id,
         firestoreTimestamp
       );
+      // STEP 4: Commit once and make any failure visible to the user.
       await batch.commit();
       this.dailyReportService.invalidateReportCache(this.branch.id, this.selectedType.id, this.dateToAddInDaily || new Date());
       // this.dailyReportService.addDataToLocal(dailyReportToSaveLocally, this.dailyReportService.getDateKey(this.dateToAddInDaily!), this.selectedType.id, this.branch.id)
       alert("يعطيك العافية تم التحديث بنجاح")
       window.location.reload();
     } catch (error) {
-
+      console.error('فشل حفظ الجرد اليومي:', error);
+      alert(error instanceof Error ? error.message : 'تعذر حفظ الجرد اليومي. حاول مرة أخرى.');
     } finally {
       this.isLoading = false
     }

@@ -38,6 +38,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   saving = false;
   error = '';
   restricted = false;
+  restrictionMessage = '';
   expiryNotice = '';
   success = '';
   expiredDates: string[] = [];
@@ -72,12 +73,13 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
   /**
    * Opens the next survey or shows the missed-deadline restriction.
    * 1. Resolve the signed-in branch or the administrator's selected branch and its access state.
-   * 2. Show the restriction, open the required survey, or continue to the branch.
+   * 2. Show the current ban, open the required survey, or continue to the branch.
    */
   async loadSurveys(): Promise<void> {
     this.loading = true;
     this.error = '';
     this.restricted = false;
+    this.restrictionMessage = '';
     try {
       const user = await this.auth.getCurrentUser();
       if (!user) throw new Error('Unauthenticated user');
@@ -94,10 +96,11 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       }
       const access = await this.service.getBranchSurveyState(this.branchId);
       // STEP 2: Keep a restricted branch on this page until its missed survey is reopened.
-      if (access.blocked) {
+      if (access.banMessage || access.blocked) {
         this.active = undefined;
         this.requiredSurveys = [];
         this.restricted = true;
+        this.restrictionMessage = access.banMessage || 'تم تقييد الفرع. تواصل مع الإدارة.';
         return;
       }
       this.requiredSurveys = access.required;
