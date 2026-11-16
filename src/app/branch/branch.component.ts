@@ -3,7 +3,7 @@ import { Component, ElementRef, HostListener, inject, Inject, PLATFORM_ID, Query
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
-import { addDoc, and, collection, deleteDoc, doc, DocumentReference, getDoc, getDocs, getDocsFromServer, getFirestore, limit, or, orderBy, query, QueryConstraint, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, and, collection, deleteDoc, doc, DocumentReference, getDoc, getDocFromServer, getDocs, getDocsFromServer, getFirestore, limit, or, orderBy, query, QueryConstraint, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ApiService } from '../api.service';
 import { collectionNames } from '../Shareds';
 import { environment } from '../../env';
@@ -3357,9 +3357,9 @@ isChangeStatus2(): boolean {
   /**
    * Saves one daily inventory report and its opening balances.
    * 1. Prevent overlapping saves and confirm the entered report.
-   * 2. Check new opening balances against current server records.
+   * 2. Recheck branch access and new opening balances against server records.
    * 3. Queue the report, balance, summary, and update markers in one batch.
-   * 4. Commit the batch, refresh the page, or show a save error.
+   * 4. Commit the batch and consume a matching attempt after success.
    */
   async saveDaily() {
     // STEP 1: A second click must not start another save from the same stale rows.
@@ -3380,7 +3380,19 @@ isChangeStatus2(): boolean {
 
 
     try {
-      // STEP 2: Reject a stale page before it creates another opening balance.
+      // STEP 2: An old open tab must not submit after a ban or attempt expiry.
+      if (!this.isAdmin) {
+        const [currentBranch, currentAttempt] = await Promise.all([
+          getDocFromServer(doc(this.apiService.db, 'branches', this.branch.id)),
+          getDocFromServer(doc(this.apiService.db, 'banAttempts', this.branch.id))
+        ]);
+        if (typeof currentBranch.data()?.['ban'] === 'string') throw new Error('الفرع محظور حاليًا.');
+        const attempt = currentAttempt.data();
+        if (attempt?.['status'] === 'active' && attempt['expiresAt']?.toMillis?.() <= Date.now()) {
+          throw new Error('انتهت المحاولة الإضافية.');
+        }
+      }
+      // A stale page must not create another opening balance.
       const { toCreate: openStockToAdd, toUpdate: openStockToUpdate } =
         this.dailyReportTransactions.prepareOpeningStockChanges(
           newCombinedData,
@@ -3506,8 +3518,17 @@ isChangeStatus2(): boolean {
         this.dailyReportUpdates.id,
         firestoreTimestamp
       );
-      // STEP 4: Commit once and make any failure visible to the user.
+      // STEP 4: Only a committed report may consume a matching daily-inventory attempt.
       await batch.commit();
+      if (this.selectedType.id === '5' && firestoreTimestamp) {
+        const reportDate = new Date(firestoreTimestamp.toMillis() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        try {
+          await this.dailyReportTransactions.consumeDailyInventoryAttempt(this.apiService.db, this.branch.id, reportDate);
+        } catch (attemptError) {
+          // NOTE: The saved report remains valid; the expiry job also checks its marker.
+          console.error('Unable to close daily-inventory attempt after save:', attemptError);
+        }
+      }
       this.dailyReportService.invalidateReportCache(this.branch.id, this.selectedType.id, this.dateToAddInDaily || new Date());
       // this.dailyReportService.addDataToLocal(dailyReportToSaveLocally, this.dailyReportService.getDateKey(this.dateToAddInDaily!), this.selectedType.id, this.branch.id)
       alert("يعطيك العافية تم التحديث بنجاح")
