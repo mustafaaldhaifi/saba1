@@ -137,9 +137,9 @@
 
 
 
-    <section class="pending-opening-stock" *ngIf="hideDailyStockColumnsInTable && pendingOpeningStockRows.length">
+    <section class="pending-opening-stock" *ngIf="isDailyColumnHidden('openingStockQnt') && pendingOpeningStockRows.length">
         <h3>إكمال الرصيد الافتتاحي</h3>
-        <p>أدخل الكميات الناقصة ثم احفظ الجرد. يبقى عمودا الموجودة والمتبقي مخفيين من الجدول.</p>
+        <p>أدخل الكميات الناقصة ثم احفظ الجرد. يبقى عمود الموجودة مخفيًا من الجدول.</p>
         <div class="pending-opening-stock-grid">
             <label *ngFor="let row of pendingOpeningStockRows">
                 <span>{{ row.item.productName }}</span>
@@ -149,7 +149,7 @@
         </div>
     </section>
 
-    <app-branch-daily-order-table [context]="dailyTableContext" [hideStockColumns]="hideDailyStockColumnsInTable"></app-branch-daily-order-table>
+    <app-branch-daily-order-table [context]="dailyTableContext" [hiddenColumns]="hiddenDailyInventoryColumns"></app-branch-daily-order-table>
 
     <!-- <input *ngIf="ifEnabledNoteFiled()" type="text" placeholder="الملاحظة" [(ngModel)]="dialyNote"> -->
     <!-- <button (click)="saveDailyNote()"

@@ -4,19 +4,19 @@
                 <thead>
                     <tr vz class="f-h">
                         <th style="position: sticky; left: 0;">الاصناف</th>
-                        <th *ngIf="!hideStockColumns" style="width: 28px;">
+                        <th *ngIf="!isColumnHidden('openingStockQnt')" style="width: 28px;">
                             الموجودة
                         </th>
-                        <th>المستلم</th>
-                        <th>الجرد</th>
-                        <th>مبيعات</th>
-                        <th>وجبة موظف</th>
-                        <th>تعويض زبون</th>
-                        <th>مكنسل</th>
-                        <th>تحويل مباشر</th>
-                        <th>تحويل % </th>
-                        <th>التالف</th>
-                        <th *ngIf="!hideStockColumns">المتبقي</th>
+                        <th [style.display]="isColumnHidden('recieved') ? 'none' : null">المستلم</th>
+                        <th [style.display]="isColumnHidden('add') ? 'none' : null">الجرد</th>
+                        <th [style.display]="isColumnHidden('sales') ? 'none' : null">مبيعات</th>
+                        <th [style.display]="isColumnHidden('staffMeal') ? 'none' : null">وجبة موظف</th>
+                        <th [style.display]="isColumnHidden('freeIncrease') ? 'none' : null">تعويض زبون</th>
+                        <th [style.display]="isColumnHidden('canceled') ? 'none' : null">مكنسل</th>
+                        <th [style.display]="isColumnHidden('directTransfer') ? 'none' : null">تحويل مباشر</th>
+                        <th [style.display]="isColumnHidden('transfer') ? 'none' : null">تحويل % </th>
+                        <th [style.display]="isColumnHidden('dameged') ? 'none' : null">التالف</th>
+                        <th *ngIf="!isColumnHidden('closeStock')">المتبقي</th>
 
                     </tr>
                 </thead>
@@ -75,19 +75,19 @@
                         </td>
 
 
-                        <td *ngIf="!hideStockColumns">
+                        <td *ngIf="!isColumnHidden('openingStockQnt')">
                             <input [attr.tabindex]=" 1000 + i" *ngIf="!item.isSales"
                                 [disabled]="context.isPositiveNumber(context.combinedData[i].openingStockQnt) && context.combinedData[i].openingStockId != -1 || context.isReadDailyMode === true"
                                 (blur)="context.onQuantityChange('openingStockQnt', item, i)"
                                 [(ngModel)]="context.combinedData[i].openingStockQnt" type="number" required>
                         </td>
-                        <td>
+                        <td [style.display]="isColumnHidden('recieved') ? 'none' : null">
                             <input [attr.tabindex]="2000 + i" [disabled]="context.isDisabledDailyField()" *ngIf="!item.isSales"
                                 [(ngModel)]="item.recieved" (blur)="context.onQuantityChange('recieved', item, i)" min="0"
                                 step="any" type="number" required>
 
                         </td>
-                        <td>
+                        <td [style.display]="isColumnHidden('add') ? 'none' : null">
                             <ng-container *ngIf="item.products?.length; else normalProduct1">
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
@@ -110,7 +110,7 @@
 
 
                         <ng-container *ngIf="item.products?.length; else normalProduct2">
-                            <td>
+                            <td [style.display]="isColumnHidden('sales') ? 'none' : null">
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
@@ -124,7 +124,7 @@
                         </ng-container>
 
                         <ng-template #normalProduct2>
-                            <td>
+                            <td [style.display]="isColumnHidden('sales') ? 'none' : null">
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="4000 + i"
                                     [disabled]="context.isDisabledDailyField()" (blur)="context.onQuantityChange('sales', item, i)"
                                     [(ngModel)]="context.combinedData[i].sales" type="number" required />
@@ -135,7 +135,7 @@
 
 
                         <ng-container *ngIf="item.products?.length; else normalProduct3">
-                            <td>
+                            <td [style.display]="isColumnHidden('staffMeal') ? 'none' : null">
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
                                         <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
@@ -150,7 +150,7 @@
                         </ng-container>
 
                         <ng-template #normalProduct3>
-                            <td>
+                            <td [style.display]="isColumnHidden('staffMeal') ? 'none' : null">
                                 <input class="form-control1" [style.width.%]="100" [attr.tabindex]="5000 + i"
                                     *ngIf="!item.isSales"
                                     [disabled]="context.isDisabledDailyField()  || context.isItemLocked(item.productId || item.id)"
@@ -160,7 +160,7 @@
                             </td>
                         </ng-template>
 
-                        <td>
+                        <td [style.display]="isColumnHidden('freeIncrease') ? 'none' : null">
                             <ng-container *ngIf="item.products?.length; else normalProduct41">
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
@@ -182,7 +182,7 @@
                             </ng-template>
                         </td>
 
-                        <td>
+                        <td [style.display]="isColumnHidden('canceled') ? 'none' : null">
                             <ng-container *ngIf="item.products?.length; else normalProduct42">
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
@@ -204,21 +204,21 @@
                         </td>
 
 
-                        <td>
+                        <td [style.display]="isColumnHidden('directTransfer') ? 'none' : null">
                             <input [disabled]="true" *ngIf="!item.isSales"
                                 (blur)="context.onQuantityChange('directTransfer', item, i)"
                                 [(ngModel)]="context.combinedData[i].directTransfer" type="number" required>
 
                         </td>
 
-                        <td>
+                        <td [style.display]="isColumnHidden('transfer') ? 'none' : null">
                             <input [attr.tabindex]="6000 + i" [disabled]="context.isDisabledDailyField()" *ngIf="!item.isSales"
                                 (blur)="context.onQuantityChange('transfer', item, i)" [(ngModel)]="context.combinedData[i].transfer"
                                  [disabled]="context.isColumnLocked(item.productId || item.id,'transfer',context.selectedDate)"
                                 type="number" required>
 
                         </td>
-                        <td>
+                        <td [style.display]="isColumnHidden('dameged') ? 'none' : null">
                             <ng-container *ngIf="item.products?.length; else normalProduct4">
                                 <div class="d-flex flex-column gap-2 w-100">
                                     <ng-container *ngFor="let subProduct of item.products; let s = index">
@@ -237,7 +237,7 @@
                             </ng-template>
 
                         </td>
-                        <td *ngIf="!hideStockColumns && !item.isSales">
+                        <td *ngIf="!isColumnHidden('closeStock') && !item.isSales">
                             <!-- {{calculateClosingStock(context.combinedData[i])}} -->
                             {{ context.combinedData[i].closeStock}}
                         </td>

@@ -23,4 +23,18 @@ describe('Branch stock columns by view mode', () => {
     page.branch = { data: { hideOpeningStockColumn: true, hideClosingStockColumn: false } };
     expect(page.hideDailyStockColumnsInTable).toBeFalse();
   });
+
+  it('hides only the columns selected for a branch', () => {
+    page.isAdmin = false;
+    page.branch = { data: { dailyInventoryHiddenColumns: ['add', 'closeStock'] } };
+    expect(page.isDailyColumnHidden('add')).toBeTrue();
+    expect(page.isDailyColumnHidden('closeStock')).toBeTrue();
+    expect(page.isDailyColumnHidden('recieved')).toBeFalse();
+  });
+
+  it('shows every column to the administrator', () => {
+    page.isAdmin = true;
+    page.branch = { data: { dailyInventoryHiddenColumns: ['add', 'closeStock'] } };
+    expect(page.isDailyColumnHidden('add')).toBeFalse();
+  });
 });

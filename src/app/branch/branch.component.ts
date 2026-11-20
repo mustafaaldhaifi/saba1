@@ -55,15 +55,29 @@ export class BranchComponent {
   /** Typed contract exposed to the extracted daily table. */
   readonly dailyTableContext: DailyOrderTableFacade = this;
 
-  /** Branch mode alone applies the shared stock-column setting to the table and exports. */
+  /** Reads individual daily column choices, falling back to older stock settings. */
+  get hiddenDailyInventoryColumns(): string[] {
+    if (this.isAdmin) return [];
+    const data = this.branch?.data;
+    const supported = ['openingStockQnt', 'recieved', 'add', 'sales', 'staffMeal', 'freeIncrease',
+      'canceled', 'directTransfer', 'transfer', 'dameged', 'closeStock'];
+    if (Array.isArray(data?.dailyInventoryHiddenColumns)) {
+      return data.dailyInventoryHiddenColumns.filter((id: string) => supported.includes(id));
+    }
+    const older = data?.hideDailyStockColumns === true;
+    return [
+      (typeof data?.hideOpeningStockColumn === 'boolean' ? data.hideOpeningStockColumn : older) && 'openingStockQnt',
+      (typeof data?.hideClosingStockColumn === 'boolean' ? data.hideClosingStockColumn : older) && 'closeStock',
+    ].filter((id): id is string => typeof id === 'string');
+  }
+
+  isDailyColumnHidden(columnId: string): boolean {
+    return this.hiddenDailyInventoryColumns.includes(columnId);
+  }
+
+  /** Branch mode alone applies the older combined stock-column setting. */
   get hideDailyStockColumnsInTable(): boolean {
-    if (this.isAdmin) return false;
-    const oldChoice = this.branch?.data?.hideDailyStockColumns === true;
-    const openingChoice = this.branch?.data?.hideOpeningStockColumn;
-    const closingChoice = this.branch?.data?.hideClosingStockColumn;
-    const openingHidden = typeof openingChoice === 'boolean' ? openingChoice : oldChoice;
-    const closingHidden = typeof closingChoice === 'boolean' ? closingChoice : oldChoice;
-    return openingHidden && closingHidden;
+    return this.isDailyColumnHidden('openingStockQnt') && this.isDailyColumnHidden('closeStock');
   }
 
   /**
@@ -84,16 +98,17 @@ export class BranchComponent {
   }
 
   /**
-   * Prepares PDF rows for the shared stock-column setting.
-   * 1. Leave exports unchanged when both figures are visible.
-   * 2. Copy rows and blank both figures without changing stored calculations.
+   * Prepares PDF rows for the branch's hidden daily columns.
+   * 1. Leave exports unchanged when every column is visible.
+   * 2. Copy rows and blank hidden values without changing stored calculations.
    */
   private dailyRowsForExport(rows: any[]): any[] {
-    // STEP 1: Avoid copying reports with no hidden stock figures.
-    if (!this.hideDailyStockColumnsInTable) return rows;
+    // STEP 1: Avoid copying reports with no hidden columns.
+    const hidden = this.hiddenDailyInventoryColumns;
+    if (!hidden.length) return rows;
 
     // STEP 2: PDF generation receives copies; live form values are not altered.
-    return rows.map((item: any) => ({ ...item, openingStockQnt: '', closeStock: '' }));
+    return rows.map((item: any) => ({ ...item, ...Object.fromEntries(hidden.map((id) => [id, ''])) }));
   }
 
   /** Applies the type chosen in the presentational branch header. */
@@ -5027,7 +5042,15 @@ isChangeStatus2(): boolean {
     });
 
   }
+  /**
+   * Checks required sales entries only when the branch can see that column.
+   * 1. Skip the requirement for a hidden sales column.
+   * 2. Otherwise validate each parent or child value as before.
+   */
   ifSalesCompleted(): boolean {
+    // STEP 1: A hidden sales input cannot be completed by the branch.
+    if (this.isDailyColumnHidden('sales')) return true;
+    // STEP 2: Keep the existing parent and child sales checks.
     return this.combinedData.every((item: any) => {
       if (item.products && item.products.length > 0) {
         // تحقق من أن كل منتج فرعي لديه قيمة رقمية في حقل sales
