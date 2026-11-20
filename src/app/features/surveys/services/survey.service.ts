@@ -95,7 +95,7 @@ export class SurveyService {
   }
 
   /**
-   * Saves only explanations for a previously locked product count.
+   * Saves deficit explanations for a previously locked product count.
    * 1. Recheck occurrence access and read its response in a transaction.
    * 2. Preserve every count while updating the editable explanations.
    */
@@ -113,7 +113,7 @@ export class SurveyService {
       const saved = existing.data()['inventoryAnswers'] as Record<string, InventorySurveyAnswer> | undefined;
       if (!saved || !Object.keys(saved).length) throw new Error('بيانات الكميات المحفوظة غير مكتملة. تواصل مع الإدارة.');
       const next = Object.fromEntries(Object.entries(saved).map(([id, answer]) => [id, {
-        ...answer, reason: answer.difference === 0 ? '' : String(reasons[id] ?? '').trim()
+        ...answer, reason: answer.difference !== null && answer.difference < 0 ? String(reasons[id] ?? '').trim() : ''
       }]));
       transaction.update(reference, { inventoryAnswers: next, updatedAt: serverTimestamp() });
     });
@@ -121,7 +121,7 @@ export class SurveyService {
 
   /**
    * Submits a product survey and applies positive differences to the latest daily inventory.
-   * 1. Check the branch's current or reopened occurrence access.
+   * 1. Check occurrence access, counts, and deficit explanations.
    * 2. Read the latest report and related stock documents from the server.
    * 3. Recheck the reference, response status, and closing balances in a transaction.
    * 4. Apply surplus, submit the response, and consume a matching attempt atomically.
@@ -137,8 +137,8 @@ export class SurveyService {
     if (!entries.length || entries.some(([, answer]) =>
       answer.actualQuantity === null || !Number.isFinite(answer.actualQuantity) || answer.actualQuantity < 0 ||
       !Number.isFinite(answer.expectedQuantity) || answer.difference !== answer.actualQuantity - answer.expectedQuantity ||
-      (answer.difference !== 0 && !answer.reason.trim())
-    )) throw new Error('أكمل أعداد الأصناف وأسباب الفروقات قبل الإرسال.');
+      (answer.difference !== null && answer.difference < 0 && !answer.reason.trim())
+    )) throw new Error('أكمل أعداد الأصناف وأسباب العجز قبل الإرسال.');
     const referenceDate = entries[0][1].referenceDate;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(referenceDate) || entries.some(([, answer]) => answer.referenceDate !== referenceDate)) {
       throw new Error('تاريخ الجرد المرجعي غير صحيح. حدّث الاستبيان.');

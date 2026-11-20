@@ -401,7 +401,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
 
   /**
    * Saves explanations for a fixed product count or submits the survey.
-   * 1. Read locked counts and validate conditional reasons for submission.
+   * 1. Read locked counts and require explanations only for deficits on submission.
    * 2. Save reasons as a draft or submit with the existing atomic surplus adjustment.
    * 3. Continue to the next required survey after submission.
    */
@@ -418,9 +418,9 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       const value = this.form.get(product.id)?.getRawValue();
       const actual = value?.actualQuantity === null || value?.actualQuantity === '' ? null : Number(value.actualQuantity);
       const difference = actual === null ? null : actual - product.expectedQuantity;
-      const reason = difference === 0 ? '' : String(value?.reason ?? '').trim();
-      if (submitted && (actual === null || !Number.isFinite(actual) || actual < 0 || (difference !== 0 && !reason))) {
-        this.showError(`أكمل العدد الفعلي وسبب الفارق للصنف «${product.name}».`);
+      const reason = difference !== null && difference < 0 ? String(value?.reason ?? '').trim() : '';
+      if (submitted && (actual === null || !Number.isFinite(actual) || actual < 0 || (difference !== null && difference < 0 && !reason))) {
+        this.showError(`أكمل العدد الفعلي وسبب العجز عند وجود نقص للصنف «${product.name}».`);
         return;
       }
       inventoryAnswers[product.id] = {
