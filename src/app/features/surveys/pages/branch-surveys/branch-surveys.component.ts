@@ -161,7 +161,14 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     this.workersFor(questionId).removeAt(index);
   }
 
+  /**
+   * Opens one required survey with its saved or copied answers.
+   * 1. Reset the prior form and delegate inventory surveys to their own flow.
+   * 2. Create document controls with status-dependent validation.
+   * 3. Restore the current draft or previous submission, then watch document dates.
+   */
   async open(item?: RequiredSurvey): Promise<void> {
+    // STEP 1: An absent occurrence leaves the current view untouched.
     if (!item) return;
     this.formChanges?.unsubscribe();
     this.expiredDates = [];
@@ -179,6 +186,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       await this.openInventory(item);
       return;
     }
+    // STEP 2: Build each document control before applying saved answers.
     this.showLicenseQrNotice = item.survey.questions.some(question =>
       question.type === 'document' && !this.isHealthDocumentsQuestion(question)
     );
@@ -195,7 +203,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
           documentNumber: [''],
           expiryDateCalendar: ['gregorian'],
           expiryDate: ['']
-        }, { validators: this.expiryDateValidator('expiryDate', 'expiryDateCalendar') });
+        }, { validators: this.expiryDateValidator('expiryDate', 'expiryDateCalendar', 'status') });
         this.configureDocumentStatus(controls[question.id], question.required);
       } else if (question.type === 'yes_no') {
         controls[question.id] = this.fb.group({
@@ -210,7 +218,7 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     }
     this.form = this.fb.group(controls);
 
-    // A draft for this occurrence wins over earlier submitted answers.
+    // STEP 3: A draft for this occurrence wins over earlier submitted answers.
     const current = await this.service.getResponse(item.survey.id, this.branchId, item.occurrenceDate);
     if (current?.answers) {
       this.applyAnswers(current.answers);
@@ -545,7 +553,13 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     setTimeout(() => this.expiryCloseButton?.nativeElement.focus(), 0);
   }
 
+  /**
+   * Builds a worker row from fresh or copied document data.
+   * 1. Restore visible worker fields and clear dates for missing certificates.
+   * 2. Apply date validation and required rules for available certificates.
+   */
   private createWorkerGroup(worker?: Partial<HealthDocumentWorker>): FormGroup {
+    // STEP 1: Hidden dates cannot invalidate a copied missing certificate.
     const group = this.fb.group({
       id: [worker?.id || this.createWorkerId()],
       fullName: [worker?.fullName ?? '', Validators.required],
@@ -555,14 +569,15 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
       phoneNumber: [worker?.phoneNumber ?? '', Validators.required],
       healthCertificateStatus: [worker?.healthCertificateStatus ?? 'available'],
       healthCertificateExpiryDateCalendar: [worker?.healthCertificateExpiryDateCalendar ?? 'gregorian'],
-      healthCertificateExpiryDate: [worker?.healthCertificateExpiryDate ?? ''],
+      healthCertificateExpiryDate: [worker?.healthCertificateStatus === 'missing' ? '' : worker?.healthCertificateExpiryDate ?? ''],
       educationCertificateStatus: [worker?.educationCertificateStatus ?? 'available'],
       educationExpiryDateCalendar: [worker?.educationExpiryDateCalendar ?? 'gregorian'],
-      educationExpiryDate: [worker?.educationExpiryDate ?? '']
+      educationExpiryDate: [worker?.educationCertificateStatus === 'missing' ? '' : worker?.educationExpiryDate ?? '']
     }, { validators: [
-      this.expiryDateValidator('healthCertificateExpiryDate', 'healthCertificateExpiryDateCalendar'),
-      this.expiryDateValidator('educationExpiryDate', 'educationExpiryDateCalendar')
+      this.expiryDateValidator('healthCertificateExpiryDate', 'healthCertificateExpiryDateCalendar', 'healthCertificateStatus'),
+      this.expiryDateValidator('educationExpiryDate', 'educationExpiryDateCalendar', 'educationCertificateStatus')
     ] });
+    // STEP 2: Date requirements follow the restored status of each certificate.
     this.configureWorkerCertificateStatus(group, 'healthCertificateStatus', 'healthCertificateExpiryDate');
     this.configureWorkerCertificateStatus(group, 'educationCertificateStatus', 'educationExpiryDate');
     return group;
@@ -613,11 +628,18 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     group.get(dateField)?.updateValueAndValidity({ emitEvent: false });
   }
 
-  /** Preserve the chosen calendar; validate the typed date without converting it. */
-  private expiryDateValidator(dateField: string, calendarField: string): ValidatorFn {
+  /**
+   * Validates a visible document date in its chosen calendar.
+   * 1. Ignore missing documents and empty dates, which required validators handle separately.
+   * 2. Check the entered date against its selected calendar.
+   */
+  private expiryDateValidator(dateField: string, calendarField: string, statusField: string): ValidatorFn {
     return (group: AbstractControl): ValidationErrors | null => {
+      // STEP 1: A hidden or empty date has no format error.
+      if (group.get(statusField)?.value === 'missing') return null;
       const value = group.get(dateField)?.value;
       if (!value) return null; // Required fields are checked separately.
+      // STEP 2: Use the selected calendar without converting the stored value.
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
       if (!match) return { invalidExpiryDate: true };
       const [year, month, day] = match.slice(1).map(Number);
@@ -635,8 +657,13 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
     return globalThis.crypto?.randomUUID?.() ?? `worker_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   }
 
-  /** Copies only answers belonging to questions in the current survey version. */
+  /**
+   * Restores answers for the current survey and their status-dependent validators.
+   * 1. Rebuild worker rows from saved answers.
+   * 2. Patch standard answers and configure document fields for the restored status.
+   */
   private applyAnswers(answers: SurveyAnswers): void {
+    // STEP 1: Worker controls configure certificate dates from each restored status.
     for (const question of this.active?.questions ?? []) {
       const answer = answers[question.id];
       if (!answer) continue;
@@ -646,7 +673,16 @@ export class BranchSurveysComponent implements OnInit, OnDestroy {
         if (!Array.isArray(workers)) continue;
         for (const worker of workers) this.addWorker(question.id, worker);
       } else {
-        this.form.get(question.id)?.patchValue(answer);
+        // STEP 2: A copied missing document must not retain required hidden fields.
+        const group = this.form.get(question.id) as FormGroup | null;
+        group?.patchValue(answer);
+        if (question.type === 'document' && group) {
+          if (group.get('status')?.value === 'missing') {
+            group.patchValue({ documentNumber: '', expiryDate: '' });
+          }
+          this.configureDocumentStatus(group, question.required);
+          group.updateValueAndValidity();
+        }
       }
     }
   }
